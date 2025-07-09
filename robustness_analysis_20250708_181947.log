@@ -1,0 +1,456 @@
+2025-07-08 18:19:47 - INFO - ================================================================================
+2025-07-08 18:19:47 - INFO - COMPREHENSIVE ROBUSTNESS TESTING FRAMEWORK
+2025-07-08 18:19:47 - INFO - ================================================================================
+2025-07-08 18:19:47 - INFO - 📝 Logging session to: robustness_analysis_20250708_181947.log
+2025-07-08 18:19:47 - INFO - 🕒 Started at: 2025-07-08 18:19:47
+2025-07-08 18:19:47 - INFO - ================================================================================
+2025-07-08 18:19:47 - INFO - 
+1. Loading dataset...
+2025-07-08 18:19:47 - INFO - Label column: Class
+2025-07-08 18:19:47 - INFO - Feature types: 10 features
+2025-07-08 18:19:47 - INFO - Feature actions: {'PREDICT', 'INC', 'FIXED', 'FREE'}
+2025-07-08 18:19:47 - INFO - 
+Fold Summary:
+2025-07-08 18:19:47 - INFO - Dataset Summary:
+2025-07-08 18:19:47 - INFO - Total samples (after cleaning): 1000
+2025-07-08 18:19:47 - INFO - Number of features: 9
+2025-07-08 18:19:47 - INFO - Label column: Class
+2025-07-08 18:19:47 - INFO - Number of folds: 5
+2025-07-08 18:19:47 - INFO - Fold Summary:
+2025-07-08 18:19:47 - INFO - --------------------------------------------------
+2025-07-08 18:19:47 - INFO - Fold 0: Train=800 samples, Test=200 samples
+2025-07-08 18:19:47 - INFO - Fold 1: Train=800 samples, Test=200 samples
+2025-07-08 18:19:47 - INFO - Fold 2: Train=800 samples, Test=200 samples
+2025-07-08 18:19:47 - INFO - Fold 3: Train=800 samples, Test=200 samples
+2025-07-08 18:19:47 - INFO - Fold 4: Train=800 samples, Test=200 samples
+2025-07-08 18:19:47 - INFO - --------------------------------------------------
+2025-07-08 18:19:47 - INFO - 
+2. Comprehensive Perturbation Testing - All 5 Folds
+2025-07-08 18:19:47 - INFO - Note: Rows with missing values have been completely removed.
+2025-07-08 18:19:47 - INFO - ================================================================================
+2025-07-08 18:19:47 - INFO - 
+--- FOLD 0 - COMPREHENSIVE PERTURBATION ANALYSIS ---
+2025-07-08 18:19:47 - INFO - Raw data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:19:47 - INFO - Missing values - Train: 0, Test: 0
+2025-07-08 18:19:47 - INFO - Processed data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:19:47 - INFO - Missing values (processed) - Train: 0, Test: 0
+2025-07-08 18:19:47 - INFO - 
+Baseline model - Training size: 800 samples
+2025-07-08 18:19:47 - INFO - Baseline accuracy: 0.7600
+2025-07-08 18:19:47 - INFO - 
+================================================================================
+2025-07-08 18:19:47 - INFO - ALL DATA PERTURBATIONS
+2025-07-08 18:19:47 - INFO - ================================================================================
+2025-07-08 18:19:47 - INFO - 
+--- MINOR DELETION (Remove 0%-20%) ---
+2025-07-08 18:19:47 - INFO -   Bin  0: Remove  0% - Training size: 800 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:47 - INFO -   Bin  2: Remove  2% - Training size: 784 samples - Accuracy: 0.7550 (Δ: -0.0050)
+2025-07-08 18:19:48 - INFO -   Bin  4: Remove  4% - Training size: 768 samples - Accuracy: 0.7400 (Δ: -0.0200)
+2025-07-08 18:19:48 - INFO -   Bin  6: Remove  6% - Training size: 752 samples - Accuracy: 0.7450 (Δ: -0.0150)
+2025-07-08 18:19:48 - INFO -   Bin  8: Remove  8% - Training size: 736 samples - Accuracy: 0.7450 (Δ: -0.0150)
+2025-07-08 18:19:48 - INFO -   Bin 10: Remove 10% - Training size: 720 samples - Accuracy: 0.7300 (Δ: -0.0300)
+2025-07-08 18:19:48 - INFO -   Bin 12: Remove 12% - Training size: 704 samples - Accuracy: 0.7250 (Δ: -0.0350)
+2025-07-08 18:19:49 - INFO -   Bin 14: Remove 14% - Training size: 688 samples - Accuracy: 0.7450 (Δ: -0.0150)
+2025-07-08 18:19:49 - INFO -   Bin 16: Remove 16% - Training size: 672 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:49 - INFO -   Bin 18: Remove 18% - Training size: 656 samples - Accuracy: 0.7800 (Δ: +0.0200)
+2025-07-08 18:19:49 - INFO -   Bin 20: Remove 20% - Training size: 640 samples - Accuracy: 0.7700 (Δ: +0.0100)
+2025-07-08 18:19:49 - INFO - 
+--- MAJOR DELETION (Remove 0%, 50%) ---
+2025-07-08 18:19:50 - INFO -   Bin 0: Remove  0% - Training size: 800 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:50 - INFO -   Bin 1: Remove 50% - Training size: 400 samples - Accuracy: 0.7750 (Δ: +0.0150)
+2025-07-08 18:19:50 - INFO - 
+--- MINOR ADDITION (Use 80%-100%) ---
+2025-07-08 18:19:50 - INFO -   Bin  0: Use  80% - Training size: 640 samples - Accuracy: 0.7350 (Δ: -0.0250)
+2025-07-08 18:19:50 - INFO -   Bin  2: Use  82% - Training size: 656 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:50 - INFO -   Bin  4: Use  84% - Training size: 672 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:51 - INFO -   Bin  6: Use  86% - Training size: 688 samples - Accuracy: 0.7250 (Δ: -0.0350)
+2025-07-08 18:19:51 - INFO -   Bin  8: Use  88% - Training size: 704 samples - Accuracy: 0.7650 (Δ: +0.0050)
+2025-07-08 18:19:51 - INFO -   Bin 10: Use  90% - Training size: 720 samples - Accuracy: 0.7500 (Δ: -0.0100)
+2025-07-08 18:19:51 - INFO -   Bin 12: Use  92% - Training size: 736 samples - Accuracy: 0.7550 (Δ: -0.0050)
+2025-07-08 18:19:51 - INFO -   Bin 14: Use  94% - Training size: 752 samples - Accuracy: 0.7350 (Δ: -0.0250)
+2025-07-08 18:19:52 - INFO -   Bin 16: Use  96% - Training size: 768 samples - Accuracy: 0.7300 (Δ: -0.0300)
+2025-07-08 18:19:52 - INFO -   Bin 18: Use  98% - Training size: 784 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:52 - INFO -   Bin 20: Use 100% - Training size: 800 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:52 - INFO - 
+--- MAJOR ADDITION (Use 50%, 100%) ---
+2025-07-08 18:19:52 - INFO -   Bin 0: Use  50% - Training size: 400 samples - Accuracy: 0.7450 (Δ: -0.0150)
+2025-07-08 18:19:53 - INFO -   Bin 1: Use 100% - Training size: 800 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:53 - INFO - 
+================================================================================
+2025-07-08 18:19:53 - INFO - MODEL PERTURBATIONS (Using 80% of training data)
+2025-07-08 18:19:53 - INFO - ================================================================================
+2025-07-08 18:19:53 - INFO -   RANDOM_FOREST (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7050 (Δ: -0.0550)
+2025-07-08 18:19:53 - INFO -   RANDOM_FOREST (depth= 5, n_est=100) - Training size: 640 samples - Accuracy: 0.7050 (Δ: -0.0550)
+2025-07-08 18:19:53 - INFO -   RANDOM_FOREST (depth=10, n_est=200) - Training size: 640 samples - Accuracy: 0.7300 (Δ: -0.0300)
+2025-07-08 18:19:53 - INFO -   XGBOOST      (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7450 (Δ: -0.0150)
+2025-07-08 18:19:53 - INFO -   XGBOOST      (depth= 6, n_est=100) - Training size: 640 samples - Accuracy: 0.7350 (Δ: -0.0250)
+2025-07-08 18:19:53 - INFO -   LIGHTGBM     (depth= 4, n_est= 75) - Training size: 640 samples - Accuracy: 0.7400 (Δ: -0.0200)
+2025-07-08 18:19:53 - INFO -   ADABOOST     (depth= 2, n_est= 30) - Training size: 640 samples - Accuracy: 0.7600 (Δ: +0.0000)
+2025-07-08 18:19:53 - INFO - 
+--- FOLD 1 - COMPREHENSIVE PERTURBATION ANALYSIS ---
+2025-07-08 18:19:53 - INFO - Raw data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:19:53 - INFO - Missing values - Train: 0, Test: 0
+2025-07-08 18:19:53 - INFO - Processed data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:19:53 - INFO - Missing values (processed) - Train: 0, Test: 0
+2025-07-08 18:19:54 - INFO - 
+Baseline model - Training size: 800 samples
+2025-07-08 18:19:54 - INFO - Baseline accuracy: 0.7400
+2025-07-08 18:19:54 - INFO - 
+================================================================================
+2025-07-08 18:19:54 - INFO - ALL DATA PERTURBATIONS
+2025-07-08 18:19:54 - INFO - ================================================================================
+2025-07-08 18:19:54 - INFO - 
+--- MINOR DELETION (Remove 0%-20%) ---
+2025-07-08 18:19:54 - INFO -   Bin  0: Remove  0% - Training size: 800 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:19:54 - INFO -   Bin  2: Remove  2% - Training size: 784 samples - Accuracy: 0.7700 (Δ: +0.0300)
+2025-07-08 18:19:54 - INFO -   Bin  4: Remove  4% - Training size: 768 samples - Accuracy: 0.7450 (Δ: +0.0050)
+2025-07-08 18:19:55 - INFO -   Bin  6: Remove  6% - Training size: 752 samples - Accuracy: 0.7450 (Δ: +0.0050)
+2025-07-08 18:19:55 - INFO -   Bin  8: Remove  8% - Training size: 736 samples - Accuracy: 0.7750 (Δ: +0.0350)
+2025-07-08 18:19:55 - INFO -   Bin 10: Remove 10% - Training size: 720 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:19:55 - INFO -   Bin 12: Remove 12% - Training size: 704 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:19:55 - INFO -   Bin 14: Remove 14% - Training size: 688 samples - Accuracy: 0.7600 (Δ: +0.0200)
+2025-07-08 18:19:56 - INFO -   Bin 16: Remove 16% - Training size: 672 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:19:56 - INFO -   Bin 18: Remove 18% - Training size: 656 samples - Accuracy: 0.7700 (Δ: +0.0300)
+2025-07-08 18:19:56 - INFO -   Bin 20: Remove 20% - Training size: 640 samples - Accuracy: 0.7350 (Δ: -0.0050)
+2025-07-08 18:19:56 - INFO - 
+--- MAJOR DELETION (Remove 0%, 50%) ---
+2025-07-08 18:19:56 - INFO -   Bin 0: Remove  0% - Training size: 800 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:19:56 - INFO -   Bin 1: Remove 50% - Training size: 400 samples - Accuracy: 0.7450 (Δ: +0.0050)
+2025-07-08 18:19:56 - INFO - 
+--- MINOR ADDITION (Use 80%-100%) ---
+2025-07-08 18:19:57 - INFO -   Bin  0: Use  80% - Training size: 640 samples - Accuracy: 0.7450 (Δ: +0.0050)
+2025-07-08 18:19:57 - INFO -   Bin  2: Use  82% - Training size: 656 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:19:57 - INFO -   Bin  4: Use  84% - Training size: 672 samples - Accuracy: 0.7450 (Δ: +0.0050)
+2025-07-08 18:19:57 - INFO -   Bin  6: Use  86% - Training size: 688 samples - Accuracy: 0.7650 (Δ: +0.0250)
+2025-07-08 18:19:57 - INFO -   Bin  8: Use  88% - Training size: 704 samples - Accuracy: 0.7300 (Δ: -0.0100)
+2025-07-08 18:19:58 - INFO -   Bin 10: Use  90% - Training size: 720 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:19:58 - INFO -   Bin 12: Use  92% - Training size: 736 samples - Accuracy: 0.7350 (Δ: -0.0050)
+2025-07-08 18:19:58 - INFO -   Bin 14: Use  94% - Training size: 752 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:19:58 - INFO -   Bin 16: Use  96% - Training size: 768 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:19:59 - INFO -   Bin 18: Use  98% - Training size: 784 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:19:59 - INFO -   Bin 20: Use 100% - Training size: 800 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:19:59 - INFO - 
+--- MAJOR ADDITION (Use 50%, 100%) ---
+2025-07-08 18:19:59 - INFO -   Bin 0: Use  50% - Training size: 400 samples - Accuracy: 0.7500 (Δ: +0.0100)
+2025-07-08 18:19:59 - INFO -   Bin 1: Use 100% - Training size: 800 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:19:59 - INFO - 
+================================================================================
+2025-07-08 18:19:59 - INFO - MODEL PERTURBATIONS (Using 80% of training data)
+2025-07-08 18:19:59 - INFO - ================================================================================
+2025-07-08 18:19:59 - INFO -   RANDOM_FOREST (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7250 (Δ: -0.0150)
+2025-07-08 18:19:59 - INFO -   RANDOM_FOREST (depth= 5, n_est=100) - Training size: 640 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:20:00 - INFO -   RANDOM_FOREST (depth=10, n_est=200) - Training size: 640 samples - Accuracy: 0.7650 (Δ: +0.0250)
+2025-07-08 18:20:00 - INFO -   XGBOOST      (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7350 (Δ: -0.0050)
+2025-07-08 18:20:00 - INFO -   XGBOOST      (depth= 6, n_est=100) - Training size: 640 samples - Accuracy: 0.7450 (Δ: +0.0050)
+2025-07-08 18:20:00 - INFO -   LIGHTGBM     (depth= 4, n_est= 75) - Training size: 640 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:20:00 - INFO -   ADABOOST     (depth= 2, n_est= 30) - Training size: 640 samples - Accuracy: 0.6900 (Δ: -0.0500)
+2025-07-08 18:20:00 - INFO - 
+--- FOLD 2 - COMPREHENSIVE PERTURBATION ANALYSIS ---
+2025-07-08 18:20:00 - INFO - Raw data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:20:00 - INFO - Missing values - Train: 0, Test: 0
+2025-07-08 18:20:00 - INFO - Processed data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:20:00 - INFO - Missing values (processed) - Train: 0, Test: 0
+2025-07-08 18:20:00 - INFO - 
+Baseline model - Training size: 800 samples
+2025-07-08 18:20:00 - INFO - Baseline accuracy: 0.7300
+2025-07-08 18:20:00 - INFO - 
+================================================================================
+2025-07-08 18:20:00 - INFO - ALL DATA PERTURBATIONS
+2025-07-08 18:20:00 - INFO - ================================================================================
+2025-07-08 18:20:00 - INFO - 
+--- MINOR DELETION (Remove 0%-20%) ---
+2025-07-08 18:20:00 - INFO -   Bin  0: Remove  0% - Training size: 800 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:01 - INFO -   Bin  2: Remove  2% - Training size: 784 samples - Accuracy: 0.7050 (Δ: -0.0250)
+2025-07-08 18:20:01 - INFO -   Bin  4: Remove  4% - Training size: 768 samples - Accuracy: 0.6900 (Δ: -0.0400)
+2025-07-08 18:20:01 - INFO -   Bin  6: Remove  6% - Training size: 752 samples - Accuracy: 0.7100 (Δ: -0.0200)
+2025-07-08 18:20:01 - INFO -   Bin  8: Remove  8% - Training size: 736 samples - Accuracy: 0.7200 (Δ: -0.0100)
+2025-07-08 18:20:01 - INFO -   Bin 10: Remove 10% - Training size: 720 samples - Accuracy: 0.7250 (Δ: -0.0050)
+2025-07-08 18:20:02 - INFO -   Bin 12: Remove 12% - Training size: 704 samples - Accuracy: 0.6950 (Δ: -0.0350)
+2025-07-08 18:20:02 - INFO -   Bin 14: Remove 14% - Training size: 688 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:02 - INFO -   Bin 16: Remove 16% - Training size: 672 samples - Accuracy: 0.7150 (Δ: -0.0150)
+2025-07-08 18:20:02 - INFO -   Bin 18: Remove 18% - Training size: 656 samples - Accuracy: 0.7150 (Δ: -0.0150)
+2025-07-08 18:20:03 - INFO -   Bin 20: Remove 20% - Training size: 640 samples - Accuracy: 0.7150 (Δ: -0.0150)
+2025-07-08 18:20:03 - INFO - 
+--- MAJOR DELETION (Remove 0%, 50%) ---
+2025-07-08 18:20:03 - INFO -   Bin 0: Remove  0% - Training size: 800 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:03 - INFO -   Bin 1: Remove 50% - Training size: 400 samples - Accuracy: 0.6800 (Δ: -0.0500)
+2025-07-08 18:20:03 - INFO - 
+--- MINOR ADDITION (Use 80%-100%) ---
+2025-07-08 18:20:03 - INFO -   Bin  0: Use  80% - Training size: 640 samples - Accuracy: 0.7350 (Δ: +0.0050)
+2025-07-08 18:20:03 - INFO -   Bin  2: Use  82% - Training size: 656 samples - Accuracy: 0.7750 (Δ: +0.0450)
+2025-07-08 18:20:04 - INFO -   Bin  4: Use  84% - Training size: 672 samples - Accuracy: 0.7400 (Δ: +0.0100)
+2025-07-08 18:20:04 - INFO -   Bin  6: Use  86% - Training size: 688 samples - Accuracy: 0.7400 (Δ: +0.0100)
+2025-07-08 18:20:04 - INFO -   Bin  8: Use  88% - Training size: 704 samples - Accuracy: 0.7350 (Δ: +0.0050)
+2025-07-08 18:20:04 - INFO -   Bin 10: Use  90% - Training size: 720 samples - Accuracy: 0.7600 (Δ: +0.0300)
+2025-07-08 18:20:04 - INFO -   Bin 12: Use  92% - Training size: 736 samples - Accuracy: 0.7450 (Δ: +0.0150)
+2025-07-08 18:20:05 - INFO -   Bin 14: Use  94% - Training size: 752 samples - Accuracy: 0.7450 (Δ: +0.0150)
+2025-07-08 18:20:05 - INFO -   Bin 16: Use  96% - Training size: 768 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:05 - INFO -   Bin 18: Use  98% - Training size: 784 samples - Accuracy: 0.7350 (Δ: +0.0050)
+2025-07-08 18:20:05 - INFO -   Bin 20: Use 100% - Training size: 800 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:05 - INFO - 
+--- MAJOR ADDITION (Use 50%, 100%) ---
+2025-07-08 18:20:05 - INFO -   Bin 0: Use  50% - Training size: 400 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:06 - INFO -   Bin 1: Use 100% - Training size: 800 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:06 - INFO - 
+================================================================================
+2025-07-08 18:20:06 - INFO - MODEL PERTURBATIONS (Using 80% of training data)
+2025-07-08 18:20:06 - INFO - ================================================================================
+2025-07-08 18:20:06 - INFO -   RANDOM_FOREST (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7100 (Δ: -0.0200)
+2025-07-08 18:20:06 - INFO -   RANDOM_FOREST (depth= 5, n_est=100) - Training size: 640 samples - Accuracy: 0.7200 (Δ: -0.0100)
+2025-07-08 18:20:06 - INFO -   RANDOM_FOREST (depth=10, n_est=200) - Training size: 640 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:06 - INFO -   XGBOOST      (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7150 (Δ: -0.0150)
+2025-07-08 18:20:06 - INFO -   XGBOOST      (depth= 6, n_est=100) - Training size: 640 samples - Accuracy: 0.7350 (Δ: +0.0050)
+2025-07-08 18:20:06 - INFO -   LIGHTGBM     (depth= 4, n_est= 75) - Training size: 640 samples - Accuracy: 0.7200 (Δ: -0.0100)
+2025-07-08 18:20:06 - INFO -   ADABOOST     (depth= 2, n_est= 30) - Training size: 640 samples - Accuracy: 0.7100 (Δ: -0.0200)
+2025-07-08 18:20:06 - INFO - 
+--- FOLD 3 - COMPREHENSIVE PERTURBATION ANALYSIS ---
+2025-07-08 18:20:06 - INFO - Raw data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:20:06 - INFO - Missing values - Train: 0, Test: 0
+2025-07-08 18:20:06 - INFO - Processed data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:20:06 - INFO - Missing values (processed) - Train: 0, Test: 0
+2025-07-08 18:20:07 - INFO - 
+Baseline model - Training size: 800 samples
+2025-07-08 18:20:07 - INFO - Baseline accuracy: 0.7400
+2025-07-08 18:20:07 - INFO - 
+================================================================================
+2025-07-08 18:20:07 - INFO - ALL DATA PERTURBATIONS
+2025-07-08 18:20:07 - INFO - ================================================================================
+2025-07-08 18:20:07 - INFO - 
+--- MINOR DELETION (Remove 0%-20%) ---
+2025-07-08 18:20:07 - INFO -   Bin  0: Remove  0% - Training size: 800 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:20:07 - INFO -   Bin  2: Remove  2% - Training size: 784 samples - Accuracy: 0.7350 (Δ: -0.0050)
+2025-07-08 18:20:07 - INFO -   Bin  4: Remove  4% - Training size: 768 samples - Accuracy: 0.7500 (Δ: +0.0100)
+2025-07-08 18:20:08 - INFO -   Bin  6: Remove  6% - Training size: 752 samples - Accuracy: 0.7300 (Δ: -0.0100)
+2025-07-08 18:20:08 - INFO -   Bin  8: Remove  8% - Training size: 736 samples - Accuracy: 0.7350 (Δ: -0.0050)
+2025-07-08 18:20:08 - INFO -   Bin 10: Remove 10% - Training size: 720 samples - Accuracy: 0.7300 (Δ: -0.0100)
+2025-07-08 18:20:08 - INFO -   Bin 12: Remove 12% - Training size: 704 samples - Accuracy: 0.7500 (Δ: +0.0100)
+2025-07-08 18:20:08 - INFO -   Bin 14: Remove 14% - Training size: 688 samples - Accuracy: 0.7150 (Δ: -0.0250)
+2025-07-08 18:20:09 - INFO -   Bin 16: Remove 16% - Training size: 672 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:20:09 - INFO -   Bin 18: Remove 18% - Training size: 656 samples - Accuracy: 0.7250 (Δ: -0.0150)
+2025-07-08 18:20:09 - INFO -   Bin 20: Remove 20% - Training size: 640 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:20:09 - INFO - 
+--- MAJOR DELETION (Remove 0%, 50%) ---
+2025-07-08 18:20:09 - INFO -   Bin 0: Remove  0% - Training size: 800 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:20:09 - INFO -   Bin 1: Remove 50% - Training size: 400 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:20:09 - INFO - 
+--- MINOR ADDITION (Use 80%-100%) ---
+2025-07-08 18:20:10 - INFO -   Bin  0: Use  80% - Training size: 640 samples - Accuracy: 0.7800 (Δ: +0.0400)
+2025-07-08 18:20:10 - INFO -   Bin  2: Use  82% - Training size: 656 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:20:10 - INFO -   Bin  4: Use  84% - Training size: 672 samples - Accuracy: 0.7200 (Δ: -0.0200)
+2025-07-08 18:20:10 - INFO -   Bin  6: Use  86% - Training size: 688 samples - Accuracy: 0.7300 (Δ: -0.0100)
+2025-07-08 18:20:10 - INFO -   Bin  8: Use  88% - Training size: 704 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:20:11 - INFO -   Bin 10: Use  90% - Training size: 720 samples - Accuracy: 0.7500 (Δ: +0.0100)
+2025-07-08 18:20:11 - INFO -   Bin 12: Use  92% - Training size: 736 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:20:11 - INFO -   Bin 14: Use  94% - Training size: 752 samples - Accuracy: 0.7250 (Δ: -0.0150)
+2025-07-08 18:20:11 - INFO -   Bin 16: Use  96% - Training size: 768 samples - Accuracy: 0.7350 (Δ: -0.0050)
+2025-07-08 18:20:12 - INFO -   Bin 18: Use  98% - Training size: 784 samples - Accuracy: 0.7450 (Δ: +0.0050)
+2025-07-08 18:20:12 - INFO -   Bin 20: Use 100% - Training size: 800 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:20:12 - INFO - 
+--- MAJOR ADDITION (Use 50%, 100%) ---
+2025-07-08 18:20:12 - INFO -   Bin 0: Use  50% - Training size: 400 samples - Accuracy: 0.7600 (Δ: +0.0200)
+2025-07-08 18:20:12 - INFO -   Bin 1: Use 100% - Training size: 800 samples - Accuracy: 0.7400 (Δ: +0.0000)
+2025-07-08 18:20:12 - INFO - 
+================================================================================
+2025-07-08 18:20:12 - INFO - MODEL PERTURBATIONS (Using 80% of training data)
+2025-07-08 18:20:12 - INFO - ================================================================================
+2025-07-08 18:20:12 - INFO -   RANDOM_FOREST (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7200 (Δ: -0.0200)
+2025-07-08 18:20:12 - INFO -   RANDOM_FOREST (depth= 5, n_est=100) - Training size: 640 samples - Accuracy: 0.7300 (Δ: -0.0100)
+2025-07-08 18:20:13 - INFO -   RANDOM_FOREST (depth=10, n_est=200) - Training size: 640 samples - Accuracy: 0.7550 (Δ: +0.0150)
+2025-07-08 18:20:13 - INFO -   XGBOOST      (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7450 (Δ: +0.0050)
+2025-07-08 18:20:13 - INFO -   XGBOOST      (depth= 6, n_est=100) - Training size: 640 samples - Accuracy: 0.7250 (Δ: -0.0150)
+2025-07-08 18:20:13 - INFO -   LIGHTGBM     (depth= 4, n_est= 75) - Training size: 640 samples - Accuracy: 0.7600 (Δ: +0.0200)
+2025-07-08 18:20:13 - INFO -   ADABOOST     (depth= 2, n_est= 30) - Training size: 640 samples - Accuracy: 0.6800 (Δ: -0.0600)
+2025-07-08 18:20:13 - INFO - 
+--- FOLD 4 - COMPREHENSIVE PERTURBATION ANALYSIS ---
+2025-07-08 18:20:13 - INFO - Raw data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:20:13 - INFO - Missing values - Train: 0, Test: 0
+2025-07-08 18:20:13 - INFO - Processed data - Train: (800, 10), Test: (200, 10)
+2025-07-08 18:20:13 - INFO - Missing values (processed) - Train: 0, Test: 0
+2025-07-08 18:20:13 - INFO - 
+Baseline model - Training size: 800 samples
+2025-07-08 18:20:13 - INFO - Baseline accuracy: 0.7300
+2025-07-08 18:20:13 - INFO - 
+================================================================================
+2025-07-08 18:20:13 - INFO - ALL DATA PERTURBATIONS
+2025-07-08 18:20:13 - INFO - ================================================================================
+2025-07-08 18:20:13 - INFO - 
+--- MINOR DELETION (Remove 0%-20%) ---
+2025-07-08 18:20:13 - INFO -   Bin  0: Remove  0% - Training size: 800 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:14 - INFO -   Bin  2: Remove  2% - Training size: 784 samples - Accuracy: 0.7100 (Δ: -0.0200)
+2025-07-08 18:20:14 - INFO -   Bin  4: Remove  4% - Training size: 768 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:14 - INFO -   Bin  6: Remove  6% - Training size: 752 samples - Accuracy: 0.7350 (Δ: +0.0050)
+2025-07-08 18:20:14 - INFO -   Bin  8: Remove  8% - Training size: 736 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:14 - INFO -   Bin 10: Remove 10% - Training size: 720 samples - Accuracy: 0.7200 (Δ: -0.0100)
+2025-07-08 18:20:15 - INFO -   Bin 12: Remove 12% - Training size: 704 samples - Accuracy: 0.7200 (Δ: -0.0100)
+2025-07-08 18:20:15 - INFO -   Bin 14: Remove 14% - Training size: 688 samples - Accuracy: 0.7150 (Δ: -0.0150)
+2025-07-08 18:20:15 - INFO -   Bin 16: Remove 16% - Training size: 672 samples - Accuracy: 0.7100 (Δ: -0.0200)
+2025-07-08 18:20:15 - INFO -   Bin 18: Remove 18% - Training size: 656 samples - Accuracy: 0.7350 (Δ: +0.0050)
+2025-07-08 18:20:16 - INFO -   Bin 20: Remove 20% - Training size: 640 samples - Accuracy: 0.7450 (Δ: +0.0150)
+2025-07-08 18:20:16 - INFO - 
+--- MAJOR DELETION (Remove 0%, 50%) ---
+2025-07-08 18:20:16 - INFO -   Bin 0: Remove  0% - Training size: 800 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:16 - INFO -   Bin 1: Remove 50% - Training size: 400 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:16 - INFO - 
+--- MINOR ADDITION (Use 80%-100%) ---
+2025-07-08 18:20:16 - INFO -   Bin  0: Use  80% - Training size: 640 samples - Accuracy: 0.7250 (Δ: -0.0050)
+2025-07-08 18:20:16 - INFO -   Bin  2: Use  82% - Training size: 656 samples - Accuracy: 0.7050 (Δ: -0.0250)
+2025-07-08 18:20:17 - INFO -   Bin  4: Use  84% - Training size: 672 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:17 - INFO -   Bin  6: Use  86% - Training size: 688 samples - Accuracy: 0.7050 (Δ: -0.0250)
+2025-07-08 18:20:17 - INFO -   Bin  8: Use  88% - Training size: 704 samples - Accuracy: 0.7200 (Δ: -0.0100)
+2025-07-08 18:20:17 - INFO -   Bin 10: Use  90% - Training size: 720 samples - Accuracy: 0.7000 (Δ: -0.0300)
+2025-07-08 18:20:17 - INFO -   Bin 12: Use  92% - Training size: 736 samples - Accuracy: 0.7150 (Δ: -0.0150)
+2025-07-08 18:20:18 - INFO -   Bin 14: Use  94% - Training size: 752 samples - Accuracy: 0.7250 (Δ: -0.0050)
+2025-07-08 18:20:18 - INFO -   Bin 16: Use  96% - Training size: 768 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:18 - INFO -   Bin 18: Use  98% - Training size: 784 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:18 - INFO -   Bin 20: Use 100% - Training size: 800 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:18 - INFO - 
+--- MAJOR ADDITION (Use 50%, 100%) ---
+2025-07-08 18:20:18 - INFO -   Bin 0: Use  50% - Training size: 400 samples - Accuracy: 0.7000 (Δ: -0.0300)
+2025-07-08 18:20:19 - INFO -   Bin 1: Use 100% - Training size: 800 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:19 - INFO - 
+================================================================================
+2025-07-08 18:20:19 - INFO - MODEL PERTURBATIONS (Using 80% of training data)
+2025-07-08 18:20:19 - INFO - ================================================================================
+2025-07-08 18:20:19 - INFO -   RANDOM_FOREST (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7100 (Δ: -0.0200)
+2025-07-08 18:20:19 - INFO -   RANDOM_FOREST (depth= 5, n_est=100) - Training size: 640 samples - Accuracy: 0.7400 (Δ: +0.0100)
+2025-07-08 18:20:19 - INFO -   RANDOM_FOREST (depth=10, n_est=200) - Training size: 640 samples - Accuracy: 0.7050 (Δ: -0.0250)
+2025-07-08 18:20:19 - INFO -   XGBOOST      (depth= 3, n_est= 50) - Training size: 640 samples - Accuracy: 0.7450 (Δ: +0.0150)
+2025-07-08 18:20:19 - INFO -   XGBOOST      (depth= 6, n_est=100) - Training size: 640 samples - Accuracy: 0.7300 (Δ: +0.0000)
+2025-07-08 18:20:19 - INFO -   LIGHTGBM     (depth= 4, n_est= 75) - Training size: 640 samples - Accuracy: 0.7550 (Δ: +0.0250)
+2025-07-08 18:20:19 - INFO -   ADABOOST     (depth= 2, n_est= 30) - Training size: 640 samples - Accuracy: 0.6900 (Δ: -0.0400)
+2025-07-08 18:20:19 - INFO - 
+====================================================================================================
+2025-07-08 18:20:19 - INFO - SUMMARY: AVERAGED RESULTS ACROSS ALL 5 FOLDS
+2025-07-08 18:20:19 - INFO - ====================================================================================================
+2025-07-08 18:20:19 - INFO - 
+BASELINE PERFORMANCE:
+2025-07-08 18:20:19 - INFO -   Mean Accuracy: 0.7400 ± 0.0110
+2025-07-08 18:20:19 - INFO -   Individual Folds: ['0.7600', '0.7400', '0.7300', '0.7400', '0.7300']
+2025-07-08 18:20:19 - INFO - 
+DATA PERTURBATIONS - AVERAGED ACCURACY:
+2025-07-08 18:20:19 - INFO - Type                 Bin  Remove/Use Mean Acc   Std      Δ vs Baseline All Folds
+2025-07-08 18:20:19 - INFO - ----------------------------------------------------------------------------------------------------
+2025-07-08 18:20:19 - INFO - Minor Deletion       0    Remove 0%  0.7400     0.0110   +0.0000      ['0.7600', '0.7400', '0.7300', '0.7400', '0.7300']
+2025-07-08 18:20:19 - INFO - Minor Deletion       2    Remove 2%  0.7350     0.0251   -0.0050      ['0.7550', '0.7700', '0.7050', '0.7350', '0.7100']
+2025-07-08 18:20:19 - INFO - Minor Deletion       4    Remove 4%  0.7310     0.0215   -0.0090      ['0.7400', '0.7450', '0.6900', '0.7500', '0.7300']
+2025-07-08 18:20:19 - INFO - Minor Deletion       6    Remove 6%  0.7330     0.0129   -0.0070      ['0.7450', '0.7450', '0.7100', '0.7300', '0.7350']
+2025-07-08 18:20:19 - INFO - Minor Deletion       8    Remove 8%  0.7410     0.0188   +0.0010      ['0.7450', '0.7750', '0.7200', '0.7350', '0.7300']
+2025-07-08 18:20:19 - INFO - Minor Deletion       10   Remove 10% 0.7320     0.0121   -0.0080      ['0.7300', '0.7550', '0.7250', '0.7300', '0.7200']
+2025-07-08 18:20:19 - INFO - Minor Deletion       12   Remove 12% 0.7260     0.0188   -0.0140      ['0.7250', '0.7400', '0.6950', '0.7500', '0.7200']
+2025-07-08 18:20:19 - INFO - Minor Deletion       14   Remove 14% 0.7330     0.0175   -0.0070      ['0.7450', '0.7600', '0.7300', '0.7150', '0.7150']
+2025-07-08 18:20:19 - INFO - Minor Deletion       16   Remove 16% 0.7330     0.0183   -0.0070      ['0.7600', '0.7400', '0.7150', '0.7400', '0.7100']
+2025-07-08 18:20:19 - INFO - Minor Deletion       18   Remove 18% 0.7450     0.0255   +0.0050      ['0.7800', '0.7700', '0.7150', '0.7250', '0.7350']
+2025-07-08 18:20:19 - INFO - Minor Deletion       20   Remove 20% 0.7440     0.0185   +0.0040      ['0.7700', '0.7350', '0.7150', '0.7550', '0.7450']
+2025-07-08 18:20:19 - INFO - Major Deletion       0    Remove 0%  0.7400     0.0110   +0.0000      ['0.7600', '0.7400', '0.7300', '0.7400', '0.7300']
+2025-07-08 18:20:19 - INFO - Major Deletion       1    Remove 50% 0.7370     0.0320   -0.0030      ['0.7750', '0.7450', '0.6800', '0.7550', '0.7300']
+2025-07-08 18:20:19 - INFO - Minor Addition       0    Use 80%    0.7440     0.0191   +0.0040      ['0.7350', '0.7450', '0.7350', '0.7800', '0.7250']
+2025-07-08 18:20:19 - INFO - Minor Addition       2    Use 82%    0.7470     0.0238   +0.0070      ['0.7600', '0.7550', '0.7750', '0.7400', '0.7050']
+2025-07-08 18:20:19 - INFO - Minor Addition       4    Use 84%    0.7390     0.0136   -0.0010      ['0.7600', '0.7450', '0.7400', '0.7200', '0.7300']
+2025-07-08 18:20:19 - INFO - Minor Addition       6    Use 86%    0.7330     0.0196   -0.0070      ['0.7250', '0.7650', '0.7400', '0.7300', '0.7050']
+2025-07-08 18:20:19 - INFO - Minor Addition       8    Use 88%    0.7410     0.0166   +0.0010      ['0.7650', '0.7300', '0.7350', '0.7550', '0.7200']
+2025-07-08 18:20:19 - INFO - Minor Addition       10   Use 90%    0.7400     0.0210   +0.0000      ['0.7500', '0.7400', '0.7600', '0.7500', '0.7000']
+2025-07-08 18:20:19 - INFO - Minor Addition       12   Use 92%    0.7410     0.0150   +0.0010      ['0.7550', '0.7350', '0.7450', '0.7550', '0.7150']
+2025-07-08 18:20:19 - INFO - Minor Addition       14   Use 94%    0.7370     0.0117   -0.0030      ['0.7350', '0.7550', '0.7450', '0.7250', '0.7250']
+2025-07-08 18:20:19 - INFO - Minor Addition       16   Use 96%    0.7360     0.0097   -0.0040      ['0.7300', '0.7550', '0.7300', '0.7350', '0.7300']
+2025-07-08 18:20:19 - INFO - Minor Addition       18   Use 98%    0.7420     0.0103   +0.0020      ['0.7600', '0.7400', '0.7350', '0.7450', '0.7300']
+2025-07-08 18:20:19 - INFO - Minor Addition       20   Use 100%   0.7400     0.0110   +0.0000      ['0.7600', '0.7400', '0.7300', '0.7400', '0.7300']
+2025-07-08 18:20:19 - INFO - Major Addition       0    Use 50%    0.7370     0.0209   -0.0030      ['0.7450', '0.7500', '0.7300', '0.7600', '0.7000']
+2025-07-08 18:20:19 - INFO - Major Addition       1    Use 100%   0.7400     0.0110   +0.0000      ['0.7600', '0.7400', '0.7300', '0.7400', '0.7300']
+2025-07-08 18:20:19 - INFO - 
+MODEL PERTURBATIONS - AVERAGED ACCURACY:
+2025-07-08 18:20:19 - INFO - Model                     Parameters           Mean Acc   Std      Δ vs Baseline Available  All Folds
+2025-07-08 18:20:19 - INFO - --------------------------------------------------------------------------------------------------------------
+2025-07-08 18:20:19 - INFO - Random Forest             depth=3, n_est=50    0.7140     0.0073   -0.0260      5/5 folds  ['0.7050', '0.7250', '0.7100', '0.7200', '0.7100']
+2025-07-08 18:20:19 - INFO - Random Forest             depth=5, n_est=100   0.7270     0.0133   -0.0130      5/5 folds  ['0.7050', '0.7400', '0.7200', '0.7300', '0.7400']
+2025-07-08 18:20:19 - INFO - Random Forest             depth=10, n_est=200  0.7370     0.0211   -0.0030      5/5 folds  ['0.7300', '0.7650', '0.7300', '0.7550', '0.7050']
+2025-07-08 18:20:19 - INFO - XGBoost                   depth=3, n_est=50    0.7370     0.0117   -0.0030      5/5 folds  ['0.7450', '0.7350', '0.7150', '0.7450', '0.7450']
+2025-07-08 18:20:19 - INFO - XGBoost                   depth=6, n_est=100   0.7340     0.0066   -0.0060      5/5 folds  ['0.7350', '0.7450', '0.7350', '0.7250', '0.7300']
+2025-07-08 18:20:19 - INFO - LightGBM                  depth=4, n_est=75    0.7460     0.0146   +0.0060      5/5 folds  ['0.7400', '0.7550', '0.7200', '0.7600', '0.7550']
+2025-07-08 18:20:19 - INFO - AdaBoost                  depth=2, n_est=30    0.7060     0.0287   -0.0340      5/5 folds  ['0.7600', '0.6900', '0.7100', '0.6800', '0.6900']
+2025-07-08 18:20:19 - INFO - 
+====================================================================================================
+2025-07-08 18:20:19 - INFO - KEY INSIGHTS FROM GERMAN CREDIT DATASET:
+2025-07-08 18:20:19 - INFO - ====================================================================================================
+2025-07-08 18:20:19 - INFO - • Baseline Performance: 0.7400 ± 0.0110
+2025-07-08 18:20:19 - INFO - • Best Data Perturbation: minor_addition bin 2 (Accuracy: 0.7470)
+2025-07-08 18:20:19 - INFO - • Worst Data Perturbation: minor_deletion bin 12 (Accuracy: 0.7260)
+2025-07-08 18:20:19 - INFO - • Data Perturbation Range: 0.7260 to 0.7470 (Δ: 0.0210)
+2025-07-08 18:20:19 - INFO - • Best Model: lightgbm_4_75 (Accuracy: 0.7460)
+2025-07-08 18:20:19 - INFO - • Worst Model: adaboost_2_30 (Accuracy: 0.7060)
+2025-07-08 18:20:19 - INFO - • Model Performance Range: 0.7060 to 0.7460 (Δ: 0.0400)
+2025-07-08 18:20:19 - INFO - • Total Experiments: 170 across 5 folds
+2025-07-08 18:20:19 - INFO - • Robustness Framework: Systematic evaluation complete!
+2025-07-08 18:20:19 - INFO - 
+3. Testing with another dataset (HELOC)...
+2025-07-08 18:20:20 - INFO - HELOC raw data - Train: (1668, 24), Test: (834, 24)
+2025-07-08 18:20:20 - INFO - HELOC processed data - Train: (1668, 24), Test: (834, 24)
+2025-07-08 18:20:20 - INFO - HELOC label column: RiskPerformance
+2025-07-08 18:20:20 - INFO - 
+====================================================================================================
+2025-07-08 18:20:20 - INFO - 🎯 COMPREHENSIVE ROBUSTNESS TESTING FRAMEWORK DEMO COMPLETED!
+2025-07-08 18:20:20 - INFO - ====================================================================================================
+2025-07-08 18:20:20 - INFO - 🕒 Completed at: 2025-07-08 18:20:20
+2025-07-08 18:20:20 - INFO - ⏱️ Total analysis time captured in log file
+2025-07-08 18:20:20 - INFO - 📝 All results saved to log file for further analysis
+2025-07-08 18:20:20 - INFO - ====================================================================================================
+2025-07-08 18:20:20 - INFO - 
+📊 DEMO SUMMARY:
+2025-07-08 18:20:20 - INFO - ✅ Comprehensive testing of ALL perturbation variations on German Credit Dataset
+2025-07-08 18:20:20 - INFO - ✅ All 5 folds analyzed with complete perturbation coverage
+2025-07-08 18:20:20 - INFO - ✅ Training sizes displayed for every model training occasion
+2025-07-08 18:20:20 - INFO - ✅ Accuracy changes (Δ) calculated relative to baseline for each fold
+2025-07-08 18:20:20 - INFO - ✅ Averaged results across all folds with standard deviations
+2025-07-08 18:20:20 - INFO - ✅ Both data and model perturbations systematically evaluated
+2025-07-08 18:20:20 - INFO - ✅ Best/worst perturbations identified with performance ranges
+2025-07-08 18:20:20 - INFO - ✅ Statistical summary with confidence intervals
+2025-07-08 18:20:20 - INFO - 
+🔧 KEY FEATURES:
+2025-07-08 18:20:20 - INFO - ✅ Simple interface: get_data(fold, raw_data=True/False)
+2025-07-08 18:20:20 - INFO - ✅ K-fold CV on entire dataset (ignoring metadata rows)
+2025-07-08 18:20:20 - INFO - ✅ Rows with missing values completely removed
+2025-07-08 18:20:20 - INFO - ✅ Label encoding for categorical features (tree-friendly)
+2025-07-08 18:20:20 - INFO - ✅ MinMax scaling for numeric features
+2025-07-08 18:20:20 - INFO - ✅ Systematic bin-based data perturbations
+2025-07-08 18:20:20 - INFO - ✅ Integrated model training with hyperparameter perturbations
+2025-07-08 18:20:20 - INFO - ✅ Support for multiple model types (RF, XGBoost, LightGBM, AdaBoost)
+2025-07-08 18:20:20 - INFO - ✅ Comprehensive robustness analysis with statistical averaging
+2025-07-08 18:20:20 - INFO - 
+💻 USAGE:
+2025-07-08 18:20:20 - INFO -   dm = DataModule('dataset.csv')
+2025-07-08 18:20:20 - INFO -   perturbation = Perturbation(dm)
+2025-07-08 18:20:20 - INFO -   train, test = perturbation.get_data(fold=0, raw_data=True)
+2025-07-08 18:20:20 - INFO -   # Data perturbations
+2025-07-08 18:20:20 - INFO -   perturbed = perturbation.perturb_data(train, 'minor_deletion', bin_number=10)
+2025-07-08 18:20:20 - INFO -   # Model perturbations
+2025-07-08 18:20:20 - INFO -   model = perturbation.perturb_model(train, 'random_forest', max_depth=5, n_estimators=100)
+2025-07-08 18:20:20 - INFO - 
+📈 DATA PERTURBATION COVERAGE:
+2025-07-08 18:20:20 - INFO -   🔹 minor_deletion: 21 bins (remove 0%-20%) - Tested every 2nd bin across 5 folds
+2025-07-08 18:20:20 - INFO -   🔹 major_deletion: 2 bins (remove 0%, 50%) - All bins tested across 5 folds
+2025-07-08 18:20:20 - INFO -   🔹 minor_addition: 21 bins (use 80%-100%) - Tested every 2nd bin across 5 folds
+2025-07-08 18:20:20 - INFO -   🔹 major_addition: 2 bins (use 50%, 100%) - All bins tested across 5 folds
+2025-07-08 18:20:20 - INFO - 
+🤖 MODEL PERTURBATION COVERAGE:
+2025-07-08 18:20:20 - INFO -   🔹 Multiple algorithms with various hyperparameter combinations
+2025-07-08 18:20:20 - INFO -   🔹 All models use 80% of training data for consistent comparison
+2025-07-08 18:20:20 - INFO -   🔹 Error handling for unavailable models
+2025-07-08 18:20:20 - INFO -   🔹 Results averaged across successful folds
+2025-07-08 18:20:20 - INFO - 
+⚙️ PREPROCESSING:
+2025-07-08 18:20:20 - INFO -   🔹 Categorical features: Label encoded (C → D)
+2025-07-08 18:20:20 - INFO -   🔹 Numeric features: MinMax scaled (N, D, B → scaled)
+2025-07-08 18:20:20 - INFO -   🔹 Perfect for tree-based algorithms!
+2025-07-08 18:20:20 - INFO - 
+🎯 ROBUSTNESS INSIGHTS:
+2025-07-08 18:20:20 - INFO -   🔹 Training size impact clearly visible
+2025-07-08 18:20:20 - INFO -   🔹 Performance changes (Δ) relative to baseline with confidence intervals
+2025-07-08 18:20:20 - INFO -   🔹 Systematic evaluation across all perturbation types
+2025-07-08 18:20:20 - INFO -   🔹 Statistical significance with mean ± standard deviation
+2025-07-08 18:20:20 - INFO -   🔹 Best/worst performing configurations identified
+2025-07-08 18:20:20 - INFO -   🔹 Ready for comprehensive robustness analysis and research!
+2025-07-08 18:20:20 - INFO - 
+🏆 FRAMEWORK BENEFITS:
+2025-07-08 18:20:20 - INFO -   🔹 Reproducible and systematic robustness evaluation
+2025-07-08 18:20:20 - INFO -   🔹 Statistical rigor with cross-fold validation
+2025-07-08 18:20:20 - INFO -   🔹 Clear performance comparisons and rankings
+2025-07-08 18:20:20 - INFO -   🔹 Publication-ready robustness analysis results

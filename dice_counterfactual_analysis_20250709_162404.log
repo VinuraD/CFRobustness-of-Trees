@@ -1,0 +1,36 @@
+2025-07-09 16:24:04 - INFO - ================================================================================
+2025-07-09 16:24:04 - INFO - DiCE COUNTERFACTUAL GENERATION - SPAMBASE DATASET
+2025-07-09 16:24:04 - INFO - ================================================================================
+2025-07-09 16:24:04 - INFO - 📝 Logging session to: dice_counterfactual_analysis_20250709_162404.log
+2025-07-09 16:24:04 - INFO - 🕒 Started at: 2025-07-09 16:24:04
+2025-07-09 16:24:04 - INFO - ================================================================================
+2025-07-09 16:24:04 - INFO - 
+1. Loading Spambase dataset...
+2025-07-09 16:24:04 - INFO - Label column: Class
+2025-07-09 16:24:04 - INFO - Feature types: 58 features
+2025-07-09 16:24:04 - INFO - Feature actions: {'PREDICT', 'FREE'}
+2025-07-09 16:24:04 - INFO - 
+2. Preparing data for fold 0...
+2025-07-09 16:24:04 - INFO - Fold 0 data shapes:
+2025-07-09 16:24:04 - INFO -   Raw - Train: (3680, 58), Test: (921, 58)
+2025-07-09 16:24:04 - INFO -   Processed - Train: (3680, 58), Test: (921, 58)
+2025-07-09 16:24:04 - INFO - Data preparation complete:
+2025-07-09 16:24:04 - INFO -   Training samples: 3680
+2025-07-09 16:24:04 - INFO -   Test samples: 921
+2025-07-09 16:24:04 - INFO -   Features: 57
+2025-07-09 16:24:04 - INFO -   Class distribution - Train: [2230 1450]
+2025-07-09 16:24:04 - INFO -   Class distribution - Test: [558 363]
+2025-07-09 16:24:04 - INFO - 
+3. Training baseline model...
+2025-07-09 16:24:05 - INFO - Baseline model performance:
+2025-07-09 16:24:05 - INFO -   Train accuracy: 0.9992
+2025-07-09 16:24:05 - INFO -   Test accuracy: 0.9577
+2025-07-09 16:24:05 - INFO - 
+4. Setting up DiCE framework...
+2025-07-09 16:24:05 - INFO - DiCE setup complete:
+2025-07-09 16:24:05 - INFO -   Continuous features: 57
+2025-07-09 16:24:05 - INFO -   Categorical features: 0
+2025-07-09 16:24:05 - INFO - 
+5. Generating counterfactuals for test set...
+2025-07-09 16:24:05 - INFO - Generating counterfactuals using method: random
+2025-07-09 16:24:05 - INFO - Test set size: 921 samples
