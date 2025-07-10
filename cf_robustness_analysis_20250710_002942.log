@@ -1,0 +1,170 @@
+2025-07-10 00:29:42 - INFO - ================================================================================
+2025-07-10 00:29:42 - INFO - COUNTERFACTUAL ROBUSTNESS ANALYSIS
+2025-07-10 00:29:42 - INFO - ================================================================================
+2025-07-10 00:29:42 - INFO - 📝 Logging session to: cf_robustness_analysis_20250710_002942.log
+2025-07-10 00:29:42 - INFO - 🕒 Started at: 2025-07-10 00:29:42
+2025-07-10 00:29:42 - INFO - ================================================================================
+2025-07-10 00:29:42 - INFO - 
+1. Loading dataset...
+2025-07-10 00:29:42 - INFO - Dataset: Spambase
+2025-07-10 00:29:42 - INFO - Label column: Class
+2025-07-10 00:29:42 - INFO - Features: 58 features
+2025-07-10 00:29:42 - INFO - 
+2. Analysis parameters:
+2025-07-10 00:29:42 - INFO -   Fold: 0
+2025-07-10 00:29:42 - INFO -   Perturbation types: minor_deletion, major_deletion, minor_addition, major_addition
+2025-07-10 00:29:42 - INFO - 
+3. Preparing unperturbed data (fold 0)...
+2025-07-10 00:29:42 - INFO - Unperturbed data shapes:
+2025-07-10 00:29:42 - INFO -   Train: (3680, 58), Test: (921, 58)
+2025-07-10 00:29:42 - INFO - Data preparation complete:
+2025-07-10 00:29:42 - INFO -   Training samples: 3680
+2025-07-10 00:29:42 - INFO -   Test samples: 921
+2025-07-10 00:29:42 - INFO -   Features: 57
+2025-07-10 00:29:42 - INFO -   Class distribution - Train: [2230 1450]
+2025-07-10 00:29:42 - INFO -   Class distribution - Test: [558 363]
+2025-07-10 00:29:42 - INFO - 
+4. Training baseline model on unperturbed data...
+2025-07-10 00:29:43 - INFO - Baseline model performance:
+2025-07-10 00:29:43 - INFO -   Train accuracy: 0.9992
+2025-07-10 00:29:43 - INFO -   Test accuracy: 0.9577
+2025-07-10 00:29:43 - INFO - 
+5. Setting up DiCE framework...
+2025-07-10 00:29:43 - INFO - DiCE setup complete:
+2025-07-10 00:29:43 - INFO -   Continuous features: 57
+2025-07-10 00:29:43 - INFO -   Categorical features: 0
+2025-07-10 00:29:43 - INFO - 
+6. Generating counterfactuals using baseline model...
+2025-07-10 00:29:43 - INFO - Generating counterfactuals using method: random
+2025-07-10 00:29:43 - INFO - Test set size: 921 samples
+2025-07-10 00:38:36 - INFO - Counterfactual generation complete:
+2025-07-10 00:38:36 - INFO -   Successful: 921/921 (100.00%)
+2025-07-10 00:38:36 - INFO -   Failed: 0/921 (0.00%)
+2025-07-10 00:38:36 - INFO - Counterfactual generation summary:
+2025-07-10 00:38:36 - INFO -   Total test samples: 921
+2025-07-10 00:38:36 - INFO -   Successful generations: 921
+2025-07-10 00:38:36 - INFO -   Success rate: 100.00%
+2025-07-10 00:38:36 - INFO - Baseline validity: 0.8882 (818/921)
+2025-07-10 00:38:36 - INFO - 
+7. Testing counterfactual robustness across perturbed datasets...
+2025-07-10 00:38:36 - INFO - ================================================================================
+2025-07-10 00:38:36 - INFO - 
+📊 MINOR_DELETION PERTURBATION ANALYSIS
+2025-07-10 00:38:36 - INFO - ------------------------------------------------------------
+2025-07-10 00:38:36 - INFO - Bin 0: Remove 0% -> 3680 samples
+2025-07-10 00:38:36 - INFO -   Model accuracy: 0.6189
+2025-07-10 00:38:36 - INFO -   Counterfactual validity: 0.1661 (153/921)
+2025-07-10 00:38:36 - INFO -   Validity change from baseline: -0.7220
+2025-07-10 00:38:36 - INFO - ----------------------------------------
+2025-07-10 00:38:36 - INFO - Bin 5: Remove 5% -> 3496 samples
+2025-07-10 00:38:37 - INFO -   Model accuracy: 0.6080
+2025-07-10 00:38:37 - INFO -   Counterfactual validity: 0.0402 (37/921)
+2025-07-10 00:38:37 - INFO -   Validity change from baseline: -0.8480
+2025-07-10 00:38:37 - INFO - ----------------------------------------
+2025-07-10 00:38:37 - INFO - Bin 10: Remove 10% -> 3312 samples
+2025-07-10 00:38:38 - INFO -   Model accuracy: 0.6059
+2025-07-10 00:38:38 - INFO -   Counterfactual validity: 0.0130 (12/921)
+2025-07-10 00:38:38 - INFO -   Validity change from baseline: -0.8751
+2025-07-10 00:38:38 - INFO - ----------------------------------------
+2025-07-10 00:38:38 - INFO - Bin 15: Remove 15% -> 3128 samples
+2025-07-10 00:38:39 - INFO -   Model accuracy: 0.6069
+2025-07-10 00:38:39 - INFO -   Counterfactual validity: 0.0369 (34/921)
+2025-07-10 00:38:39 - INFO -   Validity change from baseline: -0.8512
+2025-07-10 00:38:39 - INFO - ----------------------------------------
+2025-07-10 00:38:39 - INFO - Bin 20: Remove 20% -> 2944 samples
+2025-07-10 00:38:40 - INFO -   Model accuracy: 0.6059
+2025-07-10 00:38:40 - INFO -   Counterfactual validity: 0.0087 (8/921)
+2025-07-10 00:38:40 - INFO -   Validity change from baseline: -0.8795
+2025-07-10 00:38:40 - INFO - ----------------------------------------
+2025-07-10 00:38:40 - INFO - 
+📊 MAJOR_DELETION PERTURBATION ANALYSIS
+2025-07-10 00:38:40 - INFO - ------------------------------------------------------------
+2025-07-10 00:38:40 - INFO - Bin 0: Remove 0% -> 3680 samples
+2025-07-10 00:38:41 - INFO -   Model accuracy: 0.6189
+2025-07-10 00:38:41 - INFO -   Counterfactual validity: 0.1661 (153/921)
+2025-07-10 00:38:41 - INFO -   Validity change from baseline: -0.7220
+2025-07-10 00:38:41 - INFO - ----------------------------------------
+2025-07-10 00:38:41 - INFO - Bin 1: Remove 50% -> 1840 samples
+2025-07-10 00:38:41 - INFO -   Model accuracy: 0.6059
+2025-07-10 00:38:41 - INFO -   Counterfactual validity: 0.0000 (0/921)
+2025-07-10 00:38:41 - INFO -   Validity change from baseline: -0.8882
+2025-07-10 00:38:41 - INFO - ----------------------------------------
+2025-07-10 00:38:41 - INFO - 
+📊 MINOR_ADDITION PERTURBATION ANALYSIS
+2025-07-10 00:38:41 - INFO - ------------------------------------------------------------
+2025-07-10 00:38:41 - INFO - Bin 0: Use 80% -> 2944 samples
+2025-07-10 00:38:42 - INFO -   Model accuracy: 0.6254
+2025-07-10 00:38:42 - INFO -   Counterfactual validity: 0.1336 (123/921)
+2025-07-10 00:38:42 - INFO -   Validity change from baseline: -0.7546
+2025-07-10 00:38:42 - INFO - ----------------------------------------
+2025-07-10 00:38:42 - INFO - Bin 5: Use 85% -> 3128 samples
+2025-07-10 00:38:43 - INFO -   Model accuracy: 0.6145
+2025-07-10 00:38:43 - INFO -   Counterfactual validity: 0.1336 (123/921)
+2025-07-10 00:38:43 - INFO -   Validity change from baseline: -0.7546
+2025-07-10 00:38:43 - INFO - ----------------------------------------
+2025-07-10 00:38:43 - INFO - Bin 10: Use 90% -> 3312 samples
+2025-07-10 00:38:44 - INFO -   Model accuracy: 0.6124
+2025-07-10 00:38:44 - INFO -   Counterfactual validity: 0.0901 (83/921)
+2025-07-10 00:38:44 - INFO -   Validity change from baseline: -0.7980
+2025-07-10 00:38:44 - INFO - ----------------------------------------
+2025-07-10 00:38:44 - INFO - Bin 15: Use 95% -> 3496 samples
+2025-07-10 00:38:45 - INFO -   Model accuracy: 0.6200
+2025-07-10 00:38:45 - INFO -   Counterfactual validity: 0.1086 (100/921)
+2025-07-10 00:38:45 - INFO -   Validity change from baseline: -0.7796
+2025-07-10 00:38:45 - INFO - ----------------------------------------
+2025-07-10 00:38:45 - INFO - Bin 20: Use 100% -> 3680 samples
+2025-07-10 00:38:46 - INFO -   Model accuracy: 0.6189
+2025-07-10 00:38:46 - INFO -   Counterfactual validity: 0.1661 (153/921)
+2025-07-10 00:38:46 - INFO -   Validity change from baseline: -0.7220
+2025-07-10 00:38:46 - INFO - ----------------------------------------
+2025-07-10 00:38:46 - INFO - 
+📊 MAJOR_ADDITION PERTURBATION ANALYSIS
+2025-07-10 00:38:46 - INFO - ------------------------------------------------------------
+2025-07-10 00:38:46 - INFO - Bin 0: Use 50% -> 1840 samples
+2025-07-10 00:38:46 - INFO -   Model accuracy: 0.6819
+2025-07-10 00:38:46 - INFO -   Counterfactual validity: 0.2269 (209/921)
+2025-07-10 00:38:46 - INFO -   Validity change from baseline: -0.6612
+2025-07-10 00:38:46 - INFO - ----------------------------------------
+2025-07-10 00:38:46 - INFO - Bin 1: Use 100% -> 3680 samples
+2025-07-10 00:38:47 - INFO -   Model accuracy: 0.6189
+2025-07-10 00:38:47 - INFO -   Counterfactual validity: 0.1661 (153/921)
+2025-07-10 00:38:47 - INFO -   Validity change from baseline: -0.7220
+2025-07-10 00:38:47 - INFO - ----------------------------------------
+2025-07-10 00:38:47 - INFO - 
+8. Generating summary of counterfactual robustness...
+2025-07-10 00:38:47 - INFO - ================================================================================
+2025-07-10 00:38:47 - INFO - 
+COUNTERFACTUAL ROBUSTNESS SUMMARY:
+2025-07-10 00:38:47 - INFO - ----------------------------------------------------------------------------------------------------
+2025-07-10 00:38:47 - INFO - Perturbation    Bin   Data         Train Samples   Model Acc    CF Validity  Validity Δ   Flipped/Total  
+2025-07-10 00:38:47 - INFO - ----------------------------------------------------------------------------------------------------
+2025-07-10 00:38:47 - INFO - minor_deletion  0     Remove 0%    3680            0.6189       0.1661       -0.7220       153/921        
+2025-07-10 00:38:47 - INFO - minor_deletion  5     Remove 5%    3496            0.6080       0.0402       -0.8480       37/921         
+2025-07-10 00:38:47 - INFO - minor_deletion  10    Remove 10%   3312            0.6059       0.0130       -0.8751       12/921         
+2025-07-10 00:38:47 - INFO - minor_deletion  15    Remove 15%   3128            0.6069       0.0369       -0.8512       34/921         
+2025-07-10 00:38:47 - INFO - minor_deletion  20    Remove 20%   2944            0.6059       0.0087       -0.8795       8/921          
+2025-07-10 00:38:47 - INFO - major_deletion  0     Remove 0%    3680            0.6189       0.1661       -0.7220       153/921        
+2025-07-10 00:38:47 - INFO - major_deletion  1     Remove 50%   1840            0.6059       0.0000       -0.8882       0/921          
+2025-07-10 00:38:47 - INFO - minor_addition  0     Use 80%      2944            0.6254       0.1336       -0.7546       123/921        
+2025-07-10 00:38:47 - INFO - minor_addition  5     Use 85%      3128            0.6145       0.1336       -0.7546       123/921        
+2025-07-10 00:38:47 - INFO - minor_addition  10    Use 90%      3312            0.6124       0.0901       -0.7980       83/921         
+2025-07-10 00:38:47 - INFO - minor_addition  15    Use 95%      3496            0.6200       0.1086       -0.7796       100/921        
+2025-07-10 00:38:47 - INFO - minor_addition  20    Use 100%     3680            0.6189       0.1661       -0.7220       153/921        
+2025-07-10 00:38:47 - INFO - major_addition  0     Use 50%      1840            0.6819       0.2269       -0.6612       209/921        
+2025-07-10 00:38:47 - INFO - major_addition  1     Use 100%     3680            0.6189       0.1661       -0.7220       153/921        
+2025-07-10 00:38:48 - INFO - 
+Plot saved to: cf_robustness_plot_20250710_003848.png
+2025-07-10 00:38:48 - INFO - 
+================================================================================
+2025-07-10 00:38:48 - INFO - COUNTERFACTUAL ROBUSTNESS INSIGHTS
+2025-07-10 00:38:48 - INFO - ================================================================================
+2025-07-10 00:38:48 - INFO - Most robust to: major_addition (avg validity change: -0.7220)
+2025-07-10 00:38:48 - INFO - Least robust to: major_deletion (avg validity change: -0.8882)
+2025-07-10 00:38:48 - INFO - Overall counterfactual robustness score: 0.1907 (higher is better)
+2025-07-10 00:38:48 - INFO - 
+================================================================================
+2025-07-10 00:38:48 - INFO - 🏁 COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!
+2025-07-10 00:38:48 - INFO - ================================================================================
+2025-07-10 00:38:48 - INFO - 🕒 Completed at: 2025-07-10 00:38:48
+2025-07-10 00:38:48 - INFO - 📝 Complete analysis saved to: cf_robustness_analysis_20250710_002942.log
+2025-07-10 00:38:48 - INFO - ================================================================================

@@ -1,0 +1,344 @@
+2025-07-10 01:14:23 - INFO - ================================================================================
+2025-07-10 01:14:23 - INFO - COUNTERFACTUAL ROBUSTNESS ANALYSIS (v2)
+2025-07-10 01:14:23 - INFO - ================================================================================
+2025-07-10 01:14:23 - INFO - 📝 Logging session to: cf_robustness_analysis_v2_20250710_011423.log
+2025-07-10 01:14:23 - INFO - 🕒 Started at: 2025-07-10 01:14:23
+2025-07-10 01:14:23 - INFO - ================================================================================
+2025-07-10 01:14:23 - INFO - 
+1. Loading dataset...
+2025-07-10 01:14:23 - INFO - Dataset: Spambase
+2025-07-10 01:14:23 - INFO - Label column: Class
+2025-07-10 01:14:23 - INFO - Features: 58 features
+2025-07-10 01:14:23 - INFO - 
+2. Analysis parameters:
+2025-07-10 01:14:23 - INFO -   Fold: 0
+2025-07-10 01:14:23 - INFO -   Data perturbation types: ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
+2025-07-10 01:14:23 - INFO -   Model perturbations: 7 configurations
+2025-07-10 01:14:23 - INFO -     - random_forest (max_depth=3, n_estimators=50)
+2025-07-10 01:14:23 - INFO -     - random_forest (max_depth=5, n_estimators=100)
+2025-07-10 01:14:23 - INFO -     - random_forest (max_depth=10, n_estimators=200)
+2025-07-10 01:14:23 - INFO -     - xgboost (max_depth=3, n_estimators=50)
+2025-07-10 01:14:23 - INFO -     - xgboost (max_depth=6, n_estimators=100)
+2025-07-10 01:14:23 - INFO -     - lightgbm (max_depth=4, n_estimators=75)
+2025-07-10 01:14:23 - INFO -     - adaboost (max_depth=2, n_estimators=30)
+2025-07-10 01:14:23 - INFO - 
+3. Preparing unperturbed data (fold 0)...
+2025-07-10 01:14:23 - INFO - Unperturbed data shapes:
+2025-07-10 01:14:23 - INFO -   Raw train: (3680, 58)
+2025-07-10 01:14:23 - INFO -   Processed - Train: (3680, 58), Test: (921, 58)
+2025-07-10 01:14:23 - INFO - Data preparation complete:
+2025-07-10 01:14:23 - INFO -   Training samples: 3680
+2025-07-10 01:14:23 - INFO -   Test samples: 921
+2025-07-10 01:14:23 - INFO -   Features: 57
+2025-07-10 01:14:23 - INFO -   Class distribution - Train: [2230 1450]
+2025-07-10 01:14:23 - INFO -   Class distribution - Test: [558 363]
+2025-07-10 01:14:23 - INFO - 
+4. Training baseline model on unperturbed data...
+2025-07-10 01:14:24 - INFO - Baseline model (RandomForest, max_depth=5, n_estimators=100):
+2025-07-10 01:14:24 - INFO -   Train accuracy: 0.9326
+2025-07-10 01:14:24 - INFO -   Test accuracy: 0.9186
+2025-07-10 01:14:24 - INFO - 
+5. Setting up DiCE framework...
+2025-07-10 01:14:24 - INFO - DiCE setup complete:
+2025-07-10 01:14:24 - INFO -   Continuous features: 57
+2025-07-10 01:14:24 - INFO -   Categorical features: 0
+2025-07-10 01:14:24 - INFO - 
+6. Generating counterfactuals using baseline model...
+2025-07-10 01:14:24 - INFO - Generating counterfactuals using method: random
+2025-07-10 01:14:24 - INFO - Test set size: 921 samples
+2025-07-10 01:23:49 - INFO - Counterfactual generation complete:
+2025-07-10 01:23:49 - INFO -   Successful: 921/921 (100.00%)
+2025-07-10 01:23:49 - INFO -   Failed: 0/921 (0.00%)
+2025-07-10 01:23:49 - INFO - Counterfactual generation summary:
+2025-07-10 01:23:49 - INFO -   Total test samples: 921
+2025-07-10 01:23:49 - INFO -   Successful generations: 921
+2025-07-10 01:23:49 - INFO -   Success rate: 100.00%
+2025-07-10 01:23:49 - INFO - Baseline validity: 1.0000 (921/921)
+2025-07-10 01:23:49 - INFO - 
+7. Testing counterfactual robustness across data perturbations...
+2025-07-10 01:23:49 - INFO - ================================================================================
+2025-07-10 01:23:49 - INFO - 
+📊 MINOR_DELETION PERTURBATION ANALYSIS
+2025-07-10 01:23:49 - INFO - ------------------------------------------------------------
+2025-07-10 01:23:49 - INFO - Bin 0: Remove 0% -> 3680 samples
+2025-07-10 01:23:49 - INFO -   Model accuracy: 0.6091
+2025-07-10 01:23:49 - INFO -   Counterfactual validity: 0.0858 (79/921)
+2025-07-10 01:23:49 - INFO -   Validity change from baseline: -0.9142
+2025-07-10 01:23:49 - INFO - ----------------------------------------
+2025-07-10 01:23:49 - INFO - Bin 5: Remove 5% -> 3496 samples
+2025-07-10 01:23:49 - INFO -   Model accuracy: 0.6102
+2025-07-10 01:23:49 - INFO -   Counterfactual validity: 0.0988 (91/921)
+2025-07-10 01:23:49 - INFO -   Validity change from baseline: -0.9012
+2025-07-10 01:23:49 - INFO - ----------------------------------------
+2025-07-10 01:23:49 - INFO - Bin 10: Remove 10% -> 3312 samples
+2025-07-10 01:23:50 - INFO -   Model accuracy: 0.6059
+2025-07-10 01:23:50 - INFO -   Counterfactual validity: 0.0347 (32/921)
+2025-07-10 01:23:50 - INFO -   Validity change from baseline: -0.9653
+2025-07-10 01:23:50 - INFO - ----------------------------------------
+2025-07-10 01:23:50 - INFO - Bin 15: Remove 15% -> 3128 samples
+2025-07-10 01:23:50 - INFO -   Model accuracy: 0.6059
+2025-07-10 01:23:50 - INFO -   Counterfactual validity: 0.0141 (13/921)
+2025-07-10 01:23:50 - INFO -   Validity change from baseline: -0.9859
+2025-07-10 01:23:50 - INFO - ----------------------------------------
+2025-07-10 01:23:50 - INFO - Bin 20: Remove 20% -> 2944 samples
+2025-07-10 01:23:50 - INFO -   Model accuracy: 0.6059
+2025-07-10 01:23:50 - INFO -   Counterfactual validity: 0.0109 (10/921)
+2025-07-10 01:23:50 - INFO -   Validity change from baseline: -0.9891
+2025-07-10 01:23:50 - INFO - ----------------------------------------
+2025-07-10 01:23:50 - INFO - 
+📊 MAJOR_DELETION PERTURBATION ANALYSIS
+2025-07-10 01:23:50 - INFO - ------------------------------------------------------------
+2025-07-10 01:23:50 - INFO - Bin 0: Remove 0% -> 3680 samples
+2025-07-10 01:23:51 - INFO -   Model accuracy: 0.6091
+2025-07-10 01:23:51 - INFO -   Counterfactual validity: 0.0858 (79/921)
+2025-07-10 01:23:51 - INFO -   Validity change from baseline: -0.9142
+2025-07-10 01:23:51 - INFO - ----------------------------------------
+2025-07-10 01:23:51 - INFO - Bin 1: Remove 50% -> 1840 samples
+2025-07-10 01:23:51 - INFO -   Model accuracy: 0.6059
+2025-07-10 01:23:51 - INFO -   Counterfactual validity: 0.0000 (0/921)
+2025-07-10 01:23:51 - INFO -   Validity change from baseline: -1.0000
+2025-07-10 01:23:51 - INFO - ----------------------------------------
+2025-07-10 01:23:51 - INFO - 
+📊 MINOR_ADDITION PERTURBATION ANALYSIS
+2025-07-10 01:23:51 - INFO - ------------------------------------------------------------
+2025-07-10 01:23:51 - INFO - Bin 0: Use 80% -> 2944 samples
+2025-07-10 01:23:51 - INFO -   Model accuracy: 0.6276
+2025-07-10 01:23:51 - INFO -   Counterfactual validity: 0.2237 (206/921)
+2025-07-10 01:23:51 - INFO -   Validity change from baseline: -0.7763
+2025-07-10 01:23:51 - INFO - ----------------------------------------
+2025-07-10 01:23:51 - INFO - Bin 5: Use 85% -> 3128 samples
+2025-07-10 01:23:51 - INFO -   Model accuracy: 0.6145
+2025-07-10 01:23:51 - INFO -   Counterfactual validity: 0.1357 (125/921)
+2025-07-10 01:23:51 - INFO -   Validity change from baseline: -0.8643
+2025-07-10 01:23:51 - INFO - ----------------------------------------
+2025-07-10 01:23:51 - INFO - Bin 10: Use 90% -> 3312 samples
+2025-07-10 01:23:52 - INFO -   Model accuracy: 0.6178
+2025-07-10 01:23:52 - INFO -   Counterfactual validity: 0.1260 (116/921)
+2025-07-10 01:23:52 - INFO -   Validity change from baseline: -0.8740
+2025-07-10 01:23:52 - INFO - ----------------------------------------
+2025-07-10 01:23:52 - INFO - Bin 15: Use 95% -> 3496 samples
+2025-07-10 01:23:52 - INFO -   Model accuracy: 0.6102
+2025-07-10 01:23:52 - INFO -   Counterfactual validity: 0.0934 (86/921)
+2025-07-10 01:23:52 - INFO -   Validity change from baseline: -0.9066
+2025-07-10 01:23:52 - INFO - ----------------------------------------
+2025-07-10 01:23:52 - INFO - Bin 20: Use 100% -> 3680 samples
+2025-07-10 01:23:52 - INFO -   Model accuracy: 0.6091
+2025-07-10 01:23:52 - INFO -   Counterfactual validity: 0.0858 (79/921)
+2025-07-10 01:23:52 - INFO -   Validity change from baseline: -0.9142
+2025-07-10 01:23:52 - INFO - ----------------------------------------
+2025-07-10 01:23:52 - INFO - 
+📊 MAJOR_ADDITION PERTURBATION ANALYSIS
+2025-07-10 01:23:52 - INFO - ------------------------------------------------------------
+2025-07-10 01:23:52 - INFO - Bin 0: Use 50% -> 1840 samples
+2025-07-10 01:23:53 - INFO -   Model accuracy: 0.8404
+2025-07-10 01:23:53 - INFO -   Counterfactual validity: 0.7199 (663/921)
+2025-07-10 01:23:53 - INFO -   Validity change from baseline: -0.2801
+2025-07-10 01:23:53 - INFO - ----------------------------------------
+2025-07-10 01:23:53 - INFO - Bin 1: Use 100% -> 3680 samples
+2025-07-10 01:23:53 - INFO -   Model accuracy: 0.6091
+2025-07-10 01:23:53 - INFO -   Counterfactual validity: 0.0858 (79/921)
+2025-07-10 01:23:53 - INFO -   Validity change from baseline: -0.9142
+2025-07-10 01:23:53 - INFO - ----------------------------------------
+2025-07-10 01:23:53 - INFO - 
+8. Testing counterfactual robustness across model perturbations...
+2025-07-10 01:23:53 - INFO - ================================================================================
+2025-07-10 01:23:53 - INFO - 
+🤖 MODEL PERTURBATION ANALYSIS
+2025-07-10 01:23:53 - INFO - ------------------------------------------------------------
+2025-07-10 01:23:53 - INFO - Model: random_forest (max_depth=3, n_estimators=50)
+2025-07-10 01:23:53 - INFO -   Model accuracy: 0.6493
+2025-07-10 01:23:53 - INFO -   Counterfactual validity: 0.2291 (211/921)
+2025-07-10 01:23:53 - INFO -   Validity change from baseline: -0.7709
+2025-07-10 01:23:53 - INFO - ----------------------------------------
+2025-07-10 01:23:53 - INFO - Model: random_forest (max_depth=5, n_estimators=100)
+2025-07-10 01:23:54 - INFO -   Model accuracy: 0.6276
+2025-07-10 01:23:54 - INFO -   Counterfactual validity: 0.2237 (206/921)
+2025-07-10 01:23:54 - INFO -   Validity change from baseline: -0.7763
+2025-07-10 01:23:54 - INFO - ----------------------------------------
+2025-07-10 01:23:54 - INFO - Model: random_forest (max_depth=10, n_estimators=200)
+2025-07-10 01:23:54 - INFO -   Model accuracy: 0.6189
+2025-07-10 01:23:54 - INFO -   Counterfactual validity: 0.1716 (158/921)
+2025-07-10 01:23:54 - INFO -   Validity change from baseline: -0.8284
+2025-07-10 01:23:54 - INFO - ----------------------------------------
+2025-07-10 01:23:54 - INFO - Model: xgboost (max_depth=3, n_estimators=50)
+2025-07-10 01:23:54 - INFO -   Model accuracy: 0.6526
+2025-07-10 01:23:54 - INFO -   Counterfactual validity: 0.2812 (259/921)
+2025-07-10 01:23:54 - INFO -   Validity change from baseline: -0.7188
+2025-07-10 01:23:54 - INFO - ----------------------------------------
+2025-07-10 01:23:54 - INFO - Model: xgboost (max_depth=6, n_estimators=100)
+2025-07-10 01:23:55 - INFO -   Model accuracy: 0.6754
+2025-07-10 01:23:55 - INFO -   Counterfactual validity: 0.2953 (272/921)
+2025-07-10 01:23:55 - INFO -   Validity change from baseline: -0.7047
+2025-07-10 01:23:55 - INFO - ----------------------------------------
+2025-07-10 01:23:55 - INFO - Model: lightgbm (max_depth=4, n_estimators=75)
+2025-07-10 01:23:55 - INFO -   Model accuracy: 0.6580
+2025-07-10 01:23:55 - INFO -   Counterfactual validity: 0.2454 (226/921)
+2025-07-10 01:23:55 - INFO -   Validity change from baseline: -0.7546
+2025-07-10 01:23:55 - INFO - ----------------------------------------
+2025-07-10 01:23:55 - INFO - Model: adaboost (max_depth=2, n_estimators=30)
+2025-07-10 01:23:56 - INFO -   Model accuracy: 0.8317
+2025-07-10 01:23:56 - INFO -   Counterfactual validity: 0.4777 (440/921)
+2025-07-10 01:23:56 - INFO -   Validity change from baseline: -0.5223
+2025-07-10 01:23:56 - INFO - ----------------------------------------
+2025-07-10 01:23:56 - INFO - 
+9. Testing combined data+model perturbation robustness...
+2025-07-10 01:23:56 - INFO - ================================================================================
+2025-07-10 01:23:56 - INFO - Testing 12 representative data+model combinations...
+2025-07-10 01:23:56 - INFO - Data: minor_deletion (Remove 10%), Model: random_forest (depth=5, trees=100)
+2025-07-10 01:23:56 - INFO -   Train samples: 3312
+2025-07-10 01:23:56 - INFO -   Model accuracy: 0.6124
+2025-07-10 01:23:56 - INFO -   Counterfactual validity: 0.0749 (69/921)
+2025-07-10 01:23:56 - INFO -   Validity change from baseline: -0.9251
+2025-07-10 01:23:56 - INFO - ----------------------------------------
+2025-07-10 01:23:56 - INFO - Data: minor_deletion (Remove 10%), Model: xgboost (depth=3, trees=50)
+2025-07-10 01:23:56 - INFO -   Train samples: 3312
+2025-07-10 01:23:56 - INFO -   Model accuracy: 0.6287
+2025-07-10 01:23:56 - INFO -   Counterfactual validity: 0.1162 (107/921)
+2025-07-10 01:23:56 - INFO -   Validity change from baseline: -0.8838
+2025-07-10 01:23:56 - INFO - ----------------------------------------
+2025-07-10 01:23:56 - INFO - Data: minor_deletion (Remove 10%), Model: lightgbm (depth=4, trees=75)
+2025-07-10 01:23:56 - INFO -   Train samples: 3312
+2025-07-10 01:23:56 - INFO -   Model accuracy: 0.6124
+2025-07-10 01:23:56 - INFO -   Counterfactual validity: 0.0521 (48/921)
+2025-07-10 01:23:56 - INFO -   Validity change from baseline: -0.9479
+2025-07-10 01:23:56 - INFO - ----------------------------------------
+2025-07-10 01:23:56 - INFO - Data: major_deletion (Remove 50%), Model: random_forest (depth=5, trees=100)
+2025-07-10 01:23:56 - INFO -   Train samples: 1840
+2025-07-10 01:23:56 - INFO -   Model accuracy: 0.6059
+2025-07-10 01:23:56 - INFO -   Counterfactual validity: 0.0000 (0/921)
+2025-07-10 01:23:56 - INFO -   Validity change from baseline: -1.0000
+2025-07-10 01:23:56 - INFO - ----------------------------------------
+2025-07-10 01:23:56 - INFO - Data: major_deletion (Remove 50%), Model: xgboost (depth=3, trees=50)
+2025-07-10 01:23:56 - INFO -   Train samples: 1840
+2025-07-10 01:23:56 - INFO -   Model accuracy: 0.6059
+2025-07-10 01:23:56 - INFO -   Counterfactual validity: 0.0000 (0/921)
+2025-07-10 01:23:56 - INFO -   Validity change from baseline: -1.0000
+2025-07-10 01:23:56 - INFO - ----------------------------------------
+2025-07-10 01:23:56 - INFO - Data: major_deletion (Remove 50%), Model: lightgbm (depth=4, trees=75)
+2025-07-10 01:23:56 - INFO -   Train samples: 1840
+2025-07-10 01:23:56 - INFO -   Model accuracy: 0.6059
+2025-07-10 01:23:56 - INFO -   Counterfactual validity: 0.0000 (0/921)
+2025-07-10 01:23:56 - INFO -   Validity change from baseline: -1.0000
+2025-07-10 01:23:56 - INFO - ----------------------------------------
+2025-07-10 01:23:57 - INFO - Data: minor_addition (Use 90%), Model: random_forest (depth=5, trees=100)
+2025-07-10 01:23:57 - INFO -   Train samples: 3312
+2025-07-10 01:23:57 - INFO -   Model accuracy: 0.6602
+2025-07-10 01:23:57 - INFO -   Counterfactual validity: 0.3246 (299/921)
+2025-07-10 01:23:57 - INFO -   Validity change from baseline: -0.6754
+2025-07-10 01:23:57 - INFO - ----------------------------------------
+2025-07-10 01:23:57 - INFO - Data: minor_addition (Use 90%), Model: xgboost (depth=3, trees=50)
+2025-07-10 01:23:57 - INFO -   Train samples: 3312
+2025-07-10 01:23:57 - INFO -   Model accuracy: 0.7644
+2025-07-10 01:23:57 - INFO -   Counterfactual validity: 0.5168 (476/921)
+2025-07-10 01:23:57 - INFO -   Validity change from baseline: -0.4832
+2025-07-10 01:23:57 - INFO - ----------------------------------------
+2025-07-10 01:23:57 - INFO - Data: minor_addition (Use 90%), Model: lightgbm (depth=4, trees=75)
+2025-07-10 01:23:57 - INFO -   Train samples: 3312
+2025-07-10 01:23:57 - INFO -   Model accuracy: 0.7068
+2025-07-10 01:23:57 - INFO -   Counterfactual validity: 0.3724 (343/921)
+2025-07-10 01:23:57 - INFO -   Validity change from baseline: -0.6276
+2025-07-10 01:23:57 - INFO - ----------------------------------------
+2025-07-10 01:23:57 - INFO - Data: major_addition (Use 50%), Model: random_forest (depth=5, trees=100)
+2025-07-10 01:23:57 - INFO -   Train samples: 1840
+2025-07-10 01:23:57 - INFO -   Model accuracy: 0.3941
+2025-07-10 01:23:57 - INFO -   Counterfactual validity: 0.0000 (0/921)
+2025-07-10 01:23:57 - INFO -   Validity change from baseline: -1.0000
+2025-07-10 01:23:57 - INFO - ----------------------------------------
+2025-07-10 01:23:58 - INFO - Data: major_addition (Use 50%), Model: xgboost (depth=3, trees=50)
+2025-07-10 01:23:58 - INFO -   Train samples: 1840
+2025-07-10 01:23:58 - INFO -   Model accuracy: 0.4734
+2025-07-10 01:23:58 - INFO -   Counterfactual validity: 0.0803 (74/921)
+2025-07-10 01:23:58 - INFO -   Validity change from baseline: -0.9197
+2025-07-10 01:23:58 - INFO - ----------------------------------------
+2025-07-10 01:23:58 - INFO - Data: major_addition (Use 50%), Model: lightgbm (depth=4, trees=75)
+2025-07-10 01:23:58 - INFO -   Train samples: 1840
+2025-07-10 01:23:58 - INFO -   Model accuracy: 0.7329
+2025-07-10 01:23:58 - INFO -   Counterfactual validity: 0.3920 (361/921)
+2025-07-10 01:23:58 - INFO -   Validity change from baseline: -0.6080
+2025-07-10 01:23:58 - INFO - ----------------------------------------
+2025-07-10 01:23:58 - INFO - 
+10. Generating summary of counterfactual robustness...
+2025-07-10 01:23:58 - INFO - ================================================================================
+2025-07-10 01:23:58 - INFO - 
+DATA PERTURBATION ROBUSTNESS SUMMARY:
+2025-07-10 01:23:58 - INFO - ----------------------------------------------------------------------------------------------------
+2025-07-10 01:23:58 - INFO - Perturbation    Bin   Data         Train Samples   Model Acc    CF Validity  Validity Δ   Flipped/Total  
+2025-07-10 01:23:58 - INFO - ----------------------------------------------------------------------------------------------------
+2025-07-10 01:23:58 - INFO - minor_deletion  0     Remove 0%    3680            0.6091       0.0858       -0.9142       79/921
+2025-07-10 01:23:58 - INFO - minor_deletion  5     Remove 5%    3496            0.6102       0.0988       -0.9012       91/921
+2025-07-10 01:23:58 - INFO - minor_deletion  10    Remove 10%   3312            0.6059       0.0347       -0.9653       32/921
+2025-07-10 01:23:58 - INFO - minor_deletion  15    Remove 15%   3128            0.6059       0.0141       -0.9859       13/921
+2025-07-10 01:23:58 - INFO - minor_deletion  20    Remove 20%   2944            0.6059       0.0109       -0.9891       10/921
+2025-07-10 01:23:58 - INFO - major_deletion  0     Remove 0%    3680            0.6091       0.0858       -0.9142       79/921
+2025-07-10 01:23:58 - INFO - major_deletion  1     Remove 50%   1840            0.6059       0.0000       -1.0000       0/921
+2025-07-10 01:23:58 - INFO - minor_addition  0     Use 80%      2944            0.6276       0.2237       -0.7763       206/921
+2025-07-10 01:23:58 - INFO - minor_addition  5     Use 85%      3128            0.6145       0.1357       -0.8643       125/921
+2025-07-10 01:23:58 - INFO - minor_addition  10    Use 90%      3312            0.6178       0.1260       -0.8740       116/921
+2025-07-10 01:23:58 - INFO - minor_addition  15    Use 95%      3496            0.6102       0.0934       -0.9066       86/921
+2025-07-10 01:23:58 - INFO - minor_addition  20    Use 100%     3680            0.6091       0.0858       -0.9142       79/921
+2025-07-10 01:23:58 - INFO - major_addition  0     Use 50%      1840            0.8404       0.7199       -0.2801       663/921
+2025-07-10 01:23:58 - INFO - major_addition  1     Use 100%     3680            0.6091       0.0858       -0.9142       79/921
+2025-07-10 01:23:58 - INFO - 
+MODEL PERTURBATION ROBUSTNESS SUMMARY:
+2025-07-10 01:23:58 - INFO - ----------------------------------------------------------------------------------------------------
+2025-07-10 01:23:58 - INFO - Model Type      Max Depth  N Estimators    Model Acc    CF Validity  Validity Δ   Flipped/Total  
+2025-07-10 01:23:58 - INFO - ----------------------------------------------------------------------------------------------------
+2025-07-10 01:23:58 - INFO - random_forest   3          50              0.6493       0.2291       -0.7709       211/921
+2025-07-10 01:23:58 - INFO - random_forest   5          100             0.6276       0.2237       -0.7763       206/921
+2025-07-10 01:23:58 - INFO - random_forest   10         200             0.6189       0.1716       -0.8284       158/921
+2025-07-10 01:23:58 - INFO - xgboost         3          50              0.6526       0.2812       -0.7188       259/921
+2025-07-10 01:23:58 - INFO - xgboost         6          100             0.6754       0.2953       -0.7047       272/921
+2025-07-10 01:23:58 - INFO - lightgbm        4          75              0.6580       0.2454       -0.7546       226/921
+2025-07-10 01:23:58 - INFO - adaboost        2          30              0.8317       0.4777       -0.5223       440/921
+2025-07-10 01:23:58 - INFO - 
+COMBINED DATA+MODEL PERTURBATION ROBUSTNESS SUMMARY:
+2025-07-10 01:23:58 - INFO - ------------------------------------------------------------------------------------------------------------------------
+2025-07-10 01:23:58 - INFO - Data Perturbation         Model Type      Parameters           Train Samples   Model Acc    CF Validity  Validity Δ  
+2025-07-10 01:23:58 - INFO - ------------------------------------------------------------------------------------------------------------------------
+2025-07-10 01:23:58 - INFO - minor_deletion (Remove 10%) random_forest   d=5, n=100           3312            0.6124       0.0749       -0.9251
+2025-07-10 01:23:58 - INFO - minor_deletion (Remove 10%) xgboost         d=3, n=50            3312            0.6287       0.1162       -0.8838
+2025-07-10 01:23:58 - INFO - minor_deletion (Remove 10%) lightgbm        d=4, n=75            3312            0.6124       0.0521       -0.9479
+2025-07-10 01:23:58 - INFO - major_deletion (Remove 50%) random_forest   d=5, n=100           1840            0.6059       0.0000       -1.0000
+2025-07-10 01:23:58 - INFO - major_deletion (Remove 50%) xgboost         d=3, n=50            1840            0.6059       0.0000       -1.0000
+2025-07-10 01:23:58 - INFO - major_deletion (Remove 50%) lightgbm        d=4, n=75            1840            0.6059       0.0000       -1.0000
+2025-07-10 01:23:58 - INFO - minor_addition (Use 90%)  random_forest   d=5, n=100           3312            0.6602       0.3246       -0.6754
+2025-07-10 01:23:58 - INFO - minor_addition (Use 90%)  xgboost         d=3, n=50            3312            0.7644       0.5168       -0.4832
+2025-07-10 01:23:58 - INFO - minor_addition (Use 90%)  lightgbm        d=4, n=75            3312            0.7068       0.3724       -0.6276
+2025-07-10 01:23:58 - INFO - major_addition (Use 50%)  random_forest   d=5, n=100           1840            0.3941       0.0000       -1.0000
+2025-07-10 01:23:58 - INFO - major_addition (Use 50%)  xgboost         d=3, n=50            1840            0.4734       0.0803       -0.9197
+2025-07-10 01:23:58 - INFO - major_addition (Use 50%)  lightgbm        d=4, n=75            1840            0.7329       0.3920       -0.6080
+2025-07-10 01:23:58 - INFO - 
+Data perturbation plot saved to: cf_data_robustness_plot_20250710_012358.png
+2025-07-10 01:23:59 - INFO - Model perturbation plot saved to: cf_model_robustness_plot_20250710_012358.png
+2025-07-10 01:23:59 - INFO - Combined perturbation validity heatmap saved to: cf_combined_validity_heatmap_20250710_012359.png
+2025-07-10 01:23:59 - INFO - Combined perturbation delta heatmap saved to: cf_combined_delta_heatmap_20250710_012359.png
+2025-07-10 01:23:59 - INFO - 
+================================================================================
+2025-07-10 01:23:59 - INFO - COUNTERFACTUAL ROBUSTNESS INSIGHTS
+2025-07-10 01:23:59 - INFO - ================================================================================
+2025-07-10 01:23:59 - INFO - 
+📊 DATA PERTURBATION INSIGHTS:
+2025-07-10 01:23:59 - INFO - • Most robust to: major_addition (avg validity change: -0.5972)
+2025-07-10 01:23:59 - INFO - • Least robust to: major_deletion (avg validity change: -1.0000)
+2025-07-10 01:23:59 - INFO - • Overall data perturbation robustness score: 0.1438 (higher is better)
+2025-07-10 01:23:59 - INFO - 
+🤖 MODEL PERTURBATION INSIGHTS:
+2025-07-10 01:23:59 - INFO - • Most robust to: adaboost (avg validity change: -0.5223)
+2025-07-10 01:23:59 - INFO - • Least robust to: random_forest (avg validity change: -0.7919)
+2025-07-10 01:23:59 - INFO - • Overall model perturbation robustness score: 0.3049 (higher is better)
+2025-07-10 01:23:59 - INFO - 
+🔄 COMBINED PERTURBATION INSIGHTS:
+2025-07-10 01:23:59 - INFO - • Highest validity combination: minor_addition (Use 90%), xgboost (d=3, n=50)
+2025-07-10 01:23:59 - INFO -   Validity: 0.5168, Change from baseline: -0.4832
+2025-07-10 01:23:59 - INFO - • Lowest validity combination: major_deletion (Remove 50%), random_forest (d=5, n=100)
+2025-07-10 01:23:59 - INFO -   Validity: 0.0000, Change from baseline: -1.0000
+2025-07-10 01:23:59 - INFO - • Overall combined perturbation robustness score: 0.1608 (higher is better)
+2025-07-10 01:23:59 - INFO - 
+================================================================================
+2025-07-10 01:23:59 - INFO - 🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!
+2025-07-10 01:23:59 - INFO - ================================================================================
+2025-07-10 01:23:59 - INFO - 🕒 Completed at: 2025-07-10 01:23:59
+2025-07-10 01:23:59 - INFO - 📝 Complete analysis saved to: cf_robustness_analysis_v2_20250710_011423.log
+2025-07-10 01:23:59 - INFO - ================================================================================
+2025-07-10 01:23:59 - INFO - Total experiments run: 33
+2025-07-10 01:23:59 - INFO - Total visualizations created: 4
