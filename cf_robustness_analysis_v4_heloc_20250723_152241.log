@@ -1,0 +1,9 @@
+2025-07-23 15:22:41 - INFO - ================================================================================
+2025-07-23 15:22:41 - INFO - COUNTERFACTUAL ROBUSTNESS ANALYSIS (v4) - HELOC DATASET
+2025-07-23 15:22:41 - INFO - ================================================================================
+2025-07-23 15:22:41 - INFO - 📝 Logging session to: cf_robustness_analysis_v4_heloc_20250723_152241.log
+2025-07-23 15:22:41 - INFO - 🕒 Started at: 2025-07-23 15:22:41
+2025-07-23 15:22:41 - INFO - ================================================================================
+2025-07-23 15:22:41 - INFO - 
+1. Loading HELOC dataset...
+2025-07-23 15:22:41 - INFO - Error loading dataset: [Errno 2] No such file or directory: 'data\\heloc_dataset_v1_withmeta.csv'

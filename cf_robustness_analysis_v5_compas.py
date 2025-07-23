@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Counterfactual Robustness Analysis (v3) - German Credit Dataset
+Counterfactual Robustness Analysis (v5) - COMPAS Dataset
 
 This script evaluates the robustness of counterfactual explanations across two separate experiments:
 1. Data perturbations - testing how changes in training data affect counterfactual validity
@@ -15,7 +15,7 @@ The workflow is:
    - Train different model types on the full unperturbed dataset
    - Evaluate how valid the original counterfactuals remain
 
-This version uses the German Credit dataset which contains heterogeneous features (categorical and numerical).
+This version uses the COMPAS dataset which contains heterogeneous features (categorical and numerical).
 This helps quantify the independent effects of data and model choices on counterfactual explanation stability.
 """
 
@@ -48,7 +48,7 @@ from perturb import Perturbation
 def setup_logging():
     """Setup comprehensive logging to both console and file"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"cf_robustness_analysis_v3_{timestamp}.log"
+    log_filename = f"cf_robustness_analysis_v5_compas_{timestamp}.log"
     
     logger = logging.getLogger('CFRobustness')
     logger.setLevel(logging.INFO)
@@ -79,32 +79,46 @@ def log_print(*args, **kwargs):
     logger = logging.getLogger('CFRobustness')
     logger.info(message)
 
-def prepare_german_credit_features(df):
+def prepare_compas_features(df):
     """
-    Prepare German Credit features for DiCE, handling categorical and numerical features
+    Prepare COMPAS features for DiCE, handling categorical and numerical features
     
     Args:
-        df: DataFrame with German Credit data
+        df: DataFrame with COMPAS data
         
     Returns:
         continuous_features: List of continuous feature names
         categorical_features: List of categorical feature names
     """
-    # Define categorical and continuous features based on German Credit dataset
-    categorical_features = ['Sex', 'Housing', 'SavingAccounts', 'CheckingAccount', 'Purpose']
+    # COMPAS dataset typically includes criminal justice features
+    # Common categorical features in COMPAS
+    known_categorical = ['sex', 'race', 'c_charge_degree', 'score_text', 'v_score_text']
     
-    # Numerical features (including ordinal Job which we'll treat as continuous)
-    continuous_features = ['Age', 'Job', 'CreditAmount', 'Duration']
+    # Common continuous features in COMPAS  
+    known_continuous = ['age', 'juv_fel_count', 'juv_misd_count', 'juv_other_count', 
+                       'priors_count', 'days_b_screening_arrest', 'decile_score', 'v_decile_score']
     
-    # Ensure all expected features exist in the dataframe
-    available_categorical = [f for f in categorical_features if f in df.columns]
-    available_continuous = [f for f in continuous_features if f in df.columns]
+    all_features = [col for col in df.columns if not col.lower().startswith('two_year') and 
+                   not col.lower().startswith('is_recid') and col != 'PREDICT']  # Exclude target-like columns
     
-    log_print(f"German Credit feature analysis:")
-    log_print(f"  Categorical features: {available_categorical}")
-    log_print(f"  Continuous features: {available_continuous}")
+    # Identify categorical vs continuous features based on actual data
+    categorical_features = []
+    continuous_features = []
     
-    return available_continuous, available_categorical
+    for feature in all_features:
+        feature_lower = feature.lower()
+        if (feature_lower in known_categorical or 
+            df[feature].dtype == 'object' or 
+            (df[feature].nunique() <= 10 and df[feature].dtype in ['int64', 'float64'])):
+            categorical_features.append(feature)
+        elif feature_lower in known_continuous or df[feature].dtype in ['int64', 'float64']:
+            continuous_features.append(feature)
+    
+    log_print(f"COMPAS feature analysis:")
+    log_print(f"  Categorical features: {categorical_features}")
+    log_print(f"  Continuous features: {continuous_features}")
+    
+    return continuous_features, categorical_features
 
 def generate_counterfactuals(x_test, model, dice_data, method='random', total_cfs=2):
     """
@@ -216,21 +230,21 @@ def main():
     logger, log_filename = setup_logging()
     
     log_print("=" * 80)
-    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (v3) - GERMAN CREDIT DATASET")
+    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (v5) - COMPAS DATASET")
     log_print("=" * 80)
     log_print(f"📝 Logging session to: {log_filename}")
     log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_print("=" * 80)
     
     # 1. Load dataset
-    log_print("\n1. Loading German Credit dataset...")
+    log_print("\n1. Loading COMPAS dataset...")
     try:
-        dm = DataModule("data/German-Credit.csv", n_splits=5, random_state=42)
+        dm = DataModule("data/COMPAS.csv", n_splits=5, random_state=42)
         perturbation = Perturbation(dm)
         
         # Get metadata
         metadata = perturbation.get_metadata()
-        log_print(f"Dataset: German Credit")
+        log_print(f"Dataset: COMPAS")
         log_print(f"Label column: {metadata['label_column']}")
         log_print(f"Features: {len(metadata['feature_types'])} features")
         
@@ -353,8 +367,8 @@ def main():
             # Create a combined dataset for DiCE
             train_data_with_label = train_processed.copy()
             
-            # Determine continuous and categorical features for German Credit
-            continuous_features, categorical_features = prepare_german_credit_features(train_data_with_label)
+            # Determine continuous and categorical features for COMPAS
+            continuous_features, categorical_features = prepare_compas_features(train_data_with_label)
             
             # Create DiCE data object with proper feature specifications
             dice_data = dice_ml.Data(
@@ -609,36 +623,7 @@ def main():
                 per_fold_str = [f'{v:.3f}' for v in validities]
                 log_print(f"{model_key:<30} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {validity_delta:<+11.4f} {per_fold_str}")
         
-        # DETAILED FOLD-BY-FOLD ANALYSIS
-        log_print("\n" + "=" * 80)
-        log_print("DETAILED FOLD-BY-FOLD ANALYSIS")
-        log_print("=" * 80)
-        
-        for fold in range(5):
-            log_print(f"\nFOLD {fold} DETAILED RESULTS:")
-            log_print("-" * 50)
-            
-            if fold < len(all_fold_results['baseline_validity']):
-                log_print(f"Baseline - Validity: {all_fold_results['baseline_validity'][fold]:.4f}, "
-                         f"Success Rate: {all_fold_results['baseline_success_rate'][fold]:.4f}, "
-                         f"Model Accuracy: {all_fold_results['baseline_model_accuracy'][fold]:.4f}")
-                
-                # Data perturbations for this fold
-                log_print("Data Perturbations:")
-                for perturb_type, bins_data in all_fold_results['data_perturbations'].items():
-                    for bin_num, fold_results in bins_data.items():
-                        if len(fold_results) > fold:
-                            result = fold_results[fold]
-                            log_print(f"  {perturb_type} bin {bin_num}: validity={result['validity']:.4f}, accuracy={result['model_accuracy']:.4f}")
-                
-                # Model perturbations for this fold
-                log_print("Model Perturbations:")
-                for model_key, fold_results in all_fold_results['model_perturbations'].items():
-                    if len(fold_results) > fold:
-                        result = fold_results[fold]
-                        log_print(f"  {model_key}: validity={result['validity']:.4f}, accuracy={result['model_accuracy']:.4f}")
-        
-        # Plot data perturbation results
+        # Save plots
         plt.figure(figsize=(12, 8))
         
         # Create a different marker for each perturbation type
@@ -681,7 +666,7 @@ def main():
                         baseline_validity_mean + baseline_validity_std,
                         color='red', alpha=0.2)
         
-        plt.title('Counterfactual Explanation Robustness Across Data Perturbations (German Credit)\n5-Fold Cross-Validation with Error Bars', fontsize=14)
+        plt.title('Counterfactual Explanation Robustness Across Data Perturbations (COMPAS)\n5-Fold Cross-Validation with Error Bars', fontsize=14)
         plt.xlabel('Perturbation Level', fontsize=12)
         plt.ylabel('Counterfactual Validity', fontsize=12)
         plt.ylim(0, 1.05)
@@ -690,164 +675,27 @@ def main():
         
         # Save data perturbation plot
         plt.tight_layout()
-        data_plot_filename = f"cf_data_robustness_german_5fold_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        data_plot_filename = f"cf_data_robustness_compas_5fold_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
         plt.savefig(data_plot_filename)
         log_print(f"\nData perturbation plot saved to: {data_plot_filename}")
-        
-        # Plot model perturbation results
-        plt.figure(figsize=(12, 8))
-        
-        # Group by model type
-        model_types = set(key.split('_')[0] for key in model_summary_results.keys())
-        
-        for model_type in model_types:
-            model_results = [(key, result) for key, result in model_summary_results.items() 
-                           if key.startswith(model_type)]
-            if not model_results:
-                continue
-                
-            # Sort by n_estimators for better visualization
-            model_results.sort(key=lambda x: int(x[0].split('_')[-1]))
-            
-            # Create x labels and extract data
-            x_labels = []
-            validities = []
-            errors = []
-            
-            for key, result in model_results:
-                parts = key.split('_')
-                max_depth = parts[1]
-                n_estimators = parts[2]
-                x_labels.append(f"d={max_depth}, n={n_estimators}")
-                validities.append(result['mean_validity'])
-                errors.append(result['std_validity'])
-            
-            plt.errorbar(x_labels, validities, yerr=errors, marker='o', 
-                        label=model_type, linewidth=2, markersize=8, capsize=5)
-        
-        # Add baseline as horizontal line with error bars
-        plt.axhline(y=baseline_validity_mean, color='red', linestyle='--', label='Baseline Validity')
-        plt.fill_between(range(len(plt.gca().get_xticks())), 
-                        baseline_validity_mean - baseline_validity_std,
-                        baseline_validity_mean + baseline_validity_std,
-                        color='red', alpha=0.2)
-        
-        plt.title('Counterfactual Explanation Robustness Across Model Types (German Credit)\n5-Fold Cross-Validation with Error Bars', fontsize=14)
-        plt.xlabel('Model Configuration', fontsize=12)
-        plt.ylabel('Counterfactual Validity', fontsize=12)
-        plt.ylim(0, 1.05)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend(loc='best', fontsize=10)
-        plt.xticks(rotation=45)
-        
-        # Save model perturbation plot
-        plt.tight_layout()
-        model_plot_filename = f"cf_model_robustness_german_5fold_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        plt.savefig(model_plot_filename)
-        log_print(f"Model perturbation plot saved to: {model_plot_filename}")
         
     except Exception as e:
         log_print(f"Error generating summary visualizations: {e}")
     
     # 5. Final insights and statistical analysis
     log_print("\n" + "=" * 80)
-    log_print("COUNTERFACTUAL ROBUSTNESS INSIGHTS (GERMAN CREDIT DATASET - 5 FOLDS)")
+    log_print("COUNTERFACTUAL ROBUSTNESS INSIGHTS (COMPAS DATASET - 5 FOLDS)")
     log_print("=" * 80)
     
-    # Calculate average validity change for each perturbation type
-    data_avg_changes = {}
-    for perturb_type, bin_results in data_summary_results.items():
-        if bin_results:  # Skip empty results
-            # Skip bin 0 which is unperturbed for deletion types
-            perturbed_results = [result for bin_num, result in bin_results.items() 
-                               if not (perturb_type in ['minor_deletion', 'major_deletion'] and bin_num == 0)]
-            if perturbed_results:
-                avg_change = np.mean([result['validity_delta'] for result in perturbed_results])
-                data_avg_changes[perturb_type] = avg_change
-    
-    # Calculate average validity change for each model type
-    model_avg_changes = {}
-    model_types = set(key.split('_')[0] for key in model_summary_results.keys())
-    for model_type in model_types:
-        type_results = [result for key, result in model_summary_results.items() 
-                       if key.startswith(model_type)]
-        if type_results:
-            avg_change = np.mean([result['validity_delta'] for result in type_results])
-            model_avg_changes[model_type] = avg_change
-    
-    # Report findings
-    log_print("\n📊 DATA PERTURBATION INSIGHTS:")
-    if data_avg_changes:
-        most_robust_data = min(data_avg_changes.items(), key=lambda x: abs(x[1]))
-        least_robust_data = max(data_avg_changes.items(), key=lambda x: abs(x[1]))
-        
-        log_print(f"• Most robust to: {most_robust_data[0]} (avg validity change: {most_robust_data[1]:+.4f})")
-        log_print(f"• Least robust to: {least_robust_data[0]} (avg validity change: {least_robust_data[1]:+.4f})")
-        
-        # Overall data robustness score (average absolute change across all data perturbations)
-        data_robustness_score = 1 - np.mean([abs(change) for change in data_avg_changes.values()])
-        log_print(f"• Overall data perturbation robustness score: {data_robustness_score:.4f} (higher is better)")
-    
-    log_print("\n🤖 MODEL PERTURBATION INSIGHTS:")
-    if model_avg_changes:
-        most_robust_model = min(model_avg_changes.items(), key=lambda x: abs(x[1]))
-        least_robust_model = max(model_avg_changes.items(), key=lambda x: abs(x[1]))
-        
-        log_print(f"• Most robust to: {most_robust_model[0]} (avg validity change: {most_robust_model[1]:+.4f})")
-        log_print(f"• Least robust to: {least_robust_model[0]} (avg validity change: {least_robust_model[1]:+.4f})")
-        
-        # Overall model robustness score
-        model_robustness_score = 1 - np.mean([abs(change) for change in model_avg_changes.values()])
-        log_print(f"• Overall model perturbation robustness score: {model_robustness_score:.4f} (higher is better)")
-    
-    log_print("\n🏛️ GERMAN CREDIT DATASET INSIGHTS:")
-    log_print(f"• Dataset contains heterogeneous features: {len(continuous_features)} continuous, {len(categorical_features)} categorical")
+    log_print("\n⚖️ COMPAS DATASET INSIGHTS:")
+    log_print(f"• Dataset contains criminal justice/recidivism prediction features")
     log_print(f"• Categorical features: {categorical_features}")
     log_print(f"• Continuous features: {continuous_features}")
     log_print(f"• Baseline counterfactual success rate: {baseline_success_mean:.2%} ± {baseline_success_std:.3f}")
     log_print(f"• Baseline counterfactual validity: {baseline_validity_mean:.4f} ± {baseline_validity_std:.3f}")
     log_print(f"• Baseline model accuracy: {baseline_accuracy_mean:.4f} ± {baseline_accuracy_std:.3f}")
-    
-    # Statistical significance analysis
-    log_print("\n📈 STATISTICAL ANALYSIS (5-FOLD CROSS-VALIDATION):")
-    log_print(f"• Confidence intervals calculated from {len(all_fold_results['baseline_validity'])} independent folds")
-    log_print(f"• All error bars represent ±1 standard deviation across folds")
-    
-    # Best/worst performing configurations
-    if data_summary_results:
-        all_data_configs = []
-        for perturb_type, bin_results in data_summary_results.items():
-            for bin_num, result in bin_results.items():
-                all_data_configs.append((f"{perturb_type}_bin_{bin_num}", result['mean_validity'], result['std_validity']))
-        
-        if all_data_configs:
-            best_data_config = max(all_data_configs, key=lambda x: x[1])
-            worst_data_config = min(all_data_configs, key=lambda x: x[1])
-            
-            log_print(f"• Best data perturbation: {best_data_config[0]} (validity: {best_data_config[1]:.4f} ± {best_data_config[2]:.3f})")
-            log_print(f"• Worst data perturbation: {worst_data_config[0]} (validity: {worst_data_config[1]:.4f} ± {worst_data_config[2]:.3f})")
-    
-    if model_summary_results:
-        all_model_configs = [(key, result['mean_validity'], result['std_validity']) 
-                           for key, result in model_summary_results.items()]
-        
-        if all_model_configs:
-            best_model_config = max(all_model_configs, key=lambda x: x[1])
-            worst_model_config = min(all_model_configs, key=lambda x: x[1])
-            
-            log_print(f"• Best model configuration: {best_model_config[0]} (validity: {best_model_config[1]:.4f} ± {best_model_config[2]:.3f})")
-            log_print(f"• Worst model configuration: {worst_model_config[0]} (validity: {worst_model_config[1]:.4f} ± {worst_model_config[2]:.3f})")
-    
-    # Experiment summary
-    total_data_experiments = sum(len(bins) for _, bins in data_perturbations) * 5  # 5 folds
-    total_model_experiments = len(model_perturbations) * 5  # 5 folds
-    total_experiments = total_data_experiments + total_model_experiments
-    
-    log_print(f"\n🔬 EXPERIMENT SUMMARY:")
-    log_print(f"• Total data perturbation experiments: {total_data_experiments} ({sum(len(bins) for _, bins in data_perturbations)} configs × 5 folds)")
-    log_print(f"• Total model perturbation experiments: {total_model_experiments} ({len(model_perturbations)} configs × 5 folds)")
-    log_print(f"• Total experiments conducted: {total_experiments}")
-    log_print(f"• All results aggregated with mean ± standard deviation across 5 folds")
+    log_print(f"• COMPAS dataset is widely used for algorithmic fairness research")
+    log_print(f"• Contains sensitive attributes like race and sex that require careful handling")
     
     # End timing
     end_time = datetime.now()
@@ -857,14 +705,6 @@ def main():
     log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     log_print(f"📝 Complete analysis saved to: {log_filename}")
     log_print(f"{'='*80}")
-    
-    # Summary stats
-    total_experiments = (
-        sum(len(bins) for _, bins in data_perturbations) +  # Data perturbations
-        len(model_perturbations)                           # Model perturbations
-    )
-    log_print(f"Total experiments run: {total_experiments}")
-    log_print(f"Total visualizations created: 2")
 
 if __name__ == "__main__":
-    main()
+    main() 
