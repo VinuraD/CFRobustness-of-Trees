@@ -210,10 +210,24 @@ def main():
         log_print(f"Error loading dataset: {e}")
         return
     
-    # 2. Set analysis parameters
-    fold = 0
+    # 2. Set analysis parameters for all 5 folds
     log_print("\n2. Analysis parameters:")
-    log_print(f"  Fold: {fold}")
+    log_print(f"  Number of folds: 5")
+    
+    # Print fold summary
+    import io
+    import contextlib
+    
+    # Capture the output from dm.print_fold_summary()
+    f = io.StringIO()
+    with contextlib.redirect_stdout(f):
+        dm.print_fold_summary()
+    
+    # Log each line of the captured output
+    summary_output = f.getvalue()
+    for line in summary_output.strip().split('\n'):
+        if line.strip():
+            log_print(line)
     
     # Define data perturbations to test
     data_perturbations = [
@@ -239,401 +253,276 @@ def main():
     for model_type, max_depth, n_estimators in model_perturbations:
         log_print(f"    - {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")
     
-    # Dictionary to store results for each perturbation
-    results = {
-        'data_perturbations': {},
-        'model_perturbations': {}
+    # Dictionary to store results across all folds
+    all_fold_results = {
+        'baseline_validity': [],
+        'baseline_success_rate': [],
+        'baseline_model_accuracy': [],
+        'data_perturbations': {perturb_type: {bin_num: [] for bin_num in bins} 
+                              for perturb_type, bins in data_perturbations},
+        'model_perturbations': {f"{model_type}_{max_depth}_{n_estimators}": [] 
+                               for model_type, max_depth, n_estimators in model_perturbations}
     }
-    
-    # 3. Get unperturbed data (Bin 0)
-    log_print("\n3. Preparing unperturbed data (fold 0)...")
-    try:
-        train_raw, _ = perturbation.get_data(fold=fold, raw_data=True)
-        train_processed, test_processed = perturbation.get_data(fold=fold, raw_data=False)
-        
-        log_print(f"Unperturbed data shapes:")
-        log_print(f"  Raw train: {train_raw.shape}")
-        log_print(f"  Processed - Train: {train_processed.shape}, Test: {test_processed.shape}")
-        
-        # Setup for DiCE
-        label_col = metadata['label_column']
-        X_train = train_processed.drop(columns=[label_col])
-        y_train = train_processed[label_col]
-        X_test = test_processed.drop(columns=[label_col])
-        y_test = test_processed[label_col]
-        
-        # Handle categorical labels if needed
-        if y_train.dtype == 'object':
-            le = LabelEncoder()
-            y_train = le.fit_transform(y_train)
-            y_test = le.transform(y_test)
-        
-        log_print(f"Data preparation complete:")
-        log_print(f"  Training samples: {len(X_train)}")
-        log_print(f"  Test samples: {len(X_test)}")
-        log_print(f"  Features: {len(X_train.columns)}")
-        log_print(f"  Class distribution - Train: {np.bincount(y_train)}")
-        log_print(f"  Class distribution - Test: {np.bincount(y_test)}")
-        
-    except Exception as e:
-        log_print(f"Error preparing unperturbed data: {e}")
-        return
-    
-    # 4. Train baseline model on unperturbed data
-    log_print("\n4. Training baseline model on unperturbed data...")
-    try:
-        baseline_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
-        baseline_model.fit(X_train, y_train)
-        
-        train_acc = accuracy_score(y_train, baseline_model.predict(X_train))
-        test_acc = accuracy_score(y_test, baseline_model.predict(X_test))
-        
-        log_print(f"Baseline model (RandomForest, max_depth=5, n_estimators=100):")
-        log_print(f"  Train accuracy: {train_acc:.4f}")
-        log_print(f"  Test accuracy: {test_acc:.4f}")
-        
-    except Exception as e:
-        log_print(f"Error training baseline model: {e}")
-        return
-    
-    # 5. Setup DiCE data object
-    log_print("\n5. Setting up DiCE framework...")
-    try:
-        # Create a combined dataset for DiCE
-        train_data_with_label = train_processed.copy()
-        
-        # Determine continuous and categorical features for DiCE
-        # For Spambase, most features are likely continuous
-        continuous_features = X_train.columns.tolist()  # Assume all are continuous for now
-        categorical_features = []  # Update if there are categorical features
-        
-        # Create DiCE data object
-        dice_data = dice_ml.Data(
-            dataframe=train_data_with_label,
-            continuous_features=continuous_features,
-            outcome_name=label_col
-        )
-        
-        log_print(f"DiCE setup complete:")
-        log_print(f"  Continuous features: {len(continuous_features)}")
-        log_print(f"  Categorical features: {len(categorical_features)}")
-        
-    except Exception as e:
-        log_print(f"Error setting up DiCE: {e}")
-        return
-    
-    # 6. Generate counterfactuals using baseline model on unperturbed data
-    log_print("\n6. Generating counterfactuals using baseline model...")
-    try:
-        # Create test data for counterfactual generation (without label)
-        test_data_for_cf = X_test.copy()
-        
-        cf_list, success_rate = generate_counterfactuals(
-            test_data_for_cf, 
-            baseline_model, 
-            dice_data, 
-            method='random',
-            total_cfs=2
-        )
-        
-        log_print(f"Counterfactual generation summary:")
-        log_print(f"  Total test samples: {len(X_test)}")
-        log_print(f"  Successful generations: {(cf_list['success'] == True).sum()}")
-        log_print(f"  Success rate: {success_rate:.2%}")
-        
-        # Validate the counterfactuals on the baseline model
-        baseline_validity, flipped, total = calculate_validity(baseline_model, cf_list, X_test)
-        log_print(f"Baseline validity: {baseline_validity:.4f} ({flipped}/{total})")
-        
-    except Exception as e:
-        log_print(f"Error generating counterfactuals: {e}")
-        return
-    
-    # 7. Test counterfactuals on data perturbed models
-    log_print("\n7. Testing counterfactual robustness across data perturbations...")
+
+    # 3. Run comprehensive analysis across all 5 folds
+    log_print("\n3. Running comprehensive analysis across all 5 folds...")
     log_print("=" * 80)
     
-    # For storing result summaries
-    data_validity_results = {}
-    
-    # Function to evaluate one data perturbation type
-    def evaluate_data_perturbation_type(perturb_type, bins):
-        log_print(f"\n📊 {perturb_type.upper()} PERTURBATION ANALYSIS")
-        log_print("-" * 60)
+    for fold in range(5):
+        log_print(f"\n--- FOLD {fold} ANALYSIS ---")
+        log_print("-" * 50)
         
-        results = []
-        
-        for bin_num in bins:
-            try:
-                # Get the raw unperturbed training data
-                train_raw, _ = perturbation.get_data(fold=fold, raw_data=True)
-                
-                # Apply perturbation to the raw training data
-                perturbed_train_raw = perturbation.perturb_data(train_raw, perturb_type, bin_num)
-                
-                # Process the perturbed data
-                if perturb_type in ['minor_deletion', 'major_deletion']:
-                    remove_pct = bin_num if perturb_type == 'minor_deletion' else (0 if bin_num == 0 else 50)
-                    log_print(f"Bin {bin_num}: Remove {remove_pct}% -> {perturbed_train_raw.shape[0]} samples")
-                else:  # 'minor_addition', 'major_addition'
-                    use_pct = 80 + bin_num if perturb_type == 'minor_addition' else (50 if bin_num == 0 else 100)
-                    log_print(f"Bin {bin_num}: Use {use_pct}% -> {perturbed_train_raw.shape[0]} samples")
-                
-                # Prepare features and target
-                label_col = metadata['label_column']
-                perturbed_X_train = perturbed_train_raw.drop(columns=[label_col])
-                perturbed_y_train = perturbed_train_raw[label_col]
-                
-                # Handle categorical labels if needed
-                if perturbed_y_train.dtype == 'object':
-                    le = LabelEncoder()
-                    perturbed_y_train = le.fit_transform(perturbed_y_train)
-                
-                # Train model on perturbed data (using same params as baseline)
-                perturbed_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
-                perturbed_model.fit(perturbed_X_train, perturbed_y_train)
-                
-                # Evaluate perturbed model on test set
-                perturbed_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
-                
-                # Calculate validity of original counterfactuals on perturbed model
-                cf_validity, cf_flipped, cf_total = calculate_validity(perturbed_model, cf_list, X_test)
-                
-                # Store results
-                result = {
-                    'perturb_type': perturb_type,
-                    'bin': bin_num,
-                    'validity': cf_validity,
-                    'flipped': cf_flipped,
-                    'total': cf_total,
-                    'accuracy': perturbed_test_acc,
-                    'train_samples': perturbed_train_raw.shape[0]
-                }
-                
-                results.append(result)
-                
-                log_print(f"  Model accuracy: {perturbed_test_acc:.4f}")
-                log_print(f"  Counterfactual validity: {cf_validity:.4f} ({cf_flipped}/{cf_total})")
-                log_print(f"  Validity change from baseline: {cf_validity - baseline_validity:+.4f}")
-                log_print("-" * 40)
-                
-            except Exception as e:
-                log_print(f"Error in {perturb_type} bin {bin_num}: {e}")
-        
-        return results
-    
-    # Test all data perturbation types
-    for perturb_type, bins in data_perturbations:
-        results = evaluate_data_perturbation_type(perturb_type, bins)
-        data_validity_results[perturb_type] = results
-    
-    # 8. Test counterfactuals on model perturbations
-    log_print("\n8. Testing counterfactual robustness across model perturbations...")
-    log_print("=" * 80)    
-    model_validity_results = []
-    log_print("\n🤖 MODEL PERTURBATION ANALYSIS")
-    log_print("-" * 60)
-    
-    for model_type, max_depth, n_estimators in model_perturbations:
         try:
-            log_print(f"Model: {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")
-            
-            # Get the raw unperturbed training data (full dataset)
+            # Get unperturbed data for this fold
             train_raw, _ = perturbation.get_data(fold=fold, raw_data=True)
+            train_processed, test_processed = perturbation.get_data(fold=fold, raw_data=False)
             
-            # Create and train the model on full unperturbed data
-            perturbed_model = perturbation.perturb_model(
-                train_raw, 
-                model_type=model_type, 
-                max_depth=max_depth, 
-                n_estimators=n_estimators
+            log_print(f"Fold {fold} data shapes:")
+            log_print(f"  Raw train: {train_raw.shape}")
+            log_print(f"  Processed - Train: {train_processed.shape}, Test: {test_processed.shape}")
+            
+            # Setup for DiCE
+            label_col = metadata['label_column']
+            X_train = train_processed.drop(columns=[label_col])
+            y_train = train_processed[label_col]
+            X_test = test_processed.drop(columns=[label_col])
+            y_test = test_processed[label_col]
+            
+            # Handle categorical labels if needed
+            if y_train.dtype == 'object':
+                le = LabelEncoder()
+                y_train = le.fit_transform(y_train)
+                y_test = le.transform(y_test)
+            
+            log_print(f"  Training samples: {len(X_train)}")
+            log_print(f"  Test samples: {len(X_test)}")
+            log_print(f"  Features: {len(X_train.columns)}")
+            log_print(f"  Class distribution - Train: {np.bincount(y_train)}")
+            log_print(f"  Class distribution - Test: {np.bincount(y_test)}")
+            
+            # Train baseline model on unperturbed data
+            log_print(f"\nTraining baseline model for fold {fold}...")
+            baseline_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+            baseline_model.fit(X_train, y_train)
+            
+            train_acc = accuracy_score(y_train, baseline_model.predict(X_train))
+            test_acc = accuracy_score(y_test, baseline_model.predict(X_test))
+            all_fold_results['baseline_model_accuracy'].append(test_acc)
+            
+            log_print(f"  Train accuracy: {train_acc:.4f}")
+            log_print(f"  Test accuracy: {test_acc:.4f}")
+            
+            # Setup DiCE data object for Spambase (all continuous features)
+            log_print(f"Setting up DiCE framework for fold {fold}...")
+            
+            # Create a combined dataset for DiCE
+            train_data_with_label = train_processed.copy()
+            
+            # For Spambase, all features are continuous
+            continuous_features = X_train.columns.tolist()
+            categorical_features = []
+            
+            # Create DiCE data object
+            dice_data = dice_ml.Data(
+                dataframe=train_data_with_label,
+                continuous_features=continuous_features,
+                outcome_name=label_col
             )
             
-            # Evaluate model on test set
-            model_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
+            # Generate counterfactuals using baseline model on unperturbed data
+            log_print(f"Generating counterfactuals for fold {fold}...")
             
-            # Calculate validity of original counterfactuals on this model
-            cf_validity, cf_flipped, cf_total = calculate_validity(perturbed_model, cf_list, X_test)
+            # Create test data for counterfactual generation (without label)
+            test_data_for_cf = X_test.copy()
             
-            # Store results
-            result = {
-                'model_type': model_type,
-                'max_depth': max_depth,
-                'n_estimators': n_estimators,
-                'validity': cf_validity,
-                'flipped': cf_flipped,
-                'total': cf_total,
-                'accuracy': model_test_acc
-            }
+            cf_list, success_rate = generate_counterfactuals(
+                test_data_for_cf, 
+                baseline_model, 
+                dice_data, 
+                method='random',
+                total_cfs=2
+            )
             
-            model_validity_results.append(result)
+            all_fold_results['baseline_success_rate'].append(success_rate)
             
-            log_print(f"  Model accuracy: {model_test_acc:.4f}")
-            log_print(f"  Counterfactual validity: {cf_validity:.4f} ({cf_flipped}/{cf_total})")
-            log_print(f"  Validity change from baseline: {cf_validity - baseline_validity:+.4f}")
-            log_print("-" * 40)
+            # Validate the counterfactuals on the baseline model
+            baseline_validity, flipped, total = calculate_validity(baseline_model, cf_list, X_test)
+            all_fold_results['baseline_validity'].append(baseline_validity)
             
+            log_print(f"  Success rate: {success_rate:.2%}")
+            log_print(f"  Baseline validity: {baseline_validity:.4f} ({flipped}/{total})")
+            
+            # Test counterfactuals on data perturbed models
+            log_print(f"\nTesting data perturbations for fold {fold}...")
+            
+            for perturb_type, bins in data_perturbations:
+                log_print(f"  {perturb_type}:")
+                
+                for bin_num in bins:
+                    try:
+                        # Get the raw unperturbed training data
+                        train_raw_for_pert, _ = perturbation.get_data(fold=fold, raw_data=True)
+                        
+                        # Apply perturbation to the raw training data
+                        perturbed_train_raw = perturbation.perturb_data(train_raw_for_pert, perturb_type, bin_num)
+                        
+                        # Prepare features and target
+                        perturbed_X_train = perturbed_train_raw.drop(columns=[label_col])
+                        perturbed_y_train = perturbed_train_raw[label_col]
+                        
+                        # Handle categorical labels if needed
+                        if perturbed_y_train.dtype == 'object':
+                            le_pert = LabelEncoder()
+                            perturbed_y_train = le_pert.fit_transform(perturbed_y_train)
+                        
+                        # Train model on perturbed data (using same params as baseline)
+                        perturbed_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+                        perturbed_model.fit(perturbed_X_train, perturbed_y_train)
+                        
+                        # Evaluate perturbed model on test set
+                        perturbed_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
+                        
+                        # Calculate validity of original counterfactuals on perturbed model
+                        cf_validity, cf_flipped, cf_total = calculate_validity(perturbed_model, cf_list, X_test)
+                        
+                        # Store results
+                        all_fold_results['data_perturbations'][perturb_type][bin_num].append({
+                            'validity': cf_validity,
+                            'model_accuracy': perturbed_test_acc,
+                            'fold': fold
+                        })
+                        
+                        if perturb_type in ['minor_deletion', 'major_deletion']:
+                            remove_pct = bin_num if perturb_type == 'minor_deletion' else (0 if bin_num == 0 else 50)
+                            log_print(f"    Bin {bin_num}: Remove {remove_pct}% -> validity: {cf_validity:.4f}, accuracy: {perturbed_test_acc:.4f}")
+                        else:
+                            use_pct = 80 + bin_num if perturb_type == 'minor_addition' else (50 if bin_num == 0 else 100)
+                            log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_validity:.4f}, accuracy: {perturbed_test_acc:.4f}")
+                        
+                    except Exception as e:
+                        log_print(f"    Error in {perturb_type} bin {bin_num}: {e}")
+            
+            # Test counterfactuals on model perturbations
+            log_print(f"\nTesting model perturbations for fold {fold}...")
+            
+            for model_type, max_depth, n_estimators in model_perturbations:
+                try:
+                    # Get the raw unperturbed training data (full dataset)
+                    train_raw_for_model, _ = perturbation.get_data(fold=fold, raw_data=True)
+                    
+                    # Create and train the model on full unperturbed data
+                    perturbed_model = perturbation.perturb_model(
+                        train_raw_for_model, 
+                        model_type=model_type, 
+                        max_depth=max_depth, 
+                        n_estimators=n_estimators
+                    )
+                    
+                    # Evaluate model on test set
+                    model_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
+                    
+                    # Calculate validity of original counterfactuals on this model
+                    cf_validity, cf_flipped, cf_total = calculate_validity(perturbed_model, cf_list, X_test)
+                    
+                    # Store results
+                    model_key = f"{model_type}_{max_depth}_{n_estimators}"
+                    all_fold_results['model_perturbations'][model_key].append({
+                        'validity': cf_validity,
+                        'model_accuracy': model_test_acc,
+                        'fold': fold
+                    })
+                    
+                    log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {cf_validity:.4f}, accuracy: {model_test_acc:.4f}")
+                    
+                except Exception as e:
+                    log_print(f"  Error with {model_type} ({max_depth}, {n_estimators}): {e}")
+        
         except Exception as e:
-            log_print(f"Error with model {model_type} (max_depth={max_depth}, n_estimators={n_estimators}): {e}")    # 9. Generate summary and visualization
-    log_print("\n9. Generating summary of counterfactual robustness...")
+            log_print(f"Error in fold {fold}: {e}")
+            continue
+
+    # 4. Generate summary and visualization across all folds
+    log_print("\n4. Generating comprehensive summary of counterfactual robustness...")
     log_print("=" * 80)
     
-    try:
-        # Summary table for data perturbations
-        log_print("\nDATA PERTURBATION ROBUSTNESS SUMMARY:")
-        log_print("-" * 100)
-        log_print(f"{'Perturbation':<15} {'Bin':<5} {'Data':<12} {'Train Samples':<15} {'Model Acc':<12} {'CF Validity':<12} {'Validity Δ':<12} {'Flipped/Total':<15}")
-        log_print("-" * 100)
-        
-        for perturb_type, results in data_validity_results.items():
-            for result in results:
-                if perturb_type in ['minor_deletion', 'major_deletion']:
-                    remove_pct = result['bin'] if perturb_type == 'minor_deletion' else (0 if result['bin'] == 0 else 50)
-                    data_description = f"Remove {remove_pct}%"
-                else:  # 'minor_addition', 'major_addition'
-                    use_pct = 80 + result['bin'] if perturb_type == 'minor_addition' else (50 if result['bin'] == 0 else 100)
-                    data_description = f"Use {use_pct}%"
-                
-                log_print(f"{perturb_type:<15} {result['bin']:<5} {data_description:<12} {result['train_samples']:<15} {result['accuracy']:.4f}       {result['validity']:.4f}       {result['validity'] - baseline_validity:+.4f}       {result['flipped']}/{result['total']}")
-        
-        # Summary table for model perturbations
-        log_print("\nMODEL PERTURBATION ROBUSTNESS SUMMARY:")
-        log_print("-" * 100)
-        log_print(f"{'Model Type':<15} {'Max Depth':<10} {'N Estimators':<15} {'Model Acc':<12} {'CF Validity':<12} {'Validity Δ':<12} {'Flipped/Total':<15}")
-        log_print("-" * 100)
-        
-        for result in model_validity_results:
-            log_print(f"{result['model_type']:<15} {result['max_depth']:<10} {result['n_estimators']:<15} {result['accuracy']:.4f}       {result['validity']:.4f}       {result['validity'] - baseline_validity:+.4f}       {result['flipped']}/{result['total']}")
-        
-        # Plot data perturbation results
-        plt.figure(figsize=(12, 8))
-        
-        # Create a different marker for each perturbation type
-        markers = {
-            'minor_deletion': 'o',
-            'major_deletion': 's',
-            'minor_addition': '^',
-            'major_addition': 'D'
-        }
-        
-        for perturb_type, results in data_validity_results.items():
-            if not results:
-                continue
-                
-            # Extract data for plotting
-            if perturb_type in ['minor_deletion', 'major_deletion']:
-                x_labels = [f"{r['bin']}% removed" if perturb_type == 'minor_deletion' else ('0%' if r['bin'] == 0 else '50%') for r in results]
-            else:
-                x_labels = [f"{80+r['bin']}% used" if perturb_type == 'minor_addition' else ('50%' if r['bin'] == 0 else '100%') for r in results]
-                
-            validities = [r['validity'] for r in results]
-            
-            plt.plot(x_labels, validities, marker=markers[perturb_type], label=perturb_type, linewidth=2, markersize=8)
-        
-        # Add baseline as horizontal line
-        plt.axhline(y=baseline_validity, color='red', linestyle='--', label='Baseline Validity')
-        
-        plt.title('Counterfactual Explanation Robustness Across Data Perturbations', fontsize=14)
-        plt.xlabel('Perturbation Level', fontsize=12)
-        plt.ylabel('Counterfactual Validity', fontsize=12)
-        plt.ylim(0, 1.05)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend(loc='best', fontsize=10)
-        
-        # Save data perturbation plot
-        plt.tight_layout()
-        data_plot_filename = f"cf_data_robustness_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        plt.savefig(data_plot_filename)
-        log_print(f"\nData perturbation plot saved to: {data_plot_filename}")
-        
-        # Plot model perturbation results
-        plt.figure(figsize=(12, 8))
-        
-        # Group by model type
-        model_types = set(r['model_type'] for r in model_validity_results)
-        
-        for model_type in model_types:
-            model_results = [r for r in model_validity_results if r['model_type'] == model_type]
-            if not model_results:
-                continue
-                
-            # Sort by n_estimators for better visualization
-            model_results.sort(key=lambda x: x['n_estimators'])
-            
-            # Create x labels
-            x_labels = [f"d={r['max_depth']}, n={r['n_estimators']}" for r in model_results]
-            validities = [r['validity'] for r in model_results]
-            
-            plt.plot(x_labels, validities, marker='o', label=model_type, linewidth=2, markersize=8)
-        
-        # Add baseline as horizontal line
-        plt.axhline(y=baseline_validity, color='red', linestyle='--', label='Baseline Validity')
-        
-        plt.title('Counterfactual Explanation Robustness Across Model Types', fontsize=14)
-        plt.xlabel('Model Configuration', fontsize=12)
-        plt.ylabel('Counterfactual Validity', fontsize=12)
-        plt.ylim(0, 1.05)
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend(loc='best', fontsize=10)
-        plt.xticks(rotation=45)
-          # Save model perturbation plot
-        plt.tight_layout()
-        model_plot_filename = f"cf_model_robustness_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        plt.savefig(model_plot_filename)
-        log_print(f"Model perturbation plot saved to: {model_plot_filename}")
-        
-    except Exception as e:
-        log_print(f"Error generating summary visualizations: {e}")
+    log_print("\nFOLD-BY-FOLD RESULTS AND AGGREGATES:")
+    log_print("-" * 100)
     
-    # 10. Final insights
+    # Baseline summary
+    log_print("BASELINE MODEL (UNPERTURBED DATA):")
+    num_completed_folds = len(all_fold_results['baseline_validity'])
+    for i in range(num_completed_folds):
+        log_print(f"  Fold {i}: Validity={all_fold_results['baseline_validity'][i]:.4f}, Success Rate={all_fold_results['baseline_success_rate'][i]:.4f}, Test Acc={all_fold_results['baseline_model_accuracy'][i]:.4f}")
+    
+    if num_completed_folds > 0:
+        log_print(f"  Mean Validity: {np.mean(all_fold_results['baseline_validity']):.4f} ± {np.std(all_fold_results['baseline_validity']):.4f}")
+        log_print(f"  Mean Success Rate: {np.mean(all_fold_results['baseline_success_rate']):.4f} ± {np.std(all_fold_results['baseline_success_rate']):.4f}")
+        log_print(f"  Mean Test Acc: {np.mean(all_fold_results['baseline_model_accuracy']):.4f} ± {np.std(all_fold_results['baseline_model_accuracy']):.4f}")
+    else:
+        log_print("  No completed folds to summarize")
+    log_print("-" * 100)
+
+    # Data perturbation summary
+    log_print("DATA PERTURBATION ROBUSTNESS (mean ± std across folds):")
+    for perturb_type, bins_dict in all_fold_results['data_perturbations'].items():
+        for bin_num, fold_results in bins_dict.items():
+            if not fold_results:
+                continue
+            validities = [r['validity'] for r in fold_results]
+            accs = [r['model_accuracy'] for r in fold_results]
+            log_print(f"  {perturb_type} bin {bin_num}: Validity={np.mean(validities):.4f} ± {np.std(validities):.4f}, Acc={np.mean(accs):.4f} ± {np.std(accs):.4f}")
+    log_print("-" * 100)
+
+    # Model perturbation summary
+    log_print("MODEL PERTURBATION ROBUSTNESS (mean ± std across folds):")
+    for model_key, fold_results in all_fold_results['model_perturbations'].items():
+        if not fold_results:
+            continue
+        validities = [r['validity'] for r in fold_results]
+        accs = [r['model_accuracy'] for r in fold_results]
+        log_print(f"  {model_key}: Validity={np.mean(validities):.4f} ± {np.std(validities):.4f}, Acc={np.mean(accs):.4f} ± {np.std(accs):.4f}")
+    log_print("-" * 100)
+
+    # 5. Final insights and completion
     log_print("\n" + "=" * 80)
-    log_print("COUNTERFACTUAL ROBUSTNESS INSIGHTS")
+    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!")
     log_print("=" * 80)
     
-    # Calculate average validity change for each perturbation type
-    data_avg_changes = {}
-    for perturb_type, results in data_validity_results.items():
-        if results:  # Skip empty results
-            # Skip bin 0 which is unperturbed for deletion types
-            perturbed_results = [r for r in results if not (perturb_type in ['minor_deletion', 'major_deletion'] and r['bin'] == 0)]
-            if perturbed_results:
-                avg_change = np.mean([r['validity'] - baseline_validity for r in perturbed_results])
-                data_avg_changes[perturb_type] = avg_change
+    # Calculate overall robustness scores based on cross-fold averages
+    if len(all_fold_results['baseline_validity']) > 0:
+        baseline_validity_mean = np.mean(all_fold_results['baseline_validity'])
+        baseline_success_mean = np.mean(all_fold_results['baseline_success_rate'])
+        baseline_accuracy_mean = np.mean(all_fold_results['baseline_model_accuracy'])
+        
+        log_print(f"\n📊 OVERALL SUMMARY STATISTICS:")
+        log_print(f"• Baseline counterfactual validity: {baseline_validity_mean:.4f} ± {np.std(all_fold_results['baseline_validity']):.4f}")
+        log_print(f"• Baseline success rate: {baseline_success_mean:.4f} ± {np.std(all_fold_results['baseline_success_rate']):.4f}")
+        log_print(f"• Baseline model accuracy: {baseline_accuracy_mean:.4f} ± {np.std(all_fold_results['baseline_model_accuracy']):.4f}")
+    else:
+        log_print(f"\n📊 OVERALL SUMMARY STATISTICS:")
+        log_print(f"• No completed folds to calculate statistics")
     
-    # Calculate average validity change for each model type
-    model_avg_changes = {}
-    model_types = set(r['model_type'] for r in model_validity_results)
-    for model_type in model_types:
-        type_results = [r for r in model_validity_results if r['model_type'] == model_type]
-        if type_results:
-            avg_change = np.mean([r['validity'] - baseline_validity for r in type_results])
-            model_avg_changes[model_type] = avg_change
+    # Data perturbation insights
+    log_print(f"\n🔄 DATA PERTURBATION INSIGHTS:")
+    log_print(f"• Tested {len(data_perturbations)} types of data perturbations across 5 folds")
+    data_exp_count = sum(len(bins) for _, bins in data_perturbations) * 5
+    log_print(f"• Total data perturbation experiments: {data_exp_count}")
     
-    # Report findings
-    log_print("\n📊 DATA PERTURBATION INSIGHTS:")
-    if data_avg_changes:
-        most_robust_data = min(data_avg_changes.items(), key=lambda x: abs(x[1]))
-        least_robust_data = max(data_avg_changes.items(), key=lambda x: abs(x[1]))
-        
-        log_print(f"• Most robust to: {most_robust_data[0]} (avg validity change: {most_robust_data[1]:+.4f})")
-        log_print(f"• Least robust to: {least_robust_data[0]} (avg validity change: {least_robust_data[1]:+.4f})")
-        
-        # Overall data robustness score (average absolute change across all data perturbations)
-        data_robustness_score = 1 - np.mean([abs(change) for change in data_avg_changes.values()])
-        log_print(f"• Overall data perturbation robustness score: {data_robustness_score:.4f} (higher is better)")
+    # Model perturbation insights  
+    log_print(f"\n🤖 MODEL PERTURBATION INSIGHTS:")
+    log_print(f"• Tested {len(model_perturbations)} different model configurations across 5 folds")
+    model_exp_count = len(model_perturbations) * 5
+    log_print(f"• Total model perturbation experiments: {model_exp_count}")
     
-    log_print("\n🤖 MODEL PERTURBATION INSIGHTS:")
-    if model_avg_changes:
-        most_robust_model = min(model_avg_changes.items(), key=lambda x: abs(x[1]))
-        least_robust_model = max(model_avg_changes.items(), key=lambda x: abs(x[1]))
-        
-        log_print(f"• Most robust to: {most_robust_model[0]} (avg validity change: {most_robust_model[1]:+.4f})")
-        log_print(f"• Least robust to: {least_robust_model[0]} (avg validity change: {least_robust_model[1]:+.4f})")
-        
-        # Overall model robustness score
-        model_robustness_score = 1 - np.mean([abs(change) for change in model_avg_changes.values()])
-        log_print(f"• Overall model perturbation robustness score: {model_robustness_score:.4f} (higher is better)")
-      # End timing
+    # Overall experiment summary
+    total_experiments = data_exp_count + model_exp_count + 5  # +5 for baseline experiments
+    log_print(f"\n🎯 EXPERIMENT SUMMARY:")
+    log_print(f"• Total experiments across all folds: {total_experiments}")
+    log_print(f"• Baseline experiments: 5 (one per fold)")
+    log_print(f"• Data perturbation experiments: {data_exp_count}")
+    log_print(f"• Model perturbation experiments: {model_exp_count}")
+
+    # End timing
     end_time = datetime.now()
     log_print(f"\n{'='*80}")
     log_print("🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!")
@@ -641,14 +530,6 @@ def main():
     log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     log_print(f"📝 Complete analysis saved to: {log_filename}")
     log_print(f"{'='*80}")
-    
-    # Summary stats
-    total_experiments = (
-        sum(len(bins) for _, bins in data_perturbations) +  # Data perturbations
-        len(model_perturbations)                           # Model perturbations
-    )
-    log_print(f"Total experiments run: {total_experiments}")
-    log_print(f"Total visualizations created: 2")
 
 if __name__ == "__main__":
     main()

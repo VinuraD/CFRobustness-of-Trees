@@ -1,0 +1,164 @@
+2025-07-23 13:40:49 - INFO - ================================================================================
+2025-07-23 13:40:49 - INFO - COUNTERFACTUAL ROBUSTNESS ANALYSIS (v2)
+2025-07-23 13:40:49 - INFO - ================================================================================
+2025-07-23 13:40:49 - INFO - 📝 Logging session to: cf_robustness_analysis_v2_20250723_134049.log
+2025-07-23 13:40:49 - INFO - 🕒 Started at: 2025-07-23 13:40:49
+2025-07-23 13:40:49 - INFO - ================================================================================
+2025-07-23 13:40:49 - INFO - 
+1. Loading dataset...
+2025-07-23 13:40:50 - INFO - Dataset: Spambase
+2025-07-23 13:40:50 - INFO - Label column: Class
+2025-07-23 13:40:50 - INFO - Features: 58 features
+2025-07-23 13:40:50 - INFO - 
+2. Analysis parameters:
+2025-07-23 13:40:50 - INFO -   Number of folds: 5
+2025-07-23 13:40:50 - INFO - Dataset Summary:
+2025-07-23 13:40:50 - INFO - Total samples (after cleaning): 4601
+2025-07-23 13:40:50 - INFO - Number of features: 57
+2025-07-23 13:40:50 - INFO - Label column: Class
+2025-07-23 13:40:50 - INFO - Number of folds: 5
+2025-07-23 13:40:50 - INFO - Fold Summary:
+2025-07-23 13:40:50 - INFO - --------------------------------------------------
+2025-07-23 13:40:50 - INFO - Fold 0: Train=3680 samples, Test=921 samples
+2025-07-23 13:40:50 - INFO - Fold 1: Train=3681 samples, Test=920 samples
+2025-07-23 13:40:50 - INFO - Fold 2: Train=3681 samples, Test=920 samples
+2025-07-23 13:40:50 - INFO - Fold 3: Train=3681 samples, Test=920 samples
+2025-07-23 13:40:50 - INFO - Fold 4: Train=3681 samples, Test=920 samples
+2025-07-23 13:40:50 - INFO - --------------------------------------------------
+2025-07-23 13:40:50 - INFO -   Data perturbation types: ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
+2025-07-23 13:40:50 - INFO -   Model perturbations: 7 configurations
+2025-07-23 13:40:50 - INFO -     - random_forest (max_depth=3, n_estimators=50)
+2025-07-23 13:40:50 - INFO -     - random_forest (max_depth=5, n_estimators=100)
+2025-07-23 13:40:50 - INFO -     - random_forest (max_depth=10, n_estimators=200)
+2025-07-23 13:40:50 - INFO -     - xgboost (max_depth=3, n_estimators=50)
+2025-07-23 13:40:50 - INFO -     - xgboost (max_depth=6, n_estimators=100)
+2025-07-23 13:40:50 - INFO -     - lightgbm (max_depth=4, n_estimators=75)
+2025-07-23 13:40:50 - INFO -     - adaboost (max_depth=2, n_estimators=30)
+2025-07-23 13:40:50 - INFO - 
+3. Running comprehensive analysis across all 5 folds...
+2025-07-23 13:40:50 - INFO - ================================================================================
+2025-07-23 13:40:50 - INFO - 
+--- FOLD 0 ANALYSIS ---
+2025-07-23 13:40:50 - INFO - --------------------------------------------------
+2025-07-23 13:40:50 - INFO - Fold 0 data shapes:
+2025-07-23 13:40:50 - INFO -   Raw train: (3680, 58)
+2025-07-23 13:40:50 - INFO -   Processed - Train: (3680, 58), Test: (921, 58)
+2025-07-23 13:40:50 - INFO -   Training samples: 3680
+2025-07-23 13:40:50 - INFO -   Test samples: 921
+2025-07-23 13:40:50 - INFO -   Features: 57
+2025-07-23 13:40:50 - INFO -   Class distribution - Train: [2230 1450]
+2025-07-23 13:40:50 - INFO -   Class distribution - Test: [558 363]
+2025-07-23 13:40:50 - INFO - 
+Training baseline model for fold 0...
+2025-07-23 13:40:50 - INFO -   Train accuracy: 0.9326
+2025-07-23 13:40:50 - INFO -   Test accuracy: 0.9186
+2025-07-23 13:40:50 - INFO - Setting up DiCE framework for fold 0...
+2025-07-23 13:40:50 - INFO - Generating counterfactuals for fold 0...
+2025-07-23 13:40:50 - INFO - Generating counterfactuals using method: random
+2025-07-23 13:40:50 - INFO - Test set size: 921 samples
+2025-07-23 13:52:40 - INFO - Counterfactual generation complete:
+2025-07-23 13:52:40 - INFO -   Successful: 921/921 (100.00%)
+2025-07-23 13:52:40 - INFO -   Failed: 0/921 (0.00%)
+2025-07-23 13:52:41 - INFO -   Success rate: 100.00%
+2025-07-23 13:52:41 - INFO -   Baseline validity: 1.0000 (921/921)
+2025-07-23 13:52:41 - INFO - 
+Testing data perturbations for fold 0...
+2025-07-23 13:52:41 - INFO -   minor_deletion:
+2025-07-23 13:52:41 - INFO -     Bin 0: Remove 0% -> validity: 0.0706, accuracy: 0.6091
+2025-07-23 13:52:41 - INFO -     Bin 5: Remove 5% -> validity: 0.0662, accuracy: 0.6102
+2025-07-23 13:52:42 - INFO -     Bin 10: Remove 10% -> validity: 0.0337, accuracy: 0.6059
+2025-07-23 13:52:42 - INFO -     Bin 15: Remove 15% -> validity: 0.0087, accuracy: 0.6059
+2025-07-23 13:52:42 - INFO -     Bin 20: Remove 20% -> validity: 0.0022, accuracy: 0.6059
+2025-07-23 13:52:42 - INFO -   major_deletion:
+2025-07-23 13:52:43 - INFO -     Bin 0: Remove 0% -> validity: 0.0706, accuracy: 0.6091
+2025-07-23 13:52:43 - INFO -     Bin 1: Remove 50% -> validity: 0.0000, accuracy: 0.6059
+2025-07-23 13:52:43 - INFO -   minor_addition:
+2025-07-23 13:52:43 - INFO -     Bin 0: Use 80% -> validity: 0.2128, accuracy: 0.6276
+2025-07-23 13:52:44 - INFO -     Bin 5: Use 85% -> validity: 0.1314, accuracy: 0.6145
+2025-07-23 13:52:44 - INFO -     Bin 10: Use 90% -> validity: 0.1270, accuracy: 0.6178
+2025-07-23 13:52:45 - INFO -     Bin 15: Use 95% -> validity: 0.0814, accuracy: 0.6102
+2025-07-23 13:52:45 - INFO -     Bin 20: Use 100% -> validity: 0.0706, accuracy: 0.6091
+2025-07-23 13:52:45 - INFO -   major_addition:
+2025-07-23 13:52:45 - INFO -     Bin 0: Use 50% -> validity: 0.7155, accuracy: 0.8404
+2025-07-23 13:52:46 - INFO -     Bin 1: Use 100% -> validity: 0.0706, accuracy: 0.6091
+2025-07-23 13:52:46 - INFO - 
+Testing model perturbations for fold 0...
+2025-07-23 13:52:46 - INFO -   random_forest (3, 50): validity: 0.2291, accuracy: 0.6493
+2025-07-23 13:52:46 - INFO -   random_forest (5, 100): validity: 0.2128, accuracy: 0.6276
+2025-07-23 13:52:47 - INFO -   random_forest (10, 200): validity: 0.1618, accuracy: 0.6189
+2025-07-23 13:52:48 - INFO -   xgboost (3, 50): validity: 0.2747, accuracy: 0.6526
+2025-07-23 13:52:48 - INFO -   xgboost (6, 100): validity: 0.3094, accuracy: 0.6754
+2025-07-23 13:52:49 - INFO -   lightgbm (4, 75): validity: 0.2345, accuracy: 0.6580
+2025-07-23 13:52:49 - INFO -   adaboost (2, 30): validity: 0.4864, accuracy: 0.8317
+2025-07-23 13:52:49 - INFO - 
+--- FOLD 1 ANALYSIS ---
+2025-07-23 13:52:49 - INFO - --------------------------------------------------
+2025-07-23 13:52:49 - INFO - Fold 1 data shapes:
+2025-07-23 13:52:49 - INFO -   Raw train: (3681, 58)
+2025-07-23 13:52:49 - INFO -   Processed - Train: (3681, 58), Test: (920, 58)
+2025-07-23 13:52:49 - INFO -   Training samples: 3681
+2025-07-23 13:52:49 - INFO -   Test samples: 920
+2025-07-23 13:52:49 - INFO -   Features: 57
+2025-07-23 13:52:49 - INFO -   Class distribution - Train: [2231 1450]
+2025-07-23 13:52:49 - INFO -   Class distribution - Test: [557 363]
+2025-07-23 13:52:49 - INFO - 
+Training baseline model for fold 1...
+2025-07-23 13:52:50 - INFO -   Train accuracy: 0.9356
+2025-07-23 13:52:50 - INFO -   Test accuracy: 0.9250
+2025-07-23 13:52:50 - INFO - Setting up DiCE framework for fold 1...
+2025-07-23 13:52:50 - INFO - Generating counterfactuals for fold 1...
+2025-07-23 13:52:50 - INFO - Generating counterfactuals using method: random
+2025-07-23 13:52:50 - INFO - Test set size: 920 samples
+2025-07-23 14:03:47 - INFO - Counterfactual generation complete:
+2025-07-23 14:03:47 - INFO -   Successful: 920/920 (100.00%)
+2025-07-23 14:03:47 - INFO -   Failed: 0/920 (0.00%)
+2025-07-23 14:03:48 - INFO -   Success rate: 100.00%
+2025-07-23 14:03:48 - INFO -   Baseline validity: 1.0000 (920/920)
+2025-07-23 14:03:48 - INFO - 
+Testing data perturbations for fold 1...
+2025-07-23 14:03:48 - INFO -   minor_deletion:
+2025-07-23 14:03:48 - INFO -     Bin 0: Remove 0% -> validity: 0.1750, accuracy: 0.6076
+2025-07-23 14:03:49 - INFO -     Bin 5: Remove 5% -> validity: 0.1359, accuracy: 0.6076
+2025-07-23 14:03:49 - INFO -     Bin 10: Remove 10% -> validity: 0.0522, accuracy: 0.6065
+2025-07-23 14:03:50 - INFO -     Bin 15: Remove 15% -> validity: 0.0109, accuracy: 0.6054
+2025-07-23 14:03:50 - INFO -     Bin 20: Remove 20% -> validity: 0.0174, accuracy: 0.6054
+2025-07-23 14:03:50 - INFO -   major_deletion:
+2025-07-23 14:03:51 - INFO -     Bin 0: Remove 0% -> validity: 0.1750, accuracy: 0.6076
+2025-07-23 14:03:51 - INFO -     Bin 1: Remove 50% -> validity: 0.0000, accuracy: 0.6054
+2025-07-23 14:03:51 - INFO -   minor_addition:
+2025-07-23 14:03:52 - INFO -     Bin 0: Use 80% -> validity: 0.1826, accuracy: 0.6174
+2025-07-23 14:03:52 - INFO -     Bin 5: Use 85% -> validity: 0.1348, accuracy: 0.6163
+2025-07-23 14:03:52 - INFO -     Bin 10: Use 90% -> validity: 0.1337, accuracy: 0.6120
+2025-07-23 14:03:53 - INFO -     Bin 15: Use 95% -> validity: 0.1815, accuracy: 0.6141
+2025-07-23 14:03:53 - INFO -     Bin 20: Use 100% -> validity: 0.1750, accuracy: 0.6076
+2025-07-23 14:03:53 - INFO -   major_addition:
+2025-07-23 14:03:53 - INFO -     Bin 0: Use 50% -> validity: 0.6641, accuracy: 0.8478
+2025-07-23 14:03:54 - INFO -     Bin 1: Use 100% -> validity: 0.1750, accuracy: 0.6076
+2025-07-23 14:03:54 - INFO - 
+Testing model perturbations for fold 1...
+2025-07-23 14:03:54 - INFO -   random_forest (3, 50): validity: 0.1859, accuracy: 0.6326
+2025-07-23 14:03:54 - INFO -   random_forest (5, 100): validity: 0.1826, accuracy: 0.6174
+2025-07-23 14:03:56 - INFO -   random_forest (10, 200): validity: 0.2511, accuracy: 0.6207
+2025-07-23 14:03:56 - INFO -   xgboost (3, 50): validity: 0.3750, accuracy: 0.7000
+2025-07-23 14:03:56 - INFO -   xgboost (6, 100): validity: 0.3054, accuracy: 0.6739
+2025-07-23 14:03:56 - INFO -   lightgbm (4, 75): validity: 0.3022, accuracy: 0.6467
+2025-07-23 14:03:57 - INFO -   adaboost (2, 30): validity: 0.3739, accuracy: 0.7663
+2025-07-23 14:03:57 - INFO - 
+--- FOLD 2 ANALYSIS ---
+2025-07-23 14:03:57 - INFO - --------------------------------------------------
+2025-07-23 14:03:57 - INFO - Fold 2 data shapes:
+2025-07-23 14:03:57 - INFO -   Raw train: (3681, 58)
+2025-07-23 14:03:57 - INFO -   Processed - Train: (3681, 58), Test: (920, 58)
+2025-07-23 14:03:57 - INFO -   Training samples: 3681
+2025-07-23 14:03:57 - INFO -   Test samples: 920
+2025-07-23 14:03:57 - INFO -   Features: 57
+2025-07-23 14:03:57 - INFO -   Class distribution - Train: [2231 1450]
+2025-07-23 14:03:57 - INFO -   Class distribution - Test: [557 363]
+2025-07-23 14:03:57 - INFO - 
+Training baseline model for fold 2...
+2025-07-23 14:03:57 - INFO -   Train accuracy: 0.9326
+2025-07-23 14:03:57 - INFO -   Test accuracy: 0.9228
+2025-07-23 14:03:57 - INFO - Setting up DiCE framework for fold 2...
+2025-07-23 14:03:57 - INFO - Generating counterfactuals for fold 2...
+2025-07-23 14:03:57 - INFO - Generating counterfactuals using method: random
+2025-07-23 14:03:57 - INFO - Test set size: 920 samples

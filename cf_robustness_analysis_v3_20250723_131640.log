@@ -1,0 +1,72 @@
+2025-07-23 13:16:40 - INFO - ================================================================================
+2025-07-23 13:16:40 - INFO - COUNTERFACTUAL ROBUSTNESS ANALYSIS (v3) - GERMAN CREDIT DATASET
+2025-07-23 13:16:40 - INFO - ================================================================================
+2025-07-23 13:16:40 - INFO - 📝 Logging session to: cf_robustness_analysis_v3_20250723_131640.log
+2025-07-23 13:16:40 - INFO - 🕒 Started at: 2025-07-23 13:16:40
+2025-07-23 13:16:40 - INFO - ================================================================================
+2025-07-23 13:16:40 - INFO - 
+1. Loading German Credit dataset...
+2025-07-23 13:16:40 - INFO - Dataset: German Credit
+2025-07-23 13:16:40 - INFO - Label column: Class
+2025-07-23 13:16:40 - INFO - Features: 10 features
+2025-07-23 13:16:40 - INFO - Feature types:
+2025-07-23 13:16:40 - INFO -   Age: D
+2025-07-23 13:16:40 - INFO -   Sex: C
+2025-07-23 13:16:40 - INFO -   Job: D
+2025-07-23 13:16:40 - INFO -   Housing: C
+2025-07-23 13:16:40 - INFO -   SavingAccounts: D
+2025-07-23 13:16:40 - INFO -   CheckingAccount: D
+2025-07-23 13:16:40 - INFO -   CreditAmount: N
+2025-07-23 13:16:40 - INFO -   Duration: D
+2025-07-23 13:16:40 - INFO -   Purpose: C
+2025-07-23 13:16:40 - INFO -   Class: B
+2025-07-23 13:16:40 - INFO - 
+2. Analysis parameters:
+2025-07-23 13:16:40 - INFO -   Number of folds: 5
+2025-07-23 13:16:40 - INFO - Dataset Summary:
+2025-07-23 13:16:40 - INFO - Total samples (after cleaning): 1000
+2025-07-23 13:16:40 - INFO - Number of features: 9
+2025-07-23 13:16:40 - INFO - Label column: Class
+2025-07-23 13:16:40 - INFO - Number of folds: 5
+2025-07-23 13:16:40 - INFO - Fold Summary:
+2025-07-23 13:16:40 - INFO - --------------------------------------------------
+2025-07-23 13:16:40 - INFO - Fold 0: Train=800 samples, Test=200 samples
+2025-07-23 13:16:40 - INFO - Fold 1: Train=800 samples, Test=200 samples
+2025-07-23 13:16:40 - INFO - Fold 2: Train=800 samples, Test=200 samples
+2025-07-23 13:16:40 - INFO - Fold 3: Train=800 samples, Test=200 samples
+2025-07-23 13:16:40 - INFO - Fold 4: Train=800 samples, Test=200 samples
+2025-07-23 13:16:40 - INFO - --------------------------------------------------
+2025-07-23 13:16:40 - INFO -   Data perturbation types: ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
+2025-07-23 13:16:40 - INFO -   Model perturbations: 7 configurations
+2025-07-23 13:16:40 - INFO -     - random_forest (max_depth=3, n_estimators=50)
+2025-07-23 13:16:40 - INFO -     - random_forest (max_depth=5, n_estimators=100)
+2025-07-23 13:16:40 - INFO -     - random_forest (max_depth=10, n_estimators=200)
+2025-07-23 13:16:40 - INFO -     - xgboost (max_depth=3, n_estimators=50)
+2025-07-23 13:16:40 - INFO -     - xgboost (max_depth=6, n_estimators=100)
+2025-07-23 13:16:40 - INFO -     - lightgbm (max_depth=4, n_estimators=75)
+2025-07-23 13:16:40 - INFO -     - adaboost (max_depth=2, n_estimators=30)
+2025-07-23 13:16:40 - INFO - 
+3. Running comprehensive analysis across all 5 folds...
+2025-07-23 13:16:40 - INFO - ================================================================================
+2025-07-23 13:16:40 - INFO - 
+--- FOLD 0 ANALYSIS ---
+2025-07-23 13:16:40 - INFO - --------------------------------------------------
+2025-07-23 13:16:40 - INFO - Fold 0 data shapes:
+2025-07-23 13:16:40 - INFO -   Raw train: (800, 10)
+2025-07-23 13:16:40 - INFO -   Processed - Train: (800, 10), Test: (200, 10)
+2025-07-23 13:16:40 - INFO -   Training samples: 800
+2025-07-23 13:16:40 - INFO -   Test samples: 200
+2025-07-23 13:16:40 - INFO -   Features: 9
+2025-07-23 13:16:40 - INFO -   Class distribution - Train: [240 560]
+2025-07-23 13:16:40 - INFO -   Class distribution - Test: [ 60 140]
+2025-07-23 13:16:40 - INFO - 
+Training baseline model for fold 0...
+2025-07-23 13:16:40 - INFO -   Train accuracy: 0.7800
+2025-07-23 13:16:40 - INFO -   Test accuracy: 0.7450
+2025-07-23 13:16:40 - INFO - Setting up DiCE framework for fold 0...
+2025-07-23 13:16:40 - INFO - German Credit feature analysis:
+2025-07-23 13:16:40 - INFO -   Categorical features: ['Sex', 'Housing', 'SavingAccounts', 'CheckingAccount', 'Purpose']
+2025-07-23 13:16:40 - INFO -   Continuous features: ['Age', 'Job', 'CreditAmount', 'Duration']
+2025-07-23 13:16:40 - INFO - Generating counterfactuals for fold 0...
+2025-07-23 13:16:40 - INFO - Generating counterfactuals using method: random
+2025-07-23 13:16:40 - INFO - Test set size: 200 samples
