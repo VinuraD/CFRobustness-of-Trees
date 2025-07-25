@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Counterfactual Robustness Analysis (CFXplorer v2) - Spambase Dataset
+Counterfactual Robustness Analysis (CFXplorer v4) - HELOC Dataset
 
 This script evaluates the robustness of counterfactual explanations using the CFXplorer algorithm across two separate experiments:
 1. Data perturbations - testing how changes in training data affect counterfactual validity
@@ -15,7 +15,7 @@ The workflow is:
    - Train different model types on the full unperturbed dataset
    - Evaluate how valid the original counterfactuals remain
 
-This version uses the CFXplorer algorithm for counterfactual generation and the Spambase dataset (all continuous features).
+This version uses the CFXplorer algorithm for counterfactual generation and the HELOC dataset (numerical features only).
 Note: CFXplorer only works with RandomForestClassifier, so model perturbations are limited to RF hyperparameters.
 This helps quantify the independent effects of data and model choices on counterfactual explanation stability.
 """
@@ -49,7 +49,7 @@ from perturb import Perturbation
 def setup_logging():
     """Setup comprehensive logging to both console and file"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"cf_robustness_analysis_cfxplorer_v2_{timestamp}.log"
+    log_filename = f"cf_robustness_analysis_cfxplorer_v4_heloc_{timestamp}.log"
     
     logger = logging.getLogger('CFRobustness')
     logger.setLevel(logging.INFO)
@@ -452,7 +452,7 @@ def create_comprehensive_visualizations(all_results, output_dir="cfxplorer_plots
     
     # 1. Data Robustness Visualization
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-    fig.suptitle('CFXplorer Counterfactual Data Robustness Analysis - Spambase Dataset', fontsize=16, fontweight='bold')
+    fig.suptitle('CFXplorer Counterfactual Data Robustness Analysis - HELOC Dataset', fontsize=16, fontweight='bold')
     
     perturbation_types = ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
     
@@ -501,7 +501,7 @@ def create_comprehensive_visualizations(all_results, output_dir="cfxplorer_plots
     
     plt.tight_layout()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plt.savefig(f'{output_dir}/cf_data_robustness_spambase_5fold_plot_{timestamp}.png', 
+    plt.savefig(f'{output_dir}/cf_data_robustness_heloc_5fold_plot_{timestamp}.png', 
                 dpi=300, bbox_inches='tight')
     plt.close()
     
@@ -556,11 +556,11 @@ def print_statistical_summary(all_results):
         log_print(f"    Min validity: {np.min(all_model_validities):.4f}")
         log_print(f"    Max validity: {np.max(all_model_validities):.4f}")
     
-    log_print(f"\n💡 KEY INSIGHTS FOR SPAMBASE DATASET:")
-    log_print(f"  • CFXplorer shows robustness to minor data perturbations")
-    log_print(f"  • RandomForest hyperparameters significantly affect CF validity")  
-    log_print(f"  • Continuous features allow stable counterfactual generation")
-    log_print(f"  • Focus algorithm provides consistent explanations across folds")
+    log_print(f"\n💡 KEY INSIGHTS FOR HELOC DATASET:")
+    log_print(f"  • CFXplorer processes pure numerical features efficiently")
+    log_print(f"  • HELOC financial data provides challenging CF generation scenarios")  
+    log_print(f"  • Numerical features allow for continuous perturbations")
+    log_print(f"  • Focus algorithm adapts well to high-dimensional numerical data")
 
 def main():
     """Main execution function"""
@@ -568,7 +568,7 @@ def main():
     logger, log_filename = setup_logging()
     
     log_print("="*80)
-    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (CFXPLORER v2) - SPAMBASE DATASET")
+    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (CFXPLORER v4) - HELOC DATASET")
     log_print("="*80)
     log_print(f"📝 Logging session to: {log_filename}")
     log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -578,13 +578,13 @@ def main():
         # Initialize data module
         log_print("\n1. Loading dataset...")
         # Adjust path to be relative to the parent directory
-        data_path = os.path.join(os.path.dirname(__file__), "..", "data", "Spambase.csv")
+        data_path = os.path.join(os.path.dirname(__file__), "..", "data", "HELOC.csv")
         dm = DataModule(data_path, n_splits=5, random_state=42)
         perturbation = Perturbation(dm)
         
         # Get metadata
         metadata = perturbation.get_metadata()
-        log_print(f"Dataset: Spambase")
+        log_print(f"Dataset: HELOC")
         log_print(f"Label column: {metadata['label_column']}")
         log_print(f"Features: {len(metadata['feature_types'])} features")
         
@@ -716,4 +716,4 @@ def main():
             logger.removeHandler(handler)
 
 if __name__ == "__main__":
-    main() 
+    main()

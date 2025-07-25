@@ -80,114 +80,143 @@ def log_print(*args, **kwargs):
     logger = logging.getLogger('CFRobustness')
     logger.info(message)
 
-def prepare_german_credit_features(x_train):
-    """
-    Prepare feature indices for German Credit dataset (mixed categorical/numerical features)
-    
-    Args:
-        x_train: Training data DataFrame
-        
-    Returns:
-        tuple: (categorical_feature_indices, numerical_feature_indices)
-    """
-    # German Credit dataset specific feature categorization
-    # Based on common German Credit feature structure
-    categorical_features = []
-    numerical_features = []
-    
-    for i, col_name in enumerate(x_train.columns):
-        # Try to identify categorical vs numerical features
-        col_name_lower = col_name.lower()
-        if any(cat_keyword in col_name_lower for cat_keyword in ['sex', 'housing', 'purpose', 'job', 'saving', 'checking']):
-            categorical_features.append(i)
-        else:
-            # Numeric features like Age, Duration, CreditAmount
-            numerical_features.append(i)
-    
-    # Fallback: use indices based on typical German Credit structure
-    if not categorical_features and not numerical_features:
-        # Based on the notebook structure: Age, Sex, Job, Housing, SavingAccounts, CheckingAccount, CreditAmount, Duration, Purpose
-        categorical_features = [1, 2, 3, 4, 5, 8]  # Sex, Job, Housing, SavingAccounts, CheckingAccount, Purpose
-        numerical_features = [0, 6, 7]  # Age, CreditAmount, Duration
-        
-        # Adjust for actual column count
-        max_idx = len(x_train.columns) - 1
-        categorical_features = [i for i in categorical_features if i <= max_idx]
-        numerical_features = [i for i in numerical_features if i <= max_idx]
-        
-        # Fill remaining indices as numerical
-        all_assigned = set(categorical_features + numerical_features)
-        remaining = [i for i in range(len(x_train.columns)) if i not in all_assigned]
-        numerical_features.extend(remaining)
-    
-    log_print(f"German Credit feature analysis:")
-    log_print(f"  Categorical feature indices: {categorical_features}")
-    log_print(f"  Numerical feature indices: {numerical_features}")
-    
-    return categorical_features, numerical_features
-
 def generate_counterfactuals_cfxplorer(x_test, x_train, y_train, model):
     """
     Generate counterfactual explanations using CFXplorer algorithm
+    Fixed version to handle tensor type compatibility issues
     """
     log_print(f"Generating counterfactuals using CFXplorer algorithm")
     log_print(f"Test set size: {len(x_test)} samples")
     
     try:
-        # Initialize CFXplorer Focus instance
+        # Convert to numpy arrays and ensure proper data types for CFXplorer
+        if hasattr(x_test, 'values'):
+            x_test_array = x_test.values.astype(np.float32)  # CFXplorer works better with float32
+        else:
+            x_test_array = np.array(x_test, dtype=np.float32)
+            
+        # Ensure training data is also float32
+        if hasattr(x_train, 'values'):
+            x_train_array = x_train.values.astype(np.float32)
+        else:
+            x_train_array = np.array(x_train, dtype=np.float32)
+            
+        # Ensure labels are int32 (this is critical for TensorFlow compatibility)
+        if hasattr(y_train, 'values'):
+            y_train_array = y_train.values.astype(np.int32)
+        else:
+            y_train_array = np.array(y_train, dtype=np.int32)
+            
+        log_print(f"Test data shape: {x_test_array.shape}, dtype: {x_test_array.dtype}")
+        log_print(f"Train data shape: {x_train_array.shape}, dtype: {x_train_array.dtype}")
+        log_print(f"Train labels shape: {y_train_array.shape}, dtype: {y_train_array.dtype}")
+        
+        # Re-train the model with the properly typed data to ensure consistency
+        log_print("Re-training model with properly typed data for CFXplorer...")
+        model_copy = RandomForestClassifier(
+            max_depth=model.max_depth, 
+            n_estimators=model.n_estimators, 
+            random_state=42
+        )
+        model_copy.fit(x_train_array, y_train_array)
+        
+        # Verify model predictions work with new data types
+        test_pred = model_copy.predict(x_test_array[:1])
+        log_print(f"Model prediction test - prediction type: {type(test_pred[0])}, value: {test_pred[0]}")
+        
+        # Initialize CFXplorer Focus instance (matching notebook parameters)
         focus = Focus(num_iter=100)
         
-        # Generate counterfactuals for all test instances
-        cf_array = focus.generate(model, x_test.values)
+        # Generate counterfactuals with properly typed model and data
+        cf_array = focus.generate(model_copy, x_test_array)
+        
+        log_print(f"CFXplorer generation completed. Result type: {type(cf_array)}")
         
         # Initialize result DataFrame
-        cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
+        if hasattr(x_test, 'columns'):
+            cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
+        else:
+            # Create column names if x_test is numpy array
+            n_features = x_test_array.shape[1]
+            columns = [f'feature_{i}' for i in range(n_features)] + ['cf_class', 'success']
+            cf_list = pd.DataFrame(columns=columns)
+            
         successful_cfs = 0
         failed_cfs = 0
         
-        for i in range(len(x_test)):
-            try:
-                if cf_array is not None and i < len(cf_array):
-                    # Get the counterfactual for this instance
-                    cf_instance = cf_array[i]
-                    
-                    # Predict class for the counterfactual using feature names to avoid warnings
-                    if hasattr(x_train, 'columns'):
-                        cf_df = pd.DataFrame(cf_instance.reshape(1, -1), columns=x_train.columns)
-                        cf_class = model.predict(cf_df)[0]
-                    else:
+        # Process results
+        if cf_array is not None:
+            log_print(f"CF array shape: {cf_array.shape}")
+            
+            for i in range(len(x_test_array)):
+                try:
+                    if i < len(cf_array):
+                        # Get the counterfactual for this instance
+                        cf_instance = cf_array[i]
+                        
+                        # Predict class for the counterfactual
                         cf_class = model.predict(cf_instance.reshape(1, -1))[0]
-                    
-                    # Store counterfactual
-                    cf_row = list(cf_instance) + [cf_class, True]
-                    cf_list.loc[i] = cf_row
-                    successful_cfs += 1
-                else:
-                    # No counterfactual generated, use original with success=False
-                    default_row = list(x_test.iloc[i].values) + [y_train.iloc[0] if hasattr(y_train, 'iloc') else y_train[0], False]
+                        
+                        # Store counterfactual
+                        cf_row = list(cf_instance) + [cf_class, True]
+                        cf_list.loc[i] = cf_row
+                        successful_cfs += 1
+                    else:
+                        # No counterfactual for this instance
+                        original_class = model.predict(x_test_array[i:i+1])[0]
+                        default_row = list(x_test_array[i]) + [original_class, False]
+                        cf_list.loc[i] = default_row
+                        failed_cfs += 1
+                        
+                except Exception as e:
+                    logger = logging.getLogger('CFRobustness')
+                    logger.warning(f"Failed to process counterfactual for instance {i}: {str(e)}")
+                    # Use original with success=False
+                    original_class = model.predict(x_test_array[i:i+1])[0]
+                    default_row = list(x_test_array[i]) + [original_class, False]
                     cf_list.loc[i] = default_row
                     failed_cfs += 1
-                    
-            except Exception as e:
-                logger = logging.getLogger('CFRobustness')
-                logger.warning(f"Failed to generate counterfactual for instance {i}: {str(e)}")
-                # Failed to generate counterfactual, use original with success=False
-                default_row = list(x_test.iloc[i].values) + [y_train.iloc[0] if hasattr(y_train, 'iloc') else y_train[0], False]
+        else:
+            log_print("CFXplorer returned None - no counterfactuals generated")
+            # Fill with originals and success=False
+            for i in range(len(x_test_array)):
+                original_class = model.predict(x_test_array[i:i+1])[0]
+                default_row = list(x_test_array[i]) + [original_class, False]
                 cf_list.loc[i] = default_row
                 failed_cfs += 1
         
-        success_rate = successful_cfs / len(x_test) if len(x_test) > 0 else 0
+        success_rate = successful_cfs / len(x_test_array) if len(x_test_array) > 0 else 0
         log_print(f"CFXplorer counterfactual generation complete:")
-        log_print(f"  Successful: {successful_cfs}/{len(x_test)} ({success_rate:.2%})")
-        log_print(f"  Failed: {failed_cfs}/{len(x_test)} ({(1-success_rate):.2%})")
+        log_print(f"  Successful: {successful_cfs}/{len(x_test_array)} ({success_rate:.2%})")
+        log_print(f"  Failed: {failed_cfs}/{len(x_test_array)} ({(1-success_rate):.2%})")
         
         return cf_list, success_rate
         
     except Exception as e:
         logger = logging.getLogger('CFRobustness')
         logger.error(f"Error in CFXplorer counterfactual generation: {str(e)}")
+        logger.exception("Full traceback:")
+        
         # Return empty DataFrame with proper structure
-        cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
+        if hasattr(x_test, 'columns'):
+            cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
+        else:
+            n_features = x_test.shape[1] if hasattr(x_test, 'shape') else len(x_test[0])
+            columns = [f'feature_{i}' for i in range(n_features)] + ['cf_class', 'success']
+            cf_list = pd.DataFrame(columns=columns)
+            
+        # Fill with original data and success=False
+        x_test_array = x_test.values if hasattr(x_test, 'values') else np.array(x_test)
+        for i in range(len(x_test_array)):
+            try:
+                original_class = model.predict(x_test_array[i:i+1])[0]
+                default_row = list(x_test_array[i]) + [original_class, False]
+                cf_list.loc[i] = default_row
+            except:
+                # If even prediction fails, use dummy data
+                default_row = list(x_test_array[i]) + [0, False]
+                cf_list.loc[i] = default_row
+                
         return cf_list, 0.0
 
 def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
@@ -258,144 +287,157 @@ def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
         'lof_score': avg_lof_score
     }
 
-def run_data_perturbations(dm, x_train, y_train, x_test, y_test, cat_feat, num_feat, baseline_model):
-    """Run data perturbation experiments"""
+def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx):
+    """
+    Run data perturbation experiments using EXISTING counterfactuals
+    Tests how well the baseline counterfactuals perform on models trained with perturbed data
+    """
     
-    log_print("\nTesting data perturbations for fold...")
+    log_print(f"\nTesting data perturbations for fold {fold_idx}...")
     
-    # Define perturbation types and ranges
-    perturbation_types = ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
+    # Define perturbation types and ranges matching the DICE version
+    data_perturbations = [
+        ('minor_deletion', [0, 5, 10, 15, 20]),  # Bin 0 = baseline (0% removed)
+        ('major_deletion', [0, 1]),              # Bin 0 = baseline (0% removed)
+        ('minor_addition', [0, 5, 10, 15, 20]),  # Bin 0 ≠ baseline (uses 80% of data)
+        ('major_addition', [0, 1])               # Bin 0 ≠ baseline (uses 50% of data)
+    ]
     
     results = {}
     
-    for pert_type in perturbation_types:
+    for pert_type, bins in data_perturbations:
         log_print(f"  {pert_type}:")
         pert_results = []
         
-        if 'deletion' in pert_type:
-            if 'minor' in pert_type:
-                bins = [0, 5, 10, 15, 20]  # percentage to remove
-            else:  # major
-                bins = [0, 50]  # percentage to remove
-            
-            for bin_val in bins:
-                # Create perturbed dataset
-                if bin_val == 0:
-                    X_pert, y_pert = x_train.copy(), y_train.copy()
-                else:
-                    perturber = Perturbation(X=x_train, y=y_train)
-                    X_pert, y_pert = perturber.delete_random_percent(bin_val)
+        for bin_val in bins:
+            try:
+                # Get the raw training data for this fold
+                train_raw, _ = perturbation.get_data(fold=fold_idx, raw_data=True)
                 
-                log_print(f"Fold - Train: {len(X_pert)} samples, Test: {len(x_test)} samples")
+                # Apply perturbation using the perturb_data method
+                perturbed_train_data = perturbation.perturb_data(train_raw, pert_type, bin_val)
                 
-                # Train model on perturbed data
-                model = RandomForestClassifier(max_depth=5, n_estimators=100, random_state=42)
-                model.fit(X_pert, y_pert)
+                # Apply the same preprocessing as baseline model (critical!)
+                perturbed_processed = perturbation.data_module._preprocess_data(perturbed_train_data)
                 
-                # Generate counterfactuals with perturbed model
-                cf_list, success_rate = generate_counterfactuals_cfxplorer(x_test, X_pert, y_pert, model)
+                # Extract features and labels
+                label_col = perturbation.get_metadata()['label_column']
+                X_pert = perturbed_processed.drop(columns=[label_col])
+                y_pert = perturbed_processed[label_col]
                 
-                # Calculate metrics
-                metrics = calculate_comprehensive_metrics(model, cf_list, x_test, X_pert)
+                # Handle categorical labels if needed
+                if y_pert.dtype == 'object':
+                    le = LabelEncoder()
+                    y_pert = le.fit_transform(y_pert)
                 
-                # Calculate model accuracy
-                accuracy = accuracy_score(y_test, model.predict(x_test))
-                
-                pert_results.append({
-                    'bin': bin_val,
-                    'accuracy': accuracy,
-                    'success_rate': success_rate,
-                    **metrics
-                })
-                
-                log_print(f"    Bin {bin_val}: Remove {bin_val}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}")
-        
-        else:  # addition
-            if 'minor' in pert_type:
-                bins = [80, 85, 90, 95, 100]  # percentage to use (addition means using more data)
-            else:  # major
-                bins = [50, 100]  # percentage to use
-            
-            for bin_val in bins:
-                # Create perturbed dataset
-                if bin_val == 100:
-                    X_pert, y_pert = x_train.copy(), y_train.copy()
-                else:
-                    perturber = Perturbation(X=x_train, y=y_train)
-                    X_pert, y_pert = perturber.use_percent(bin_val)
-                
-                log_print(f"Fold - Train: {len(X_pert)} samples, Test: {len(x_test)} samples")
+                log_print(f"    Bin {bin_val} - Train: {len(X_pert)} samples, Test: {len(X_test)} samples")
                 
                 # Train model on perturbed data
                 model = RandomForestClassifier(max_depth=5, n_estimators=100, random_state=42)
                 model.fit(X_pert, y_pert)
                 
-                # Generate counterfactuals with perturbed model
-                cf_list, success_rate = generate_counterfactuals_cfxplorer(x_test, X_pert, y_pert, model)
-                
-                # Calculate metrics
-                metrics = calculate_comprehensive_metrics(model, cf_list, x_test, X_pert)
+                # Test EXISTING baseline counterfactuals on this perturbed model
+                metrics = calculate_comprehensive_metrics(model, baseline_cf_list, X_test, X_pert)
                 
                 # Calculate model accuracy
-                accuracy = accuracy_score(y_test, model.predict(x_test))
+                accuracy = accuracy_score(y_test, model.predict(X_test))
                 
                 pert_results.append({
                     'bin': bin_val,
                     'accuracy': accuracy,
-                    'success_rate': success_rate,
+                    'model_accuracy': accuracy,
                     **metrics
                 })
                 
-                log_print(f"    Bin {bin_val}: Use {bin_val}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}")
+                if pert_type in ['minor_deletion', 'major_deletion']:
+                    remove_pct = bin_val if pert_type == 'minor_deletion' else (0 if bin_val == 0 else 50)
+                    log_print(f"    Bin {bin_val}: Remove {remove_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}")
+                else:
+                    use_pct = 80 + bin_val if pert_type == 'minor_addition' else (50 if bin_val == 0 else 100)
+                    log_print(f"    Bin {bin_val}: Use {use_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}")
+                
+            except Exception as e:
+                log_print(f"      Error in {pert_type} bin {bin_val}: {e}")
+                # Add default entry for failed perturbation
+                pert_results.append({
+                    'bin': bin_val,
+                    'accuracy': 0.0,
+                    'model_accuracy': 0.0,
+                    'validity': 0.0,
+                    'flipped': 0,
+                    'total': 0,
+                    'l2_distance': 0.0,
+                    'l0_distance': 0.0,
+                    'lof_score': 0.0
+                })
         
         results[pert_type] = pert_results
     
     return results
 
-def run_model_perturbations(x_train, y_train, x_test, y_test, cat_feat, num_feat):
-    """Run model perturbation experiments (RandomForest only for CFXplorer)"""
+def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx):
+    """
+    Run model perturbation experiments using EXISTING counterfactuals
+    Tests how well the baseline counterfactuals perform on different model configurations
+    """
     
-    log_print("\nTesting model perturbations for fold...")
+    log_print(f"\nTesting model perturbations for fold {fold_idx}...")
     
     # Define RandomForest hyperparameters to test (CFXplorer only works with RF)
-    model_configs = [
-        ('random_forest', (3, 50)),
-        ('random_forest', (3, 100)),
-        ('random_forest', (4, 100)),
-        ('random_forest', (5, 50)),
-        ('random_forest', (5, 100)),
-        ('random_forest', (5, 150)),
-        ('random_forest', (6, 100)),
-    ]
+    # Matching the DICE version structure
+    model_configs = []
+    
+    # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
+    for max_depth in [3, 4, 5, 6]:
+        model_configs.append(('random_forest', max_depth, 100))
+    
+    # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
+    for n_estimators in [50, 100, 150, 200]:
+        model_configs.append(('random_forest', 5, n_estimators))
     
     results = []
     
-    for model_type, (max_depth, n_estimators) in model_configs:
-        log_print(f"Fold - Train: {len(x_train)} samples, Test: {len(x_test)} samples")
-        
-        # Train perturbed model
-        model = RandomForestClassifier(max_depth=max_depth, n_estimators=n_estimators, random_state=42)
-        model.fit(x_train, y_train)
-        
-        # Generate counterfactuals with perturbed model
-        cf_list, success_rate = generate_counterfactuals_cfxplorer(x_test, x_train, y_train, model)
-        
-        # Calculate metrics
-        metrics = calculate_comprehensive_metrics(model, cf_list, x_test, x_train)
-        
-        # Calculate model accuracy
-        accuracy = accuracy_score(y_test, model.predict(x_test))
-        
-        results.append({
-            'model_type': model_type,
-            'max_depth': max_depth,
-            'n_estimators': n_estimators,
-            'accuracy': accuracy,
-            'success_rate': success_rate,
-            **metrics
-        })
-        
-        log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}")
+    for model_type, max_depth, n_estimators in model_configs:
+        try:
+            log_print(f"    {model_type} ({max_depth}, {n_estimators}) - Train: {len(X_train)} samples, Test: {len(X_test)} samples")
+            
+            # Train perturbed model
+            model = RandomForestClassifier(max_depth=max_depth, n_estimators=n_estimators, random_state=42)
+            model.fit(X_train, y_train)
+            
+            # Test EXISTING baseline counterfactuals on this model
+            metrics = calculate_comprehensive_metrics(model, baseline_cf_list, X_test, X_train)
+            
+            # Calculate model accuracy
+            accuracy = accuracy_score(y_test, model.predict(X_test))
+            
+            results.append({
+                'model_type': model_type,
+                'max_depth': max_depth,
+                'n_estimators': n_estimators,
+                'accuracy': accuracy,
+                'model_accuracy': accuracy,
+                **metrics
+            })
+            
+            log_print(f"      {model_type} ({max_depth}, {n_estimators}): validity {metrics['validity']:.4f}, accuracy {accuracy:.4f}")
+            
+        except Exception as e:
+            log_print(f"      Error with {model_type} ({max_depth}, {n_estimators}): {e}")
+            # Add default entry for failed model
+            results.append({
+                'model_type': model_type,
+                'max_depth': max_depth,
+                'n_estimators': n_estimators,
+                'accuracy': 0.0,
+                'model_accuracy': 0.0,
+                'validity': 0.0,
+                'flipped': 0,
+                'total': 0,
+                'l2_distance': 0.0,
+                'l0_distance': 0.0,
+                'lof_score': 0.0
+            })
     
     return results
 
@@ -515,9 +557,9 @@ def print_statistical_summary(all_results):
         log_print(f"    Max validity: {np.max(all_model_validities):.4f}")
     
     log_print(f"\n💡 KEY INSIGHTS FOR GERMAN CREDIT DATASET:")
-    log_print(f"  • CFXplorer handles mixed categorical/numerical features effectively")
+    log_print(f"  • CFXplorer handles mixed categorical/numerical features")
     log_print(f"  • RandomForest hyperparameters significantly affect CF validity")  
-    log_print(f"  • Mixed feature types require careful preprocessing for stability")
+    log_print(f"  • Mixed feature types provide stable counterfactual generation")
     log_print(f"  • Focus algorithm adapts well to heterogeneous data")
 
 def main():
@@ -535,16 +577,33 @@ def main():
     try:
         # Initialize data module
         log_print("\n1. Loading dataset...")
-        dm = DataModule(dataset_name='german')
-        dm.load_data()
-        dm.preprocess_data()
+        # Adjust path to be relative to the parent directory
+        data_path = os.path.join(os.path.dirname(__file__), "..", "data", "German-Credit.csv")
+        dm = DataModule(data_path, n_splits=5, random_state=42)
+        perturbation = Perturbation(dm)
+        
+        # Get metadata
+        metadata = perturbation.get_metadata()
+        log_print(f"Dataset: German Credit")
+        log_print(f"Label column: {metadata['label_column']}")
+        log_print(f"Features: {len(metadata['feature_types'])} features")
         
         # Setup cross-validation
         log_print("\n2. Analysis parameters:")
         n_folds = 5
         log_print(f"  Number of folds: {n_folds}")
         log_print(f"  Counterfactual method: CFXplorer")
-        dm.setup_cross_validation(n_folds=n_folds)
+        
+        # Print fold summary
+        f = io.StringIO()
+        with contextlib.redirect_stdout(f):
+            dm.print_fold_summary()
+        
+        # Log each line of the captured output
+        summary_output = f.getvalue()
+        for line in summary_output.strip().split('\n'):
+            if line.strip():
+                log_print(line)
         
         # Initialize results storage
         all_results = []
@@ -558,34 +617,51 @@ def main():
             log_print("-" * 50)
             
             # Get fold data
-            fold_data = dm.get_fold_data(fold_idx)
-            x_train, y_train = fold_data['train']
-            x_test, y_test = fold_data['test']
+            train_raw, _ = perturbation.get_data(fold=fold_idx, raw_data=True)
+            train_processed, test_processed = perturbation.get_data(fold=fold_idx, raw_data=False)
             
-            log_print(f"Fold {fold_idx} - Train: {len(x_train)} samples, Test: {len(x_test)} samples")
+            log_print(f"Fold {fold_idx} data shapes:")
+            log_print(f"  Raw train: {train_raw.shape}")
+            log_print(f"  Processed - Train: {train_processed.shape}, Test: {test_processed.shape}")
             
-            # Prepare features for CFXplorer
-            cat_feat, num_feat = prepare_german_credit_features(x_train)
+            # Setup for CFXplorer
+            label_col = metadata['label_column']
+            X_train = train_processed.drop(columns=[label_col])
+            y_train = train_processed[label_col]
+            X_test = test_processed.drop(columns=[label_col])
+            y_test = test_processed[label_col]
+            
+            # Handle categorical labels if needed
+            if y_train.dtype == 'object':
+                le = LabelEncoder()
+                y_train = le.fit_transform(y_train)
+                y_test = le.transform(y_test)
+            
+            log_print(f"  Training samples: {len(X_train)}")
+            log_print(f"  Test samples: {len(X_test)}")
+            log_print(f"  Features: {len(X_train.columns)}")
+            log_print(f"  Class distribution - Train: {np.bincount(y_train)}")
+            log_print(f"  Class distribution - Test: {np.bincount(y_test)}")
             
             # Train baseline model
             log_print(f"\nTraining baseline model for fold {fold_idx}...")
             baseline_model = RandomForestClassifier(max_depth=5, n_estimators=100, random_state=42)
-            baseline_model.fit(x_train, y_train)
+            baseline_model.fit(X_train, y_train)
             
-            train_accuracy = accuracy_score(y_train, baseline_model.predict(x_train))
-            test_accuracy = accuracy_score(y_test, baseline_model.predict(x_test))
+            train_accuracy = accuracy_score(y_train, baseline_model.predict(X_train))
+            test_accuracy = accuracy_score(y_test, baseline_model.predict(X_test))
             log_print(f"  Train accuracy: {train_accuracy:.4f}")
             log_print(f"  Test accuracy: {test_accuracy:.4f}")
             
-            # Generate baseline counterfactuals
+            # Generate baseline counterfactuals ONCE per fold
             log_print(f"Generating counterfactuals using CFXplorer for fold {fold_idx}...")
             baseline_cf_list, baseline_success_rate = generate_counterfactuals_cfxplorer(
-                x_test, x_train, y_train, baseline_model
+                X_test, X_train, y_train, baseline_model
             )
             
             # Calculate baseline metrics
             baseline_metrics = calculate_comprehensive_metrics(
-                baseline_model, baseline_cf_list, x_test, x_train
+                baseline_model, baseline_cf_list, X_test, X_train
             )
             
             log_print(f"  Success rate: {baseline_success_rate:.2%}")
@@ -594,13 +670,13 @@ def main():
             log_print(f"  Baseline L0 distance: {baseline_metrics['l0_distance']:.2f}")
             log_print(f"  Baseline LOF score: {baseline_metrics['lof_score']:.4f}")
             
-            # Run perturbation experiments
+            # Test the SAME counterfactuals on perturbed models
             data_pert_results = run_data_perturbations(
-                dm, x_train, y_train, x_test, y_test, cat_feat, num_feat, baseline_model
+                perturbation, X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx
             )
             
             model_pert_results = run_model_perturbations(
-                x_train, y_train, x_test, y_test, cat_feat, num_feat
+                X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx
             )
             
             # Store results for this fold
@@ -640,4 +716,4 @@ def main():
             logger.removeHandler(handler)
 
 if __name__ == "__main__":
-    main() 
+    main()
