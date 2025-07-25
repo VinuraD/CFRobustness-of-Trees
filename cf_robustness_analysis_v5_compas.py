@@ -287,17 +287,32 @@ def main():
     ]
     log_print(f"  Data perturbation types: {[p[0] for p in data_perturbations]}")
     
-    # Define model perturbations to test
-    model_perturbations = [
-        # Model type, max_depth, n_estimators
-        ('random_forest', 3, 50),
-        ('random_forest', 5, 100),
-        ('random_forest', 10, 200),
-        ('xgboost', 3, 50),
-        ('xgboost', 6, 100),
-        ('lightgbm', 4, 75),
-        ('adaboost', 2, 30)
-    ]
+    # Define model perturbations to test - NEW SYSTEMATIC APPROACH
+    # Test max_depth variations (keep n_estimators fixed at baseline=100)
+    # Test n_estimators variations (keep max_depth fixed at baseline=5)
+    model_perturbations = []
+    
+    # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
+    for max_depth in [3, 4, 5, 6]:
+        model_perturbations.extend([
+            ('random_forest', max_depth, 100),
+            ('xgboost', max_depth, 100),
+            ('lightgbm', max_depth, 100),
+        ])
+    
+    # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
+    for n_estimators in [50, 100, 150, 200]:
+        model_perturbations.extend([
+            ('random_forest', 5, n_estimators),
+            ('xgboost', 5, n_estimators),
+            ('lightgbm', 5, n_estimators),
+        ])
+
+    # Add AdaBoost with n_estimators variations (fix max_depth=3 for base estimator)
+    for n_estimators in [50, 100, 150, 200]:
+        model_perturbations.extend([
+            ('adaboost', 3, n_estimators),
+        ])
     log_print(f"  Model perturbations: {len(model_perturbations)} configurations")
     for model_type, max_depth, n_estimators in model_perturbations:
         log_print(f"    - {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")
@@ -497,12 +512,23 @@ def main():
                     elif model_type == 'adaboost':
                         from sklearn.ensemble import AdaBoostClassifier
                         from sklearn.tree import DecisionTreeClassifier
-                        base_estimator = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
-                        perturbed_model = AdaBoostClassifier(
-                            base_estimator=base_estimator,
-                            n_estimators=n_estimators,
-                            random_state=42
-                        )
+                        # Fix: Use 'estimator' instead of deprecated 'base_estimator'
+                        try:
+                            # Try new API first (scikit-learn >= 1.2)
+                            base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
+                            perturbed_model = AdaBoostClassifier(
+                                estimator=base_tree,
+                                n_estimators=n_estimators,
+                                random_state=42
+                            )
+                        except TypeError:
+                            # Fallback to old API (scikit-learn < 1.2)
+                            base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
+                            perturbed_model = AdaBoostClassifier(
+                                base_estimator=base_tree,
+                                n_estimators=n_estimators,
+                                random_state=42
+                            )
                     else:
                         continue  # Skip unknown model types
                     

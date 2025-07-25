@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Counterfactual Robustness Analysis (v2)
+Counterfactual Robustness Analysis (CEML v2) - Spambase Dataset
 
 This script evaluates the robustness of counterfactual explanations across two separate experiments:
 1. Data perturbations - testing how changes in training data affect counterfactual validity
@@ -15,6 +15,8 @@ The workflow is:
    - Train different model types on the full unperturbed dataset
    - Evaluate how valid the original counterfactuals remain
 
+This version uses the CEML library for counterfactual generation instead of DiCE.
+The Spambase dataset contains only continuous features.
 This helps quantify the independent effects of data and model choices on counterfactual explanation stability.
 """
 
@@ -24,7 +26,7 @@ import logging
 from datetime import datetime
 import contextlib
 import io
-sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'modules'))
 
 import pandas as pd
 import numpy as np
@@ -37,9 +39,9 @@ from sklearn.neighbors import LocalOutlierFactor
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# DiCE ML imports
-import dice_ml
-from dice_ml.utils import helpers
+# CEML imports
+from ceml.sklearn import generate_counterfactual
+from ceml.sklearn.randomforest import randomforest_generate_counterfactual
 
 from data_module import DataModule
 from perturb import Perturbation
@@ -48,7 +50,7 @@ from perturb import Perturbation
 def setup_logging():
     """Setup comprehensive logging to both console and file"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"cf_robustness_analysis_v2_{timestamp}.log"
+    log_filename = f"cf_robustness_analysis_ceml_v2_{timestamp}.log"
     
     logger = logging.getLogger('CFRobustness')
     logger.setLevel(logging.INFO)
@@ -79,53 +81,54 @@ def log_print(*args, **kwargs):
     logger = logging.getLogger('CFRobustness')
     logger.info(message)
 
-def generate_counterfactuals(x_test, model, dice_data, method='random', total_cfs=2):
+def generate_counterfactuals_ceml(x_test, y_test, model, method='ceml', total_cfs=1):
     """
-    Generate counterfactuals for test set using DiCE
+    Generate counterfactuals for test set using CEML
     Returns counterfactuals with success information
     
     Args:
         x_test: Test data (without label)
+        y_test: Test labels  
         model: Trained model
-        dice_data: DiCE data object
-        method: DiCE method ('random', 'genetic', etc.)
-        total_cfs: Number of counterfactuals to generate
+        method: CEML method (not used, kept for compatibility)
+        total_cfs: Number of counterfactuals to generate (CEML generates 1 at a time)
         
     Returns:
         cf_list: DataFrame with counterfactuals and success flag
         success_rate: Proportion of successful generations
     """
-    log_print(f"Generating counterfactuals using method: {method}")
+    log_print(f"Generating counterfactuals using CEML library")
     log_print(f"Test set size: {len(x_test)} samples")
     
     x_test = x_test.reset_index(drop=True)
-    cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
+    y_test = y_test.reset_index(drop=True)
     
-    backend = 'sklearn'
-    m = dice_ml.Model(model=model, backend=backend)
-    exp = dice_ml.Dice(dice_data, m, method=method)
+    # Initialize results storage
+    cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
     
     successful_cfs = 0
     failed_cfs = 0
     
+    # CEML optimizer arguments
+    opt_args = {"max_iter": 100, "epsilon": 1e-4}
+    
     for i in range(len(x_test)):
-        query_instance = x_test[i:i+1]
+        query_instance = x_test.iloc[i].values
+        y_true = y_test.iloc[i]
+        y_target = 1 - y_true  # Flip the class
         
         try:
-            # Generate counterfactual
-            dice_exp = exp.generate_counterfactuals(
-                query_instance, 
-                total_CFs=total_cfs, 
-                desired_class="opposite", 
-                verbose=False
+            # Generate counterfactual using CEML
+            result = generate_counterfactual(
+                model, 
+                x=query_instance, 
+                y_target=y_target,
+                optimizer_args=opt_args
             )
             
-            # Extract the first counterfactual
-            cf_result = dice_exp.cf_examples_list[0].final_cfs_df
-            if len(cf_result) > 0:
-                cf_values = cf_result.iloc[0].values
-                cf_class = cf_values[-1]  # Last column should be the class
-                cf_features = cf_values[:-1]  # All but last column
+            if result is not None and 'x_cf' in result:
+                cf_features = result['x_cf']
+                cf_class = result.get('y_cf', y_target)
                 
                 # Store counterfactual
                 cf_row = list(cf_features) + [cf_class, True]
@@ -133,13 +136,13 @@ def generate_counterfactuals(x_test, model, dice_data, method='random', total_cf
                 successful_cfs += 1
             else:
                 # No counterfactual generated, use original with success=False
-                default_row = list(query_instance.iloc[0].values) + [0, False]  # Default cf_class to 0
+                default_row = list(query_instance) + [y_true, False]
                 cf_list.loc[i] = default_row
                 failed_cfs += 1
                 
         except Exception as e:
             # Failed to generate counterfactual, use original with success=False
-            default_row = list(query_instance.iloc[0].values) + [0, False]  # Default cf_class to 0
+            default_row = list(query_instance) + [y_true, False]
             cf_list.loc[i] = default_row
             failed_cfs += 1
     
@@ -231,16 +234,17 @@ def main():
     logger, log_filename = setup_logging()
     
     log_print("=" * 80)
-    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (v2)")
+    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (CEML v2) - SPAMBASE DATASET")
     log_print("=" * 80)
     log_print(f"📝 Logging session to: {log_filename}")
     log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"🔬 Using CEML library for counterfactual generation")
     log_print("=" * 80)
     
     # 1. Load dataset
     log_print("\n1. Loading dataset...")
     try:
-        dm = DataModule("data/Spambase.csv", n_splits=5, random_state=42)
+        dm = DataModule("../data/Spambase.csv", n_splits=5, random_state=42)
         perturbation = Perturbation(dm)
         
         # Get metadata
@@ -344,7 +348,7 @@ def main():
             log_print(f"  Raw train: {train_raw.shape}")
             log_print(f"  Processed - Train: {train_processed.shape}, Test: {test_processed.shape}")
             
-            # Setup for DiCE
+            # Setup for CEML
             label_col = metadata['label_column']
             X_train = train_processed.drop(columns=[label_col])
             y_train = train_processed[label_col]
@@ -375,41 +379,26 @@ def main():
             log_print(f"  Train accuracy: {train_acc:.4f}")
             log_print(f"  Test accuracy: {test_acc:.4f}")
             
-            # Setup DiCE data object for Spambase (all continuous features)
-            log_print(f"Setting up DiCE framework for fold {fold}...")
-            
-            # Create a combined dataset for DiCE
-            train_data_with_label = train_processed.copy()
-            
-            # For Spambase, all features are continuous
-            continuous_features = X_train.columns.tolist()
-            categorical_features = []
-            
-            # Create DiCE data object
-            dice_data = dice_ml.Data(
-                dataframe=train_data_with_label,
-                continuous_features=continuous_features,
-                outcome_name=label_col
-            )
-            
             # Generate counterfactuals using baseline model on unperturbed data
-            log_print(f"Generating counterfactuals for fold {fold}...")
+            log_print(f"Generating counterfactuals for fold {fold} using CEML...")
             
-            # Create test data for counterfactual generation (without label)
-            test_data_for_cf = X_test.copy()
+            # Use a subset of test data for faster CF generation (CEML is slower than DiCE)
+            test_subset_size = min(50, len(X_test))  # Use smaller subset for CEML
+            X_test_subset = X_test.iloc[:test_subset_size]
+            y_test_subset = pd.Series(y_test[:test_subset_size])
             
-            cf_list, success_rate = generate_counterfactuals(
-                test_data_for_cf, 
-                baseline_model, 
-                dice_data, 
-                method='random',
-                total_cfs=2
+            cf_list, success_rate = generate_counterfactuals_ceml(
+                X_test_subset, 
+                y_test_subset,
+                baseline_model,
+                method='ceml',
+                total_cfs=1
             )
             
             all_fold_results['baseline_success_rate'].append(success_rate)
             
             # Calculate comprehensive metrics for baseline model
-            baseline_metrics = calculate_comprehensive_metrics(baseline_model, cf_list, X_test, X_train)
+            baseline_metrics = calculate_comprehensive_metrics(baseline_model, cf_list, X_test_subset, X_train)
             all_fold_results['baseline_validity'].append(baseline_metrics['validity'])
             all_fold_results['baseline_l2_distance'].append(baseline_metrics['l2_distance'])
             all_fold_results['baseline_l0_distance'].append(baseline_metrics['l0_distance'])
@@ -435,9 +424,7 @@ def main():
                         # Apply perturbation to the raw training data
                         perturbed_train_raw = perturbation.perturb_data(train_raw_for_pert, perturb_type, bin_num)
                         
-                        # FIX: Apply the same preprocessing as baseline model
-                        # The DataModule already has fitted preprocessors from baseline training
-                        # We just need to apply them to the perturbed raw data
+                        # Apply the same preprocessing as baseline model
                         perturbed_train_processed = perturbation.data_module._preprocess_data(perturbed_train_raw)
                         
                         # Prepare features and target from PROCESSED data
@@ -454,10 +441,10 @@ def main():
                         perturbed_model.fit(perturbed_X_train, perturbed_y_train)
                         
                         # Evaluate perturbed model on test set (using processed test data)
-                        perturbed_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
+                        perturbed_test_acc = accuracy_score(y_test[:test_subset_size], perturbed_model.predict(X_test_subset))
                         
                         # Calculate comprehensive metrics for perturbed model
-                        cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test, perturbed_X_train)
+                        cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test_subset, perturbed_X_train)
                         
                         # Store results
                         all_fold_results['data_perturbations'][perturb_type][bin_num].append({
@@ -484,7 +471,7 @@ def main():
             
             for model_type, max_depth, n_estimators in model_perturbations:
                 try:
-                    # FIX: Use processed data for model perturbations too (same format as baseline)
+                    # Use processed data for model perturbations too (same format as baseline)
                     train_processed_for_model, _ = perturbation.get_data(fold=fold, raw_data=False)
                     
                     # Extract features and target from processed data
@@ -521,7 +508,7 @@ def main():
                     elif model_type == 'adaboost':
                         from sklearn.ensemble import AdaBoostClassifier
                         from sklearn.tree import DecisionTreeClassifier
-                        # Fix: Use 'estimator' instead of deprecated 'base_estimator'
+                        # Use 'estimator' instead of deprecated 'base_estimator'
                         try:
                             # Try new API first (scikit-learn >= 1.2)
                             base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
@@ -545,10 +532,10 @@ def main():
                     perturbed_model.fit(model_X_train, model_y_train)
                     
                     # Evaluate model on test set
-                    model_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
+                    model_test_acc = accuracy_score(y_test[:test_subset_size], perturbed_model.predict(X_test_subset))
                     
                     # Calculate comprehensive metrics for this model
-                    cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test, model_X_train)
+                    cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test_subset, model_X_train)
                     
                     # Store results
                     model_key = f"{model_type}_{max_depth}_{n_estimators}"
@@ -591,7 +578,7 @@ def main():
     baseline_lof_mean = np.mean(all_fold_results['baseline_lof_score'])
     baseline_lof_std = np.std(all_fold_results['baseline_lof_score'])
     
-    log_print("\nBASELINE PERFORMANCE ACROSS ALL FOLDS:")
+    log_print("\nBASELINE PERFORMANCE ACROSS ALL FOLDS (CEML):")
     log_print("-" * 80)
     log_print(f"Model Accuracy: {baseline_accuracy_mean:.4f} ± {baseline_accuracy_std:.4f}")
     log_print(f"CF Success Rate: {baseline_success_mean:.4f} ± {baseline_success_std:.4f}")
@@ -604,7 +591,7 @@ def main():
     log_print(f"Individual fold CF validities: {[f'{val:.4f}' for val in all_fold_results['baseline_validity']]}")
 
     # DATA PERTURBATION SUMMARY
-    log_print("\nDATA PERTURBATION ROBUSTNESS SUMMARY:")
+    log_print("\nDATA PERTURBATION ROBUSTNESS SUMMARY (CEML):")
     log_print("-" * 150)
     log_print(f"{'Perturbation':<15} {'Bin':<5} {'Data':<12} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Mean L2':<10} {'Mean L0':<10} {'Validity Δ':<11} {'Per-Fold Validities'}")
     log_print("-" * 150)
@@ -650,7 +637,7 @@ def main():
                 log_print(f"{perturb_type:<15} {bin_num:<5} {data_description:<12} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {mean_l2:<10.4f} {mean_l0:<10.2f} {validity_delta:<+11.4f} {per_fold_str}")
 
     # MODEL PERTURBATION SUMMARY
-    log_print("\nMODEL PERTURBATION ROBUSTNESS SUMMARY:")
+    log_print("\nMODEL PERTURBATION ROBUSTNESS SUMMARY (CEML):")
     log_print("-" * 150)
     log_print(f"{'Model Configuration':<30} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Mean L2':<10} {'Mean L0':<10} {'Validity Δ':<11} {'Per-Fold Validities'}")
     log_print("-" * 150)
@@ -688,13 +675,13 @@ def main():
 
     # 5. Final insights and completion
     log_print("\n" + "=" * 80)
-    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!")
+    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED (CEML)!")
     log_print("=" * 80)
     
     # Calculate overall robustness scores based on cross-fold averages
     if len(all_fold_results['baseline_validity']) > 0:
         
-        log_print(f"\n📊 OVERALL SUMMARY STATISTICS:")
+        log_print(f"\n📊 OVERALL SUMMARY STATISTICS (CEML):")
         log_print(f"• Baseline counterfactual validity: {baseline_validity_mean:.4f} ± {baseline_validity_std:.4f}")
         log_print(f"• Baseline success rate: {baseline_success_mean:.4f} ± {baseline_success_std:.4f}")
         log_print(f"• Baseline model accuracy: {baseline_accuracy_mean:.4f} ± {baseline_accuracy_std:.4f}")
@@ -724,7 +711,7 @@ def main():
                 model_avg_changes[model_type] = avg_change
         
         # Report findings
-        log_print("\n📊 DATA PERTURBATION INSIGHTS:")
+        log_print("\n📊 DATA PERTURBATION INSIGHTS (CEML):")
         if data_avg_changes:
             most_robust_data = min(data_avg_changes.items(), key=lambda x: abs(x[1]))
             least_robust_data = max(data_avg_changes.items(), key=lambda x: abs(x[1]))
@@ -736,7 +723,7 @@ def main():
             data_robustness_score = 1 - np.mean([abs(change) for change in data_avg_changes.values()])
             log_print(f"• Overall data perturbation robustness score: {data_robustness_score:.4f} (higher is better)")
         
-        log_print("\n🤖 MODEL PERTURBATION INSIGHTS:")
+        log_print("\n🤖 MODEL PERTURBATION INSIGHTS (CEML):")
         if model_avg_changes:
             most_robust_model = min(model_avg_changes.items(), key=lambda x: abs(x[1]))
             least_robust_model = max(model_avg_changes.items(), key=lambda x: abs(x[1]))
@@ -747,6 +734,11 @@ def main():
             # Overall model robustness score
             model_robustness_score = 1 - np.mean([abs(change) for change in model_avg_changes.values()])
             log_print(f"• Overall model perturbation robustness score: {model_robustness_score:.4f} (higher is better)")
+        
+        log_print(f"\n🔬 CEML LIBRARY INSIGHTS:")
+        log_print(f"• Used CEML library for optimization-based counterfactual generation")
+        log_print(f"• CEML provides more direct control over counterfactual optimization")
+        log_print(f"• Results can be compared with DiCE-based analysis for method comparison")
         
     else:
         log_print(f"\n📊 OVERALL SUMMARY STATISTICS:")
@@ -775,11 +767,12 @@ def main():
     # End timing
     end_time = datetime.now()
     log_print(f"\n{'='*80}")
-    log_print("🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!")
+    log_print("🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED (CEML)!")
     log_print(f"{'='*80}")
     log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     log_print(f"📝 Complete analysis saved to: {log_filename}")
+    log_print(f"🔬 Used CEML library for counterfactual generation")
     log_print(f"{'='*80}")
 
 if __name__ == "__main__":
-    main()
+    main() 
