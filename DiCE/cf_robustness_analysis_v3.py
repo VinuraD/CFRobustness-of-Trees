@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Counterfactual Robustness Analysis (v4) - HELOC Dataset
+Counterfactual Robustness Analysis (v3) - German Credit Dataset
 
 This script evaluates the robustness of counterfactual explanations across two separate experiments:
 1. Data perturbations - testing how changes in training data affect counterfactual validity
@@ -15,7 +15,7 @@ The workflow is:
    - Train different model types on the full unperturbed dataset
    - Evaluate how valid the original counterfactuals remain
 
-This version uses the HELOC dataset which contains heterogeneous features (categorical and numerical).
+This version uses the German Credit dataset which contains heterogeneous features (categorical and numerical).
 This helps quantify the independent effects of data and model choices on counterfactual explanation stability.
 """
 
@@ -48,7 +48,7 @@ from perturb import Perturbation
 def setup_logging():
     """Setup comprehensive logging to both console and file"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"cf_robustness_analysis_v4_heloc_{timestamp}.log"
+    log_filename = f"cf_robustness_analysis_v3_{timestamp}.log"
     
     logger = logging.getLogger('CFRobustness')
     logger.setLevel(logging.INFO)
@@ -79,40 +79,32 @@ def log_print(*args, **kwargs):
     logger = logging.getLogger('CFRobustness')
     logger.info(message)
 
-def prepare_heloc_features(df):
+def prepare_german_credit_features(df):
     """
-    Prepare HELOC features for DiCE, handling categorical and numerical features
+    Prepare German Credit features for DiCE, handling categorical and numerical features
     
     Args:
-        df: DataFrame with HELOC data
+        df: DataFrame with German Credit data
         
     Returns:
         continuous_features: List of continuous feature names
         categorical_features: List of categorical feature names
     """
-    # HELOC dataset typically has features related to credit risk
-    # Most features are likely continuous/numerical for credit scoring
-    # We'll identify them based on the actual columns available
+    # Define categorical and continuous features based on German Credit dataset
+    categorical_features = ['Sex', 'Housing', 'SavingAccounts', 'CheckingAccount', 'Purpose']
     
-    all_features = [col for col in df.columns if col != 'RiskPerformance']  # Assuming target column name
+    # Numerical features (including ordinal Job which we'll treat as continuous)
+    continuous_features = ['Age', 'Job', 'CreditAmount', 'Duration']
     
-    # Try to identify categorical vs continuous features
-    categorical_features = []
-    continuous_features = []
+    # Ensure all expected features exist in the dataframe
+    available_categorical = [f for f in categorical_features if f in df.columns]
+    available_continuous = [f for f in continuous_features if f in df.columns]
     
-    for feature in all_features:
-        # Check if feature has limited unique values (likely categorical)
-        unique_vals = df[feature].nunique()
-        if unique_vals <= 10 and df[feature].dtype == 'object':
-            categorical_features.append(feature)
-        else:
-            continuous_features.append(feature)
+    log_print(f"German Credit feature analysis:")
+    log_print(f"  Categorical features: {available_categorical}")
+    log_print(f"  Continuous features: {available_continuous}")
     
-    log_print(f"HELOC feature analysis:")
-    log_print(f"  Categorical features: {categorical_features}")
-    log_print(f"  Continuous features: {continuous_features}")
-    
-    return continuous_features, categorical_features
+    return available_continuous, available_categorical
 
 def generate_counterfactuals(x_test, model, dice_data, method='random', total_cfs=2):
     """
@@ -185,23 +177,27 @@ def generate_counterfactuals(x_test, model, dice_data, method='random', total_cf
     
     return cf_list, success_rate
 
-def calculate_validity(model, cf_list, x_test):
+def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
     """
-    Calculate validity: how many CFs actually flip the predicted class with the given model
+    Calculate comprehensive counterfactual evaluation metrics
     
     Args:
         model: Model to validate counterfactuals against
         cf_list: DataFrame with counterfactuals
         x_test: Original test data
+        x_train: Training data for LOF calculation
         
     Returns:
-        validity: Proportion of counterfactuals that flip the class
+        dict: Dictionary containing all evaluation metrics
     """
     # Get only successful counterfactuals
     successful_mask = cf_list['success'] == True
     if successful_mask.sum() == 0:
         log_print("No successful counterfactuals to validate")
-        return 0.0, 0, 0
+        return {
+            'validity': 0.0, 'flipped': 0, 'total': 0,
+            'l2_distance': 0.0, 'l0_distance': 0.0, 'lof_score': 0.0
+        }
     
     successful_cfs = cf_list[successful_mask]
     corresponding_originals = x_test[successful_mask]
@@ -209,7 +205,7 @@ def calculate_validity(model, cf_list, x_test):
     # Remove the success column for prediction
     cf_features = successful_cfs.drop(['success', 'cf_class'], axis=1)
     
-    # Predict on counterfactuals and originals
+    # 1. Validity: Predict on counterfactuals and originals
     cf_predictions = model.predict(cf_features)
     original_predictions = model.predict(corresponding_originals)
     
@@ -217,28 +213,67 @@ def calculate_validity(model, cf_list, x_test):
     flipped = (cf_predictions != original_predictions).sum()
     validity = flipped / len(successful_cfs) if len(successful_cfs) > 0 else 0.0
     
-    return validity, flipped, len(successful_cfs)
+    # 2. L2 Distance (Euclidean distance)
+    l2_distances = np.sqrt(np.sum((cf_features.values - corresponding_originals.values) ** 2, axis=1))
+    avg_l2_distance = np.mean(l2_distances)
+    
+    # 3. L0 Distance (Number of changed features)
+    l0_distances = np.sum(cf_features.values != corresponding_originals.values, axis=1)
+    avg_l0_distance = np.mean(l0_distances)
+    
+    # 4. LOF Score (Local Outlier Factor)
+    try:
+        from sklearn.neighbors import LocalOutlierFactor
+        # Combine training data with counterfactuals for LOF calculation
+        combined_data = np.vstack([x_train.values, cf_features.values])
+        lof = LocalOutlierFactor(n_neighbors=20, contamination=0.1)
+        lof_scores = lof.fit_predict(combined_data)
+        
+        # Get LOF scores for counterfactuals (last part of combined_data)
+        cf_lof_scores = lof_scores[-len(cf_features):]
+        avg_lof_score = np.mean(cf_lof_scores)
+    except Exception as e:
+        log_print(f"Warning: Could not calculate LOF scores: {e}")
+        avg_lof_score = 0.0
+    
+    return {
+        'validity': validity,
+        'flipped': flipped,
+        'total': len(successful_cfs),
+        'l2_distance': avg_l2_distance,
+        'l0_distance': avg_l0_distance,
+        'lof_score': avg_lof_score
+    }
+
+def calculate_validity(model, cf_list, x_test):
+    """
+    Backward compatibility wrapper for calculate_comprehensive_metrics
+    """
+    # Create dummy training data if not available
+    dummy_train = x_test.copy()
+    metrics = calculate_comprehensive_metrics(model, cf_list, x_test, dummy_train)
+    return metrics['validity'], metrics['flipped'], metrics['total']
 
 def main():
     # Setup logging
     logger, log_filename = setup_logging()
     
     log_print("=" * 80)
-    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (v4) - HELOC DATASET")
+    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (v3) - GERMAN CREDIT DATASET")
     log_print("=" * 80)
     log_print(f"📝 Logging session to: {log_filename}")
     log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_print("=" * 80)
     
     # 1. Load dataset
-    log_print("\n1. Loading HELOC dataset...")
+    log_print("\n1. Loading German Credit dataset...")
     try:
-        dm = DataModule("data/HELOC.csv", n_splits=5, random_state=42)
+        dm = DataModule("data/German-Credit.csv", n_splits=5, random_state=42)
         perturbation = Perturbation(dm)
         
         # Get metadata
         metadata = perturbation.get_metadata()
-        log_print(f"Dataset: HELOC")
+        log_print(f"Dataset: German Credit")
         log_print(f"Label column: {metadata['label_column']}")
         log_print(f"Features: {len(metadata['feature_types'])} features")
         
@@ -316,6 +351,9 @@ def main():
         'baseline_validity': [],
         'baseline_success_rate': [],
         'baseline_model_accuracy': [],
+        'baseline_l2_distance': [],
+        'baseline_l0_distance': [],
+        'baseline_lof_score': [],
         'data_perturbations': {perturb_type: {bin_num: [] for bin_num in bins} 
                               for perturb_type, bins in data_perturbations},
         'model_perturbations': {f"{model_type}_{max_depth}_{n_estimators}": [] 
@@ -376,8 +414,8 @@ def main():
             # Create a combined dataset for DiCE
             train_data_with_label = train_processed.copy()
             
-            # Determine continuous and categorical features for HELOC
-            continuous_features, categorical_features = prepare_heloc_features(train_data_with_label)
+            # Determine continuous and categorical features for German Credit
+            continuous_features, categorical_features = prepare_german_credit_features(train_data_with_label)
             
             # Create DiCE data object with proper feature specifications
             dice_data = dice_ml.Data(
@@ -402,12 +440,18 @@ def main():
             
             all_fold_results['baseline_success_rate'].append(success_rate)
             
-            # Validate the counterfactuals on the baseline model
-            baseline_validity, flipped, total = calculate_validity(baseline_model, cf_list, X_test)
-            all_fold_results['baseline_validity'].append(baseline_validity)
+            # Calculate comprehensive metrics for baseline model
+            baseline_metrics = calculate_comprehensive_metrics(baseline_model, cf_list, X_test, X_train)
+            all_fold_results['baseline_validity'].append(baseline_metrics['validity'])
+            all_fold_results['baseline_l2_distance'].append(baseline_metrics['l2_distance'])
+            all_fold_results['baseline_l0_distance'].append(baseline_metrics['l0_distance'])
+            all_fold_results['baseline_lof_score'].append(baseline_metrics['lof_score'])
             
             log_print(f"  Success rate: {success_rate:.2%}")
-            log_print(f"  Baseline validity: {baseline_validity:.4f} ({flipped}/{total})")
+            log_print(f"  Baseline validity: {baseline_metrics['validity']:.4f} ({baseline_metrics['flipped']}/{baseline_metrics['total']})")
+            log_print(f"  Baseline L2 distance: {baseline_metrics['l2_distance']:.4f}")
+            log_print(f"  Baseline L0 distance: {baseline_metrics['l0_distance']:.2f}")
+            log_print(f"  Baseline LOF score: {baseline_metrics['lof_score']:.4f}")
             
             # Test counterfactuals on data perturbed models
             log_print(f"\nTesting data perturbations for fold {fold}...")
@@ -444,22 +488,25 @@ def main():
                         # Evaluate perturbed model on test set (using processed test data)
                         perturbed_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
                         
-                        # Calculate validity of original counterfactuals on perturbed model
-                        cf_validity, cf_flipped, cf_total = calculate_validity(perturbed_model, cf_list, X_test)
+                        # Calculate comprehensive metrics for perturbed model
+                        cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test, perturbed_X_train)
                         
                         # Store results
                         all_fold_results['data_perturbations'][perturb_type][bin_num].append({
-                            'validity': cf_validity,
+                            'validity': cf_metrics['validity'],
                             'model_accuracy': perturbed_test_acc,
+                            'l2_distance': cf_metrics['l2_distance'],
+                            'l0_distance': cf_metrics['l0_distance'],
+                            'lof_score': cf_metrics['lof_score'],
                             'fold': fold
                         })
                         
                         if perturb_type in ['minor_deletion', 'major_deletion']:
                             remove_pct = bin_num if perturb_type == 'minor_deletion' else (0 if bin_num == 0 else 50)
-                            log_print(f"    Bin {bin_num}: Remove {remove_pct}% -> validity: {cf_validity:.4f}, accuracy: {perturbed_test_acc:.4f}")
+                            log_print(f"    Bin {bin_num}: Remove {remove_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}")
                         else:
                             use_pct = 80 + bin_num if perturb_type == 'minor_addition' else (50 if bin_num == 0 else 100)
-                            log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_validity:.4f}, accuracy: {perturbed_test_acc:.4f}")
+                            log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}")
                         
                     except Exception as e:
                         log_print(f"    Error in {perturb_type} bin {bin_num}: {e}")
@@ -532,18 +579,21 @@ def main():
                     # Evaluate model on test set
                     model_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
                     
-                    # Calculate validity of original counterfactuals on this model
-                    cf_validity, cf_flipped, cf_total = calculate_validity(perturbed_model, cf_list, X_test)
+                    # Calculate comprehensive metrics for this model
+                    cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test, model_X_train)
                     
                     # Store results
                     model_key = f"{model_type}_{max_depth}_{n_estimators}"
                     all_fold_results['model_perturbations'][model_key].append({
-                        'validity': cf_validity,
+                        'validity': cf_metrics['validity'],
                         'model_accuracy': model_test_acc,
+                        'l2_distance': cf_metrics['l2_distance'],
+                        'l0_distance': cf_metrics['l0_distance'],
+                        'lof_score': cf_metrics['lof_score'],
                         'fold': fold
                     })
                     
-                    log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {cf_validity:.4f}, accuracy: {model_test_acc:.4f}")
+                    log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {cf_metrics['validity']:.4f}, accuracy: {model_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}")
                     
                 except Exception as e:
                     log_print(f"  Error with {model_type} ({max_depth}, {n_estimators}): {e}")
@@ -564,21 +614,30 @@ def main():
         baseline_success_std = np.std(all_fold_results['baseline_success_rate'])
         baseline_accuracy_mean = np.mean(all_fold_results['baseline_model_accuracy'])
         baseline_accuracy_std = np.std(all_fold_results['baseline_model_accuracy'])
+        baseline_l2_mean = np.mean(all_fold_results['baseline_l2_distance'])
+        baseline_l2_std = np.std(all_fold_results['baseline_l2_distance'])
+        baseline_l0_mean = np.mean(all_fold_results['baseline_l0_distance'])
+        baseline_l0_std = np.std(all_fold_results['baseline_l0_distance'])
+        baseline_lof_mean = np.mean(all_fold_results['baseline_lof_score'])
+        baseline_lof_std = np.std(all_fold_results['baseline_lof_score'])
         
         log_print("\nBASELINE PERFORMANCE ACROSS ALL FOLDS:")
         log_print("-" * 80)
         log_print(f"Model Accuracy: {baseline_accuracy_mean:.4f} ± {baseline_accuracy_std:.4f}")
         log_print(f"CF Success Rate: {baseline_success_mean:.4f} ± {baseline_success_std:.4f}")
         log_print(f"CF Validity: {baseline_validity_mean:.4f} ± {baseline_validity_std:.4f}")
+        log_print(f"CF L2 Distance: {baseline_l2_mean:.4f} ± {baseline_l2_std:.4f}")
+        log_print(f"CF L0 Distance: {baseline_l0_mean:.4f} ± {baseline_l0_std:.4f}")
+        log_print(f"CF LOF Score: {baseline_lof_mean:.4f} ± {baseline_lof_std:.4f}")
         log_print(f"Individual fold model accuracies: {[f'{acc:.4f}' for acc in all_fold_results['baseline_model_accuracy']]}")
         log_print(f"Individual fold CF success rates: {[f'{rate:.4f}' for rate in all_fold_results['baseline_success_rate']]}")
         log_print(f"Individual fold CF validities: {[f'{val:.4f}' for val in all_fold_results['baseline_validity']]}")
         
         # DATA PERTURBATION SUMMARY
         log_print("\nDATA PERTURBATION ROBUSTNESS SUMMARY:")
-        log_print("-" * 120)
-        log_print(f"{'Perturbation':<15} {'Bin':<5} {'Data':<12} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Validity Δ':<11} {'Per-Fold Validities'}")
-        log_print("-" * 120)
+        log_print("-" * 150)
+        log_print(f"{'Perturbation':<15} {'Bin':<5} {'Data':<12} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Mean L2':<10} {'Mean L0':<10} {'Validity Δ':<11} {'Per-Fold Validities'}")
+        log_print("-" * 150)
         
         data_summary_results = {}
         for perturb_type, bins_data in all_fold_results['data_perturbations'].items():
@@ -587,11 +646,16 @@ def main():
                 if fold_results:  # If we have results for this bin
                     validities = [r['validity'] for r in fold_results]
                     accuracies = [r['model_accuracy'] for r in fold_results]
+                    l2_distances = [r['l2_distance'] for r in fold_results]
+                    l0_distances = [r['l0_distance'] for r in fold_results]
+                    lof_scores = [r['lof_score'] for r in fold_results]
                     
                     mean_validity = np.mean(validities)
                     std_validity = np.std(validities)
                     mean_accuracy = np.mean(accuracies)
                     std_accuracy = np.std(accuracies)
+                    mean_l2 = np.mean(l2_distances)
+                    mean_l0 = np.mean(l0_distances)
                     validity_delta = mean_validity - baseline_validity_mean
                     
                     data_summary_results[perturb_type][bin_num] = {
@@ -599,6 +663,8 @@ def main():
                         'std_validity': std_validity,
                         'mean_accuracy': mean_accuracy,
                         'std_accuracy': std_accuracy,
+                        'mean_l2': mean_l2,
+                        'mean_l0': mean_l0,
                         'validity_delta': validity_delta,
                         'validities': validities
                     }
@@ -611,24 +677,29 @@ def main():
                         data_description = f"Use {use_pct}%"
                     
                     per_fold_str = [f'{v:.3f}' for v in validities]
-                    log_print(f"{perturb_type:<15} {bin_num:<5} {data_description:<12} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {validity_delta:<+11.4f} {per_fold_str}")
+                    log_print(f"{perturb_type:<15} {bin_num:<5} {data_description:<12} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {mean_l2:<10.4f} {mean_l0:<10.2f} {validity_delta:<+11.4f} {per_fold_str}")
         
         # MODEL PERTURBATION SUMMARY
         log_print("\nMODEL PERTURBATION ROBUSTNESS SUMMARY:")
-        log_print("-" * 120)
-        log_print(f"{'Model Configuration':<30} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Validity Δ':<11} {'Per-Fold Validities'}")
-        log_print("-" * 120)
+        log_print("-" * 150)
+        log_print(f"{'Model Configuration':<30} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Mean L2':<10} {'Mean L0':<10} {'Validity Δ':<11} {'Per-Fold Validities'}")
+        log_print("-" * 150)
         
         model_summary_results = {}
         for model_key, fold_results in all_fold_results['model_perturbations'].items():
             if fold_results:  # If we have results for this model
                 validities = [r['validity'] for r in fold_results]
                 accuracies = [r['model_accuracy'] for r in fold_results]
+                l2_distances = [r['l2_distance'] for r in fold_results]
+                l0_distances = [r['l0_distance'] for r in fold_results]
+                lof_scores = [r['lof_score'] for r in fold_results]
                 
                 mean_validity = np.mean(validities)
                 std_validity = np.std(validities)
                 mean_accuracy = np.mean(accuracies)
                 std_accuracy = np.std(accuracies)
+                mean_l2 = np.mean(l2_distances)
+                mean_l0 = np.mean(l0_distances)
                 validity_delta = mean_validity - baseline_validity_mean
                 
                 model_summary_results[model_key] = {
@@ -636,14 +707,45 @@ def main():
                     'std_validity': std_validity,
                     'mean_accuracy': mean_accuracy,
                     'std_accuracy': std_accuracy,
+                    'mean_l2': mean_l2,
+                    'mean_l0': mean_l0,
                     'validity_delta': validity_delta,
                     'validities': validities
                 }
                 
                 per_fold_str = [f'{v:.3f}' for v in validities]
-                log_print(f"{model_key:<30} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {validity_delta:<+11.4f} {per_fold_str}")
+                log_print(f"{model_key:<30} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {mean_l2:<10.4f} {mean_l0:<10.2f} {validity_delta:<+11.4f} {per_fold_str}")
         
-        # Save plots
+        # DETAILED FOLD-BY-FOLD ANALYSIS
+        log_print("\n" + "=" * 80)
+        log_print("DETAILED FOLD-BY-FOLD ANALYSIS")
+        log_print("=" * 80)
+        
+        for fold in range(5):
+            log_print(f"\nFOLD {fold} DETAILED RESULTS:")
+            log_print("-" * 50)
+            
+            if fold < len(all_fold_results['baseline_validity']):
+                log_print(f"Baseline - Validity: {all_fold_results['baseline_validity'][fold]:.4f}, "
+                         f"Success Rate: {all_fold_results['baseline_success_rate'][fold]:.4f}, "
+                         f"Model Accuracy: {all_fold_results['baseline_model_accuracy'][fold]:.4f}")
+                
+                # Data perturbations for this fold
+                log_print("Data Perturbations:")
+                for perturb_type, bins_data in all_fold_results['data_perturbations'].items():
+                    for bin_num, fold_results in bins_data.items():
+                        if len(fold_results) > fold:
+                            result = fold_results[fold]
+                            log_print(f"  {perturb_type} bin {bin_num}: validity={result['validity']:.4f}, accuracy={result['model_accuracy']:.4f}")
+                
+                # Model perturbations for this fold
+                log_print("Model Perturbations:")
+                for model_key, fold_results in all_fold_results['model_perturbations'].items():
+                    if len(fold_results) > fold:
+                        result = fold_results[fold]
+                        log_print(f"  {model_key}: validity={result['validity']:.4f}, accuracy={result['model_accuracy']:.4f}")
+        
+        # Plot data perturbation results
         plt.figure(figsize=(12, 8))
         
         # Create a different marker for each perturbation type
@@ -686,7 +788,7 @@ def main():
                         baseline_validity_mean + baseline_validity_std,
                         color='red', alpha=0.2)
         
-        plt.title('Counterfactual Explanation Robustness Across Data Perturbations (HELOC)\n5-Fold Cross-Validation with Error Bars', fontsize=14)
+        plt.title('Counterfactual Explanation Robustness Across Data Perturbations (German Credit)\n5-Fold Cross-Validation with Error Bars', fontsize=14)
         plt.xlabel('Perturbation Level', fontsize=12)
         plt.ylabel('Counterfactual Validity', fontsize=12)
         plt.ylim(0, 1.05)
@@ -695,25 +797,167 @@ def main():
         
         # Save data perturbation plot
         plt.tight_layout()
-        data_plot_filename = f"cf_data_robustness_heloc_5fold_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        data_plot_filename = f"cf_data_robustness_german_5fold_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
         plt.savefig(data_plot_filename)
         log_print(f"\nData perturbation plot saved to: {data_plot_filename}")
+        
+        # Plot model perturbation results
+        plt.figure(figsize=(12, 8))
+        
+        # Group by model type
+        model_types = set(key.split('_')[0] for key in model_summary_results.keys())
+        
+        for model_type in model_types:
+            model_results = [(key, result) for key, result in model_summary_results.items() 
+                           if key.startswith(model_type)]
+            if not model_results:
+                continue
+                
+            # Sort by n_estimators for better visualization
+            model_results.sort(key=lambda x: int(x[0].split('_')[-1]))
+            
+            # Create x labels and extract data
+            x_labels = []
+            validities = []
+            errors = []
+            
+            for key, result in model_results:
+                parts = key.split('_')
+                max_depth = parts[1]
+                n_estimators = parts[2]
+                x_labels.append(f"d={max_depth}, n={n_estimators}")
+                validities.append(result['mean_validity'])
+                errors.append(result['std_validity'])
+            
+            plt.errorbar(x_labels, validities, yerr=errors, marker='o', 
+                        label=model_type, linewidth=2, markersize=8, capsize=5)
+        
+        # Add baseline as horizontal line with error bars
+        plt.axhline(y=baseline_validity_mean, color='red', linestyle='--', label='Baseline Validity')
+        plt.fill_between(range(len(plt.gca().get_xticks())), 
+                        baseline_validity_mean - baseline_validity_std,
+                        baseline_validity_mean + baseline_validity_std,
+                        color='red', alpha=0.2)
+        
+        plt.title('Counterfactual Explanation Robustness Across Model Types (German Credit)\n5-Fold Cross-Validation with Error Bars', fontsize=14)
+        plt.xlabel('Model Configuration', fontsize=12)
+        plt.ylabel('Counterfactual Validity', fontsize=12)
+        plt.ylim(0, 1.05)
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.legend(loc='best', fontsize=10)
+        plt.xticks(rotation=45)
+        
+        # Save model perturbation plot
+        plt.tight_layout()
+        model_plot_filename = f"cf_model_robustness_german_5fold_plot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        plt.savefig(model_plot_filename)
+        log_print(f"Model perturbation plot saved to: {model_plot_filename}")
         
     except Exception as e:
         log_print(f"Error generating summary visualizations: {e}")
     
     # 5. Final insights and statistical analysis
     log_print("\n" + "=" * 80)
-    log_print("COUNTERFACTUAL ROBUSTNESS INSIGHTS (HELOC DATASET - 5 FOLDS)")
+    log_print("COUNTERFACTUAL ROBUSTNESS INSIGHTS (GERMAN CREDIT DATASET - 5 FOLDS)")
     log_print("=" * 80)
     
-    log_print("\n🏦 HELOC DATASET INSIGHTS:")
-    log_print(f"• Dataset contains financial features for credit risk assessment")
+    # Calculate average validity change for each perturbation type
+    data_avg_changes = {}
+    for perturb_type, bin_results in data_summary_results.items():
+        if bin_results:  # Skip empty results
+            # Skip bin 0 which is unperturbed for deletion types
+            perturbed_results = [result for bin_num, result in bin_results.items() 
+                               if not (perturb_type in ['minor_deletion', 'major_deletion'] and bin_num == 0)]
+            if perturbed_results:
+                avg_change = np.mean([result['validity_delta'] for result in perturbed_results])
+                data_avg_changes[perturb_type] = avg_change
+    
+    # Calculate average validity change for each model type
+    model_avg_changes = {}
+    model_types = set(key.split('_')[0] for key in model_summary_results.keys())
+    for model_type in model_types:
+        type_results = [result for key, result in model_summary_results.items() 
+                       if key.startswith(model_type)]
+        if type_results:
+            avg_change = np.mean([result['validity_delta'] for result in type_results])
+            model_avg_changes[model_type] = avg_change
+    
+    # Report findings
+    log_print("\n📊 DATA PERTURBATION INSIGHTS:")
+    if data_avg_changes:
+        most_robust_data = min(data_avg_changes.items(), key=lambda x: abs(x[1]))
+        least_robust_data = max(data_avg_changes.items(), key=lambda x: abs(x[1]))
+        
+        log_print(f"• Most robust to: {most_robust_data[0]} (avg validity change: {most_robust_data[1]:+.4f})")
+        log_print(f"• Least robust to: {least_robust_data[0]} (avg validity change: {least_robust_data[1]:+.4f})")
+        
+        # Overall data robustness score (average absolute change across all data perturbations)
+        data_robustness_score = 1 - np.mean([abs(change) for change in data_avg_changes.values()])
+        log_print(f"• Overall data perturbation robustness score: {data_robustness_score:.4f} (higher is better)")
+    
+    log_print("\n🤖 MODEL PERTURBATION INSIGHTS:")
+    if model_avg_changes:
+        most_robust_model = min(model_avg_changes.items(), key=lambda x: abs(x[1]))
+        least_robust_model = max(model_avg_changes.items(), key=lambda x: abs(x[1]))
+        
+        log_print(f"• Most robust to: {most_robust_model[0]} (avg validity change: {most_robust_model[1]:+.4f})")
+        log_print(f"• Least robust to: {least_robust_model[0]} (avg validity change: {least_robust_model[1]:+.4f})")
+        
+        # Overall model robustness score
+        model_robustness_score = 1 - np.mean([abs(change) for change in model_avg_changes.values()])
+        log_print(f"• Overall model perturbation robustness score: {model_robustness_score:.4f} (higher is better)")
+    
+    log_print("\n🏛️ GERMAN CREDIT DATASET INSIGHTS:")
+    log_print(f"• Dataset contains heterogeneous features: {len(continuous_features)} continuous, {len(categorical_features)} categorical")
     log_print(f"• Categorical features: {categorical_features}")
     log_print(f"• Continuous features: {continuous_features}")
     log_print(f"• Baseline counterfactual success rate: {baseline_success_mean:.2%} ± {baseline_success_std:.3f}")
     log_print(f"• Baseline counterfactual validity: {baseline_validity_mean:.4f} ± {baseline_validity_std:.3f}")
     log_print(f"• Baseline model accuracy: {baseline_accuracy_mean:.4f} ± {baseline_accuracy_std:.3f}")
+    log_print(f"• Baseline L2 distance: {baseline_l2_mean:.4f} ± {baseline_l2_std:.4f}")
+    log_print(f"• Baseline L0 distance: {baseline_l0_mean:.4f} ± {baseline_l0_std:.4f}")
+    log_print(f"• Baseline LOF score: {baseline_lof_mean:.4f} ± {baseline_lof_std:.4f}")
+    
+    # Statistical significance analysis
+    log_print("\n📈 STATISTICAL ANALYSIS (5-FOLD CROSS-VALIDATION):")
+    log_print(f"• Confidence intervals calculated from {len(all_fold_results['baseline_validity'])} independent folds")
+    log_print(f"• All error bars represent ±1 standard deviation across folds")
+    
+    # Best/worst performing configurations
+    if data_summary_results:
+        all_data_configs = []
+        for perturb_type, bin_results in data_summary_results.items():
+            for bin_num, result in bin_results.items():
+                all_data_configs.append((f"{perturb_type}_bin_{bin_num}", result['mean_validity'], result['std_validity']))
+        
+        if all_data_configs:
+            best_data_config = max(all_data_configs, key=lambda x: x[1])
+            worst_data_config = min(all_data_configs, key=lambda x: x[1])
+            
+            log_print(f"• Best data perturbation: {best_data_config[0]} (validity: {best_data_config[1]:.4f} ± {best_data_config[2]:.3f})")
+            log_print(f"• Worst data perturbation: {worst_data_config[0]} (validity: {worst_data_config[1]:.4f} ± {worst_data_config[2]:.3f})")
+    
+    if model_summary_results:
+        all_model_configs = [(key, result['mean_validity'], result['std_validity']) 
+                           for key, result in model_summary_results.items()]
+        
+        if all_model_configs:
+            best_model_config = max(all_model_configs, key=lambda x: x[1])
+            worst_model_config = min(all_model_configs, key=lambda x: x[1])
+            
+            log_print(f"• Best model configuration: {best_model_config[0]} (validity: {best_model_config[1]:.4f} ± {best_model_config[2]:.3f})")
+            log_print(f"• Worst model configuration: {worst_model_config[0]} (validity: {worst_model_config[1]:.4f} ± {worst_model_config[2]:.3f})")
+    
+    # Experiment summary
+    total_data_experiments = sum(len(bins) for _, bins in data_perturbations) * 5  # 5 folds
+    total_model_experiments = len(model_perturbations) * 5  # 5 folds
+    total_experiments = total_data_experiments + total_model_experiments
+    
+    log_print(f"\n🔬 EXPERIMENT SUMMARY:")
+    log_print(f"• Total data perturbation experiments: {total_data_experiments} ({sum(len(bins) for _, bins in data_perturbations)} configs × 5 folds)")
+    log_print(f"• Total model perturbation experiments: {total_model_experiments} ({len(model_perturbations)} configs × 5 folds)")
+    log_print(f"• Total experiments conducted: {total_experiments}")
+    log_print(f"• All results aggregated with mean ± standard deviation across 5 folds")
     
     # End timing
     end_time = datetime.now()
@@ -723,6 +967,14 @@ def main():
     log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     log_print(f"📝 Complete analysis saved to: {log_filename}")
     log_print(f"{'='*80}")
+    
+    # Summary stats
+    total_experiments = (
+        sum(len(bins) for _, bins in data_perturbations) +  # Data perturbations
+        len(model_perturbations)                           # Model perturbations
+    )
+    log_print(f"Total experiments run: {total_experiments}")
+    log_print(f"Total visualizations created: 2")
 
 if __name__ == "__main__":
-    main() 
+    main()

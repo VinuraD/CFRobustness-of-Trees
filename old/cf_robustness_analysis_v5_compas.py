@@ -191,23 +191,27 @@ def generate_counterfactuals(x_test, model, dice_data, method='random', total_cf
     
     return cf_list, success_rate
 
-def calculate_validity(model, cf_list, x_test):
+def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
     """
-    Calculate validity: how many CFs actually flip the predicted class with the given model
+    Calculate comprehensive counterfactual evaluation metrics
     
     Args:
         model: Model to validate counterfactuals against
         cf_list: DataFrame with counterfactuals
         x_test: Original test data
+        x_train: Training data for LOF calculation
         
     Returns:
-        validity: Proportion of counterfactuals that flip the class
+        dict: Dictionary containing all evaluation metrics
     """
     # Get only successful counterfactuals
     successful_mask = cf_list['success'] == True
     if successful_mask.sum() == 0:
         log_print("No successful counterfactuals to validate")
-        return 0.0, 0, 0
+        return {
+            'validity': 0.0, 'flipped': 0, 'total': 0,
+            'l2_distance': 0.0, 'l0_distance': 0.0, 'lof_score': 0.0
+        }
     
     successful_cfs = cf_list[successful_mask]
     corresponding_originals = x_test[successful_mask]
@@ -215,7 +219,7 @@ def calculate_validity(model, cf_list, x_test):
     # Remove the success column for prediction
     cf_features = successful_cfs.drop(['success', 'cf_class'], axis=1)
     
-    # Predict on counterfactuals and originals
+    # 1. Validity: Predict on counterfactuals and originals
     cf_predictions = model.predict(cf_features)
     original_predictions = model.predict(corresponding_originals)
     
@@ -223,7 +227,46 @@ def calculate_validity(model, cf_list, x_test):
     flipped = (cf_predictions != original_predictions).sum()
     validity = flipped / len(successful_cfs) if len(successful_cfs) > 0 else 0.0
     
-    return validity, flipped, len(successful_cfs)
+    # 2. L2 Distance (Euclidean distance)
+    l2_distances = np.sqrt(np.sum((cf_features.values - corresponding_originals.values) ** 2, axis=1))
+    avg_l2_distance = np.mean(l2_distances)
+    
+    # 3. L0 Distance (Number of changed features)
+    l0_distances = np.sum(cf_features.values != corresponding_originals.values, axis=1)
+    avg_l0_distance = np.mean(l0_distances)
+    
+    # 4. LOF Score (Local Outlier Factor)
+    try:
+        from sklearn.neighbors import LocalOutlierFactor
+        # Combine training data with counterfactuals for LOF calculation
+        combined_data = np.vstack([x_train.values, cf_features.values])
+        lof = LocalOutlierFactor(n_neighbors=20, contamination=0.1)
+        lof_scores = lof.fit_predict(combined_data)
+        
+        # Get LOF scores for counterfactuals (last part of combined_data)
+        cf_lof_scores = lof_scores[-len(cf_features):]
+        avg_lof_score = np.mean(cf_lof_scores)
+    except Exception as e:
+        log_print(f"Warning: Could not calculate LOF scores: {e}")
+        avg_lof_score = 0.0
+    
+    return {
+        'validity': validity,
+        'flipped': flipped,
+        'total': len(successful_cfs),
+        'l2_distance': avg_l2_distance,
+        'l0_distance': avg_l0_distance,
+        'lof_score': avg_lof_score
+    }
+
+def calculate_validity(model, cf_list, x_test):
+    """
+    Backward compatibility wrapper for calculate_comprehensive_metrics
+    """
+    # Create dummy training data if not available
+    dummy_train = x_test.copy()
+    metrics = calculate_comprehensive_metrics(model, cf_list, x_test, dummy_train)
+    return metrics['validity'], metrics['flipped'], metrics['total']
 
 def main():
     # Setup logging
@@ -322,6 +365,9 @@ def main():
         'baseline_validity': [],
         'baseline_success_rate': [],
         'baseline_model_accuracy': [],
+        'baseline_l2_distance': [],
+        'baseline_l0_distance': [],
+        'baseline_lof_score': [],
         'data_perturbations': {perturb_type: {bin_num: [] for bin_num in bins} 
                               for perturb_type, bins in data_perturbations},
         'model_perturbations': {f"{model_type}_{max_depth}_{n_estimators}": [] 
@@ -408,12 +454,18 @@ def main():
             
             all_fold_results['baseline_success_rate'].append(success_rate)
             
-            # Validate the counterfactuals on the baseline model
-            baseline_validity, flipped, total = calculate_validity(baseline_model, cf_list, X_test)
-            all_fold_results['baseline_validity'].append(baseline_validity)
+            # Calculate comprehensive metrics for baseline model
+            baseline_metrics = calculate_comprehensive_metrics(baseline_model, cf_list, X_test, X_train)
+            all_fold_results['baseline_validity'].append(baseline_metrics['validity'])
+            all_fold_results['baseline_l2_distance'].append(baseline_metrics['l2_distance'])
+            all_fold_results['baseline_l0_distance'].append(baseline_metrics['l0_distance'])
+            all_fold_results['baseline_lof_score'].append(baseline_metrics['lof_score'])
             
             log_print(f"  Success rate: {success_rate:.2%}")
-            log_print(f"  Baseline validity: {baseline_validity:.4f} ({flipped}/{total})")
+            log_print(f"  Baseline validity: {baseline_metrics['validity']:.4f} ({baseline_metrics['flipped']}/{baseline_metrics['total']})")
+            log_print(f"  Baseline L2 distance: {baseline_metrics['l2_distance']:.4f}")
+            log_print(f"  Baseline L0 distance: {baseline_metrics['l0_distance']:.2f}")
+            log_print(f"  Baseline LOF score: {baseline_metrics['lof_score']:.4f}")
             
             # Test counterfactuals on data perturbed models
             log_print(f"\nTesting data perturbations for fold {fold}...")
@@ -450,22 +502,25 @@ def main():
                         # Evaluate perturbed model on test set (using processed test data)
                         perturbed_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
                         
-                        # Calculate validity of original counterfactuals on perturbed model
-                        cf_validity, cf_flipped, cf_total = calculate_validity(perturbed_model, cf_list, X_test)
+                        # Calculate comprehensive metrics for perturbed model
+                        cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test, perturbed_X_train)
                         
                         # Store results
                         all_fold_results['data_perturbations'][perturb_type][bin_num].append({
-                            'validity': cf_validity,
+                            'validity': cf_metrics['validity'],
                             'model_accuracy': perturbed_test_acc,
+                            'l2_distance': cf_metrics['l2_distance'],
+                            'l0_distance': cf_metrics['l0_distance'],
+                            'lof_score': cf_metrics['lof_score'],
                             'fold': fold
                         })
                         
                         if perturb_type in ['minor_deletion', 'major_deletion']:
                             remove_pct = bin_num if perturb_type == 'minor_deletion' else (0 if bin_num == 0 else 50)
-                            log_print(f"    Bin {bin_num}: Remove {remove_pct}% -> validity: {cf_validity:.4f}, accuracy: {perturbed_test_acc:.4f}")
+                            log_print(f"    Bin {bin_num}: Remove {remove_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}")
                         else:
                             use_pct = 80 + bin_num if perturb_type == 'minor_addition' else (50 if bin_num == 0 else 100)
-                            log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_validity:.4f}, accuracy: {perturbed_test_acc:.4f}")
+                            log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}")
                         
                     except Exception as e:
                         log_print(f"    Error in {perturb_type} bin {bin_num}: {e}")
@@ -538,18 +593,21 @@ def main():
                     # Evaluate model on test set
                     model_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
                     
-                    # Calculate validity of original counterfactuals on this model
-                    cf_validity, cf_flipped, cf_total = calculate_validity(perturbed_model, cf_list, X_test)
+                    # Calculate comprehensive metrics for this model
+                    cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test, model_X_train)
                     
                     # Store results
                     model_key = f"{model_type}_{max_depth}_{n_estimators}"
                     all_fold_results['model_perturbations'][model_key].append({
-                        'validity': cf_validity,
+                        'validity': cf_metrics['validity'],
                         'model_accuracy': model_test_acc,
+                        'l2_distance': cf_metrics['l2_distance'],
+                        'l0_distance': cf_metrics['l0_distance'],
+                        'lof_score': cf_metrics['lof_score'],
                         'fold': fold
                     })
                     
-                    log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {cf_validity:.4f}, accuracy: {model_test_acc:.4f}")
+                    log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {cf_metrics['validity']:.4f}, accuracy: {model_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}")
                     
                 except Exception as e:
                     log_print(f"  Error with {model_type} ({max_depth}, {n_estimators}): {e}")
@@ -570,21 +628,30 @@ def main():
         baseline_success_std = np.std(all_fold_results['baseline_success_rate'])
         baseline_accuracy_mean = np.mean(all_fold_results['baseline_model_accuracy'])
         baseline_accuracy_std = np.std(all_fold_results['baseline_model_accuracy'])
+        baseline_l2_mean = np.mean(all_fold_results['baseline_l2_distance'])
+        baseline_l2_std = np.std(all_fold_results['baseline_l2_distance'])
+        baseline_l0_mean = np.mean(all_fold_results['baseline_l0_distance'])
+        baseline_l0_std = np.std(all_fold_results['baseline_l0_distance'])
+        baseline_lof_mean = np.mean(all_fold_results['baseline_lof_score'])
+        baseline_lof_std = np.std(all_fold_results['baseline_lof_score'])
         
         log_print("\nBASELINE PERFORMANCE ACROSS ALL FOLDS:")
         log_print("-" * 80)
         log_print(f"Model Accuracy: {baseline_accuracy_mean:.4f} ± {baseline_accuracy_std:.4f}")
         log_print(f"CF Success Rate: {baseline_success_mean:.4f} ± {baseline_success_std:.4f}")
         log_print(f"CF Validity: {baseline_validity_mean:.4f} ± {baseline_validity_std:.4f}")
+        log_print(f"CF L2 Distance: {baseline_l2_mean:.4f} ± {baseline_l2_std:.4f}")
+        log_print(f"CF L0 Distance: {baseline_l0_mean:.4f} ± {baseline_l0_std:.4f}")
+        log_print(f"CF LOF Score: {baseline_lof_mean:.4f} ± {baseline_lof_std:.4f}")
         log_print(f"Individual fold model accuracies: {[f'{acc:.4f}' for acc in all_fold_results['baseline_model_accuracy']]}")
         log_print(f"Individual fold CF success rates: {[f'{rate:.4f}' for rate in all_fold_results['baseline_success_rate']]}")
         log_print(f"Individual fold CF validities: {[f'{val:.4f}' for val in all_fold_results['baseline_validity']]}")
         
         # DATA PERTURBATION SUMMARY
         log_print("\nDATA PERTURBATION ROBUSTNESS SUMMARY:")
-        log_print("-" * 120)
-        log_print(f"{'Perturbation':<15} {'Bin':<5} {'Data':<12} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Validity Δ':<11} {'Per-Fold Validities'}")
-        log_print("-" * 120)
+        log_print("-" * 150)
+        log_print(f"{'Perturbation':<15} {'Bin':<5} {'Data':<12} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Mean L2':<10} {'Mean L0':<10} {'Validity Δ':<11} {'Per-Fold Validities'}")
+        log_print("-" * 150)
         
         data_summary_results = {}
         for perturb_type, bins_data in all_fold_results['data_perturbations'].items():
@@ -593,11 +660,16 @@ def main():
                 if fold_results:  # If we have results for this bin
                     validities = [r['validity'] for r in fold_results]
                     accuracies = [r['model_accuracy'] for r in fold_results]
+                    l2_distances = [r['l2_distance'] for r in fold_results]
+                    l0_distances = [r['l0_distance'] for r in fold_results]
+                    lof_scores = [r['lof_score'] for r in fold_results]
                     
                     mean_validity = np.mean(validities)
                     std_validity = np.std(validities)
                     mean_accuracy = np.mean(accuracies)
                     std_accuracy = np.std(accuracies)
+                    mean_l2 = np.mean(l2_distances)
+                    mean_l0 = np.mean(l0_distances)
                     validity_delta = mean_validity - baseline_validity_mean
                     
                     data_summary_results[perturb_type][bin_num] = {
@@ -605,6 +677,8 @@ def main():
                         'std_validity': std_validity,
                         'mean_accuracy': mean_accuracy,
                         'std_accuracy': std_accuracy,
+                        'mean_l2': mean_l2,
+                        'mean_l0': mean_l0,
                         'validity_delta': validity_delta,
                         'validities': validities
                     }
@@ -617,24 +691,29 @@ def main():
                         data_description = f"Use {use_pct}%"
                     
                     per_fold_str = [f'{v:.3f}' for v in validities]
-                    log_print(f"{perturb_type:<15} {bin_num:<5} {data_description:<12} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {validity_delta:<+11.4f} {per_fold_str}")
+                    log_print(f"{perturb_type:<15} {bin_num:<5} {data_description:<12} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {mean_l2:<10.4f} {mean_l0:<10.2f} {validity_delta:<+11.4f} {per_fold_str}")
         
         # MODEL PERTURBATION SUMMARY
         log_print("\nMODEL PERTURBATION ROBUSTNESS SUMMARY:")
-        log_print("-" * 120)
-        log_print(f"{'Model Configuration':<30} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Validity Δ':<11} {'Per-Fold Validities'}")
-        log_print("-" * 120)
+        log_print("-" * 150)
+        log_print(f"{'Model Configuration':<30} {'Mean Validity':<13} {'Std Validity':<12} {'Mean Accuracy':<13} {'Std Accuracy':<12} {'Mean L2':<10} {'Mean L0':<10} {'Validity Δ':<11} {'Per-Fold Validities'}")
+        log_print("-" * 150)
         
         model_summary_results = {}
         for model_key, fold_results in all_fold_results['model_perturbations'].items():
             if fold_results:  # If we have results for this model
                 validities = [r['validity'] for r in fold_results]
                 accuracies = [r['model_accuracy'] for r in fold_results]
+                l2_distances = [r['l2_distance'] for r in fold_results]
+                l0_distances = [r['l0_distance'] for r in fold_results]
+                lof_scores = [r['lof_score'] for r in fold_results]
                 
                 mean_validity = np.mean(validities)
                 std_validity = np.std(validities)
                 mean_accuracy = np.mean(accuracies)
                 std_accuracy = np.std(accuracies)
+                mean_l2 = np.mean(l2_distances)
+                mean_l0 = np.mean(l0_distances)
                 validity_delta = mean_validity - baseline_validity_mean
                 
                 model_summary_results[model_key] = {
@@ -642,12 +721,14 @@ def main():
                     'std_validity': std_validity,
                     'mean_accuracy': mean_accuracy,
                     'std_accuracy': std_accuracy,
+                    'mean_l2': mean_l2,
+                    'mean_l0': mean_l0,
                     'validity_delta': validity_delta,
                     'validities': validities
                 }
                 
                 per_fold_str = [f'{v:.3f}' for v in validities]
-                log_print(f"{model_key:<30} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {validity_delta:<+11.4f} {per_fold_str}")
+                log_print(f"{model_key:<30} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {mean_l2:<10.4f} {mean_l0:<10.2f} {validity_delta:<+11.4f} {per_fold_str}")
         
         # Save plots
         plt.figure(figsize=(12, 8))
@@ -720,6 +801,9 @@ def main():
     log_print(f"• Baseline counterfactual success rate: {baseline_success_mean:.2%} ± {baseline_success_std:.3f}")
     log_print(f"• Baseline counterfactual validity: {baseline_validity_mean:.4f} ± {baseline_validity_std:.3f}")
     log_print(f"• Baseline model accuracy: {baseline_accuracy_mean:.4f} ± {baseline_accuracy_std:.3f}")
+    log_print(f"• Baseline L2 distance: {baseline_l2_mean:.4f} ± {baseline_l2_std:.4f}")
+    log_print(f"• Baseline L0 distance: {baseline_l0_mean:.4f} ± {baseline_l0_std:.4f}")
+    log_print(f"• Baseline LOF score: {baseline_lof_mean:.4f} ± {baseline_lof_std:.4f}")
     log_print(f"• COMPAS dataset is widely used for algorithmic fairness research")
     log_print(f"• Contains sensitive attributes like race and sex that require careful handling")
     
