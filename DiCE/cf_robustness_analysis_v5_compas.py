@@ -25,7 +25,7 @@ import logging
 from datetime import datetime
 import contextlib
 import io
-sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'modules'))
 
 import pandas as pd
 import numpy as np
@@ -240,7 +240,7 @@ def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
         from sklearn.neighbors import LocalOutlierFactor
         # Combine training data with counterfactuals for LOF calculation
         combined_data = np.vstack([x_train.values, cf_features.values])
-        lof = LocalOutlierFactor(n_neighbors=20, contamination=0.1)
+        lof = LocalOutlierFactor(n_neighbors=200, contamination=0.1)
         lof_scores = lof.fit_predict(combined_data)
         
         # Get LOF scores for counterfactuals (last part of combined_data)

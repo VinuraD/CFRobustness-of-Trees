@@ -25,7 +25,7 @@ import logging
 from datetime import datetime
 import contextlib
 import io
-sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'modules'))
 
 import pandas as pd
 import numpy as np

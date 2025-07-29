@@ -1,0 +1,40 @@
+# Core Scientific Computing
+numpy>=1.20.0
+pandas>=1.3.0
+scipy>=1.7.0
+
+# Machine Learning
+scikit-learn>=1.0.0
+xgboost>=1.5.0
+lightgbm>=3.2.0
+
+# Counterfactual Explanation Libraries
+dice-ml>=0.9
+# Note: CFXplorer should be installed manually or from source
+
+# Data Visualization
+matplotlib>=3.4.0
+seaborn>=0.11.0
+
+# Preprocessing and Feature Engineering
+# (included in scikit-learn, but listed for clarity)
+
+# Jupyter Notebook Support (optional)
+jupyter>=1.0.0
+ipykernel>=6.0.0
+
+# Logging and Utilities
+pathlib2>=2.3.0  # For older Python versions
+typing_extensions>=3.10.0  # For better type hints
+packaging>=20.0  # For version comparisons
+
+# For distance calculations and outlier detection
+# (scipy already covers distance metrics, sklearn covers LOF)
+
+# Optional: For better performance
+numba>=0.56.0  # Optional, can speed up numerical computations
+
+# Development and Testing (optional)
+pytest>=6.0.0
+black>=21.0.0  # Code formatting
+flake8>=3.9.0  # Linting 

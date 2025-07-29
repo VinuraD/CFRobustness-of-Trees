@@ -166,19 +166,18 @@ def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
     l0_distances = np.sum((cf_features.values != corresponding_originals.values), axis=1)
     avg_l0_distance = np.mean(l0_distances)
     
-    # 4. Local Outlier Factor (LOF) Score
+    # 4. LOF Score (Local Outlier Factor)
     try:
         # Combine training data with counterfactuals for LOF calculation
         combined_data = np.vstack([x_train.values, cf_features.values])
-        lof = LocalOutlierFactor(n_neighbors=50, contamination=0.1)
+        lof = LocalOutlierFactor(n_neighbors=100, contamination=0.1)
         lof_scores = lof.fit_predict(combined_data)
         
-        # Extract LOF scores for counterfactuals only
-        cf_lof_scores = lof_scores[len(x_train):]
-        avg_lof_score = np.mean(cf_lof_scores == -1)  # Proportion classified as outliers
+        # Get LOF scores for counterfactuals (last part of combined_data)
+        cf_lof_scores = lof_scores[-len(cf_features):]
+        avg_lof_score = np.mean(cf_lof_scores)
     except Exception as e:
-        logger = logging.getLogger('CFRobustness')
-        logger.warning(f"Could not calculate LOF scores: {e}")
+        log_print(f"Warning: Could not calculate LOF scores: {e}")
         avg_lof_score = 0.0
     
     return {
