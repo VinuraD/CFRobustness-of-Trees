@@ -271,8 +271,8 @@ def main():
     log_print("=" * 80)
     log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (CEML v4) - HELOC DATASET")
     log_print("=" * 80)
-    log_print(f"📝 Logging session to: {log_filename}")
-    log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Logging session to: {log_filename}")
+    log_print(f"[TIME] Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_print(f"🔬 Using CEML library for counterfactual generation")
     log_print("=" * 80)
     
@@ -744,7 +744,7 @@ def main():
             model_avg_changes[model_type] = avg_change
     
     # Report findings
-    log_print("\n📊 DATA PERTURBATION INSIGHTS (CEML):")
+    log_print("\n[SUMMARY] DATA PERTURBATION INSIGHTS (CEML):")
     if data_avg_changes:
         most_robust_data = min(data_avg_changes.items(), key=lambda x: abs(x[1]))
         least_robust_data = max(data_avg_changes.items(), key=lambda x: abs(x[1]))
@@ -783,8 +783,8 @@ def main():
     log_print(f"\n{'='*80}")
     log_print("🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED (CEML)!")
     log_print(f"{'='*80}")
-    log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    log_print(f"📝 Complete analysis saved to: {log_filename}")
+    log_print(f"[TIME] Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Complete analysis saved to: {log_filename}")
     log_print(f"🔬 Used CEML library for counterfactual generation")
     log_print(f"{'='*80}")
 

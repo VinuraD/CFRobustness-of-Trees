@@ -233,14 +233,14 @@ def main():
     log_print("=" * 80)
     log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (v2)")
     log_print("=" * 80)
-    log_print(f"📝 Logging session to: {log_filename}")
-    log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Logging session to: {log_filename}")
+    log_print(f"[TIME] Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_print("=" * 80)
     
     # 1. Load dataset
     log_print("\n1. Loading dataset...")
     try:
-        dm = DataModule("data/Spambase.csv", n_splits=5, random_state=42)
+        dm = DataModule("../data/Spambase.csv", n_splits=5, random_state=42)
         perturbation = Perturbation(dm)
         
         # Get metadata
@@ -694,7 +694,7 @@ def main():
     # Calculate overall robustness scores based on cross-fold averages
     if len(all_fold_results['baseline_validity']) > 0:
         
-        log_print(f"\n📊 OVERALL SUMMARY STATISTICS:")
+        log_print(f"\n[SUMMARY] OVERALL SUMMARY STATISTICS:")
         log_print(f"• Baseline counterfactual validity: {baseline_validity_mean:.4f} ± {baseline_validity_std:.4f}")
         log_print(f"• Baseline success rate: {baseline_success_mean:.4f} ± {baseline_success_std:.4f}")
         log_print(f"• Baseline model accuracy: {baseline_accuracy_mean:.4f} ± {baseline_accuracy_std:.4f}")
@@ -724,7 +724,7 @@ def main():
                 model_avg_changes[model_type] = avg_change
         
         # Report findings
-        log_print("\n📊 DATA PERTURBATION INSIGHTS:")
+        log_print("\n[INSIGHTS] DATA PERTURBATION INSIGHTS:")
         if data_avg_changes:
             most_robust_data = min(data_avg_changes.items(), key=lambda x: abs(x[1]))
             least_robust_data = max(data_avg_changes.items(), key=lambda x: abs(x[1]))
@@ -749,11 +749,11 @@ def main():
             log_print(f"• Overall model perturbation robustness score: {model_robustness_score:.4f} (higher is better)")
         
     else:
-        log_print(f"\n📊 OVERALL SUMMARY STATISTICS:")
+        log_print(f"\n[SUMMARY] OVERALL SUMMARY STATISTICS:")
         log_print(f"• No completed folds to calculate statistics")
     
     # Data perturbation insights
-    log_print(f"\n🔄 DATA PERTURBATION INSIGHTS:")
+    log_print(f"\n[INSIGHTS] DATA PERTURBATION INSIGHTS:")
     log_print(f"• Tested {len(data_perturbations)} types of data perturbations across 5 folds")
     data_exp_count = sum(len(bins) for _, bins in data_perturbations) * 5
     log_print(f"• Total data perturbation experiments: {data_exp_count}")
@@ -766,7 +766,7 @@ def main():
     
     # Overall experiment summary
     total_experiments = data_exp_count + model_exp_count + 5  # +5 for baseline experiments
-    log_print(f"\n🎯 EXPERIMENT SUMMARY:")
+    log_print(f"\n[SUMMARY] EXPERIMENT SUMMARY:")
     log_print(f"• Total experiments across all folds: {total_experiments}")
     log_print(f"• Baseline experiments: 5 (one per fold)")
     log_print(f"• Data perturbation experiments: {data_exp_count}")
@@ -777,8 +777,8 @@ def main():
     log_print(f"\n{'='*80}")
     log_print("🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!")
     log_print(f"{'='*80}")
-    log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    log_print(f"📝 Complete analysis saved to: {log_filename}")
+    log_print(f"[TIME] Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Complete analysis saved to: {log_filename}")
     log_print(f"{'='*80}")
 
 if __name__ == "__main__":

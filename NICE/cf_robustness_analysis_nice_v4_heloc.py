@@ -288,8 +288,8 @@ def main():
     log_print("=" * 80)
     log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (NICE v4) - HELOC DATASET")
     log_print("=" * 80)
-    log_print(f"📝 Logging session to: {log_filename}")
-    log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Logging session to: {log_filename}")
+    log_print(f"[TIME] Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_print("=" * 80)
     
     # 1. Load dataset
@@ -773,8 +773,8 @@ def main():
     log_print(f"\n{'='*80}")
     log_print("🏁 COMPREHENSIVE NICE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!")
     log_print(f"{'='*80}")
-    log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    log_print(f"📝 Complete analysis saved to: {log_filename}")
+    log_print(f"[TIME] Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Complete analysis saved to: {log_filename}")
     log_print(f"🧠 Used NICE algorithm with HEOM distance for mixed features")
     log_print(f"{'='*80}")
 

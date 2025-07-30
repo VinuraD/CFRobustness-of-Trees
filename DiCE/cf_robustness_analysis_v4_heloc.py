@@ -269,14 +269,14 @@ def main():
     log_print("=" * 80)
     log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (v4) - HELOC DATASET")
     log_print("=" * 80)
-    log_print(f"📝 Logging session to: {log_filename}")
-    log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Logging session to: {log_filename}")
+    log_print(f"[TIME] Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_print("=" * 80)
     
     # 1. Load dataset
     log_print("\n1. Loading HELOC dataset...")
     try:
-        dm = DataModule("data/HELOC.csv", n_splits=5, random_state=42)
+        dm = DataModule("../data/HELOC.csv", n_splits=5, random_state=42)
         perturbation = Perturbation(dm)
         
         # Get metadata
@@ -797,8 +797,8 @@ def main():
     log_print(f"\n{'='*80}")
     log_print("🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!")
     log_print(f"{'='*80}")
-    log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    log_print(f"📝 Complete analysis saved to: {log_filename}")
+    log_print(f"[TIME] Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Complete analysis saved to: {log_filename}")
     log_print(f"{'='*80}")
 
 if __name__ == "__main__":

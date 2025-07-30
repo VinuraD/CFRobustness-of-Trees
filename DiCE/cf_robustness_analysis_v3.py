@@ -261,14 +261,14 @@ def main():
     log_print("=" * 80)
     log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (v3) - GERMAN CREDIT DATASET")
     log_print("=" * 80)
-    log_print(f"📝 Logging session to: {log_filename}")
-    log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Logging session to: {log_filename}")
+    log_print(f"[TIME] Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_print("=" * 80)
     
     # 1. Load dataset
     log_print("\n1. Loading German Credit dataset...")
     try:
-        dm = DataModule("data/German-Credit.csv", n_splits=5, random_state=42)
+        dm = DataModule("../data/German-Credit.csv", n_splits=5, random_state=42)
         perturbation = Perturbation(dm)
         
         # Get metadata
@@ -883,7 +883,7 @@ def main():
             model_avg_changes[model_type] = avg_change
     
     # Report findings
-    log_print("\n📊 DATA PERTURBATION INSIGHTS:")
+    log_print("\n[INSIGHTS] DATA PERTURBATION INSIGHTS:")
     if data_avg_changes:
         most_robust_data = min(data_avg_changes.items(), key=lambda x: abs(x[1]))
         least_robust_data = max(data_avg_changes.items(), key=lambda x: abs(x[1]))
@@ -964,8 +964,8 @@ def main():
     log_print(f"\n{'='*80}")
     log_print("🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED!")
     log_print(f"{'='*80}")
-    log_print(f"🕒 Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    log_print(f"📝 Complete analysis saved to: {log_filename}")
+    log_print(f"[TIME] Completed at: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Complete analysis saved to: {log_filename}")
     log_print(f"{'='*80}")
     
     # Summary stats

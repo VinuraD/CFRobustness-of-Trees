@@ -582,7 +582,7 @@ def print_statistical_summary(all_results):
     log_print(f"Analysis across {num_folds} cross-validation folds")
     
     # Baseline performance summary
-    log_print(f"\n📊 BASELINE PERFORMANCE SUMMARY:")
+    log_print(f"\n[SUMMARY] BASELINE PERFORMANCE SUMMARY:")
     baseline_validities = [result['baseline']['validity'] for result in all_results]
     baseline_accuracies = [result['baseline']['accuracy'] for result in all_results]
     
@@ -590,7 +590,7 @@ def print_statistical_summary(all_results):
     log_print(f"  Baseline Model Accuracy: {np.mean(baseline_accuracies):.4f} ± {np.std(baseline_accuracies):.4f}")
     
     # Data perturbation summary
-    log_print(f"\n🔄 DATA PERTURBATION ROBUSTNESS:")
+    log_print(f"\n[INSIGHTS] DATA PERTURBATION ROBUSTNESS:")
     perturbation_types = ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
     
     for pert_type in perturbation_types:
@@ -634,8 +634,8 @@ def main():
     log_print("="*80)
     log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (CFXPLORER v2) - SPAMBASE DATASET")
     log_print("="*80)
-    log_print(f"📝 Logging session to: {log_filename}")
-    log_print(f"🕒 Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_print(f"[LOG] Logging session to: {log_filename}")
+    log_print(f"[TIME] Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_print("="*80)
     
     try:
@@ -774,11 +774,11 @@ def main():
         # Print statistical summary
         print_statistical_summary(all_results)
         
-        log_print(f"\n✅ CFXplorer robustness analysis completed successfully!")
+        log_print(f"\n[SUCCESS] CFXplorer robustness analysis completed successfully!")
         log_print(f"📁 All results saved and logged to: {log_filename}")
         
     except Exception as e:
-        log_print(f"\n❌ Error during analysis: {str(e)}")
+        log_print(f"\n[ERROR] Error during analysis: {str(e)}")
         logger.exception("Full traceback:")
         raise
     
