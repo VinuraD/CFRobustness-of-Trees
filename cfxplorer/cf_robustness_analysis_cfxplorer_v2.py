@@ -111,17 +111,46 @@ def generate_counterfactuals_cfxplorer(x_test, x_train, y_train, model):
             x_train_array = np.array(x_train, dtype=np.float32)
             
         # Ensure labels are proper integer type for CFXplorer compatibility
-        # CFXplorer library expects int32, so we ensure consistent int32 usage
+        # Platform-aware dtype selection for TensorFlow compatibility
         try:
-            # Use int32 as CFXplorer library expects this type
-            if hasattr(y_train, 'values'):
-                y_train_array = y_train.values.astype(np.int32)
+            import tensorflow as tf
+            
+            # Check TensorFlow's default int type and platform behavior
+            default_tf_int = tf.int64 if tf.executing_eagerly() else tf.int32
+            log_print(f"TensorFlow default int type: {default_tf_int}")
+            
+            # Try int64 first (preferred on Ubuntu/Linux for TensorFlow), then fallback to int32
+            dtype_priority = [np.int64, np.int32, np.int_, np.long] if sys.platform.startswith('linux') else [np.int32, np.int64, np.int_]
+            
+            y_train_array = None
+            successful_dtype = None
+            
+            for dtype in dtype_priority:
+                try:
+                    if hasattr(y_train, 'values'):
+                        y_train_array = y_train.values.astype(dtype)
+                    else:
+                        y_train_array = np.array(y_train, dtype=dtype)
+                    successful_dtype = dtype
+                    log_print(f"Successfully converted labels to {dtype.__name__} for platform compatibility")
+                    break
+                except Exception as dtype_error:
+                    log_print(f"Failed to convert to {dtype.__name__}: {dtype_error}")
+                    continue
+            
+            if y_train_array is None:
+                # Final fallback - use original data type
+                if hasattr(y_train, 'values'):
+                    y_train_array = y_train.values
+                else:
+                    y_train_array = np.array(y_train)
+                log_print(f"Using original label data type: {y_train_array.dtype}")
             else:
-                y_train_array = np.array(y_train, dtype=np.int32)
-            log_print(f"Successfully converted labels to int32 for CFXplorer compatibility")
+                log_print(f"Final label dtype: {y_train_array.dtype} ({successful_dtype.__name__})")
+                
         except Exception as e:
-            log_print(f"Error converting labels to int32: {e}")
-            # If int32 conversion fails, try the original data
+            log_print(f"Error in platform-aware dtype conversion: {e}")
+            # If all conversion attempts fail, try the original data
             if hasattr(y_train, 'values'):
                 y_train_array = y_train.values
             else:
