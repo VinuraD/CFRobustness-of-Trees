@@ -1,0 +1,790 @@
+================================================================================
+COUNTERFACTUAL ROBUSTNESS ANALYSIS (CEML v5) - COMPAS DATASET
+================================================================================
+[LOG] Logging session to: cf_robustness_analysis_ceml_v5_compas_20250731_205911.log
+[TIME] Started at: 2025-07-31 20:59:11
+🔬 Using CEML library for counterfactual generation
+================================================================================
+
+1. Loading COMPAS dataset...
+Original data shape (after removing metadata): (6172, 12)
+Dropped 0 rows with missing values
+Final data shape: (6172, 12)
+Dataset: COMPAS
+Label column: Two_yr_Recidivism
+Features: 12 features
+Feature types:
+  Two_yr_Recidivism: B
+  Number_of_Priors: N
+  score_factor: B
+  Age_Above_FourtyFive: B
+  Age_Below_TwentyFive: B
+  African_American: B
+  Asian: B
+  Hispanic: B
+  Native_American: B
+  Other: B
+  Female: B
+  Misdemeanor: B
+
+2. Analysis parameters:
+  Number of folds: 5
+Dataset Summary:
+Total samples (after cleaning): 6172
+Number of features: 11
+Label column: Two_yr_Recidivism
+Number of folds: 5
+Fold Summary:
+--------------------------------------------------
+Fold 0: Train=4937 samples, Test=1235 samples
+Fold 1: Train=4937 samples, Test=1235 samples
+Fold 2: Train=4938 samples, Test=1234 samples
+Fold 3: Train=4938 samples, Test=1234 samples
+Fold 4: Train=4938 samples, Test=1234 samples
+--------------------------------------------------
+  Data perturbation types: ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
+  Model perturbations: 28 configurations
+    - random_forest (max_depth=3, n_estimators=100)
+    - xgboost (max_depth=3, n_estimators=100)
+    - lightgbm (max_depth=3, n_estimators=100)
+    - random_forest (max_depth=4, n_estimators=100)
+    - xgboost (max_depth=4, n_estimators=100)
+    - lightgbm (max_depth=4, n_estimators=100)
+    - random_forest (max_depth=5, n_estimators=100)
+    - xgboost (max_depth=5, n_estimators=100)
+    - lightgbm (max_depth=5, n_estimators=100)
+    - random_forest (max_depth=6, n_estimators=100)
+    - xgboost (max_depth=6, n_estimators=100)
+    - lightgbm (max_depth=6, n_estimators=100)
+    - random_forest (max_depth=5, n_estimators=50)
+    - xgboost (max_depth=5, n_estimators=50)
+    - lightgbm (max_depth=5, n_estimators=50)
+    - random_forest (max_depth=5, n_estimators=100)
+    - xgboost (max_depth=5, n_estimators=100)
+    - lightgbm (max_depth=5, n_estimators=100)
+    - random_forest (max_depth=5, n_estimators=150)
+    - xgboost (max_depth=5, n_estimators=150)
+    - lightgbm (max_depth=5, n_estimators=150)
+    - random_forest (max_depth=5, n_estimators=200)
+    - xgboost (max_depth=5, n_estimators=200)
+    - lightgbm (max_depth=5, n_estimators=200)
+    - adaboost (max_depth=3, n_estimators=50)
+    - adaboost (max_depth=3, n_estimators=100)
+    - adaboost (max_depth=3, n_estimators=150)
+    - adaboost (max_depth=3, n_estimators=200)
+
+3. Running comprehensive analysis across all 5 folds...
+================================================================================
+
+--- FOLD 0 ANALYSIS ---
+--------------------------------------------------
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+Fold 0 data shapes:
+  Raw train: (4937, 12)
+  Processed - Train: (4937, 12), Test: (1235, 12)
+  Training samples: 4937
+  Test samples: 1235
+  Features: 11
+  Class distribution - Train: [2690 2247]
+  Class distribution - Test: [673 562]
+
+Training baseline model for fold 0...
+  Train accuracy: 0.6956
+  Test accuracy: 0.6704
+Generating counterfactuals for fold 0 using CEML...
+COMPAS feature analysis:
+  Categorical features: ['Two_yr_Recidivism', 'score_factor', 'Age_Above_FourtyFive', 'Age_Below_TwentyFive', 'African_American', 'Asian', 'Hispanic', 'Native_American', 'Other', 'Female', 'Misdemeanor']
+  Continuous features: ['Number_of_Priors']
+Generating counterfactuals using CEML library
+Test set size: 50 samples
+Counterfactual generation complete:
+  Successful: 50/50 (100.00%)
+  Failed: 0/50 (0.00%)
+  Success rate: 100.00%
+  Baseline validity: 0.7000 (35/50)
+  Baseline L2 distance: 0.3689
+  Baseline L0 distance: 1.38
+  Baseline LOF score: 0.6400
+
+Testing data perturbations for fold 0...
+  minor_deletion:
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Remove 0% -> validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 5: Remove 5% -> validity: 0.6800, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 10: Remove 10% -> validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 15: Remove 15% -> validity: 0.5400, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 20: Remove 20% -> validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+  major_deletion:
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Remove 0% -> validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 1: Remove 50% -> validity: 0.5200, accuracy: 0.7200, L2: 0.3689, L0: 1.38
+  minor_addition:
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Use 80% -> validity: 0.5800, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 5: Use 85% -> validity: 0.6000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 10: Use 90% -> validity: 0.6000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 15: Use 95% -> validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 20: Use 100% -> validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+  major_addition:
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Use 50% -> validity: 0.5800, accuracy: 0.6600, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 1: Use 100% -> validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+
+Testing model perturbations for fold 0...
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  random_forest (3, 100): validity: 0.5200, accuracy: 0.6800, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  xgboost (3, 100): validity: 0.5000, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (3, 100): validity: 0.3600, accuracy: 0.6800, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  random_forest (4, 100): validity: 0.6000, accuracy: 0.6800, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  xgboost (4, 100): validity: 0.5200, accuracy: 0.6600, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (4, 100): validity: 0.4000, accuracy: 0.6800, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 100): validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 100): validity: 0.4800, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 100): validity: 0.3600, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  random_forest (6, 100): validity: 0.6000, accuracy: 0.6800, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  xgboost (6, 100): validity: 0.4800, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (6, 100): validity: 0.3400, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 50): validity: 0.6600, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 50): validity: 0.4800, accuracy: 0.6600, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 50): validity: 0.3600, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 100): validity: 0.7000, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 100): validity: 0.4800, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 100): validity: 0.3600, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 150): validity: 0.6400, accuracy: 0.7000, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 150): validity: 0.5000, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 150): validity: 0.3600, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 200): validity: 0.6800, accuracy: 0.6800, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 200): validity: 0.5000, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 200): validity: 0.3600, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  adaboost (3, 50): validity: 0.4800, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  adaboost (3, 100): validity: 0.4800, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  adaboost (3, 150): validity: 0.5200, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+  adaboost (3, 200): validity: 0.5200, accuracy: 0.6400, L2: 0.3689, L0: 1.38
+
+--- FOLD 1 ANALYSIS ---
+--------------------------------------------------
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+Fold 1 data shapes:
+  Raw train: (4937, 12)
+  Processed - Train: (4937, 12), Test: (1235, 12)
+  Training samples: 4937
+  Test samples: 1235
+  Features: 11
+  Class distribution - Train: [2690 2247]
+  Class distribution - Test: [673 562]
+
+Training baseline model for fold 1...
+  Train accuracy: 0.6933
+  Test accuracy: 0.6947
+Generating counterfactuals for fold 1 using CEML...
+COMPAS feature analysis:
+  Categorical features: ['Two_yr_Recidivism', 'score_factor', 'Age_Above_FourtyFive', 'Age_Below_TwentyFive', 'African_American', 'Asian', 'Hispanic', 'Native_American', 'Other', 'Female', 'Misdemeanor']
+  Continuous features: ['Number_of_Priors']
+Generating counterfactuals using CEML library
+Test set size: 50 samples
+Counterfactual generation complete:
+  Successful: 50/50 (100.00%)
+  Failed: 0/50 (0.00%)
+  Success rate: 100.00%
+  Baseline validity: 0.7200 (36/50)
+  Baseline L2 distance: 0.3463
+  Baseline L0 distance: 1.52
+  Baseline LOF score: 0.8000
+
+Testing data perturbations for fold 1...
+  minor_deletion:
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Remove 0% -> validity: 0.7200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 5: Remove 5% -> validity: 0.6400, accuracy: 0.7000, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 10: Remove 10% -> validity: 0.6400, accuracy: 0.7000, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 15: Remove 15% -> validity: 0.6600, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 20: Remove 20% -> validity: 0.6600, accuracy: 0.6800, L2: 0.3463, L0: 1.52
+  major_deletion:
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Remove 0% -> validity: 0.7200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 1: Remove 50% -> validity: 0.6600, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+  minor_addition:
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Use 80% -> validity: 0.6800, accuracy: 0.6800, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 5: Use 85% -> validity: 0.6800, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 10: Use 90% -> validity: 0.6800, accuracy: 0.6800, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 15: Use 95% -> validity: 0.7000, accuracy: 0.7000, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 20: Use 100% -> validity: 0.7200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+  major_addition:
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Use 50% -> validity: 0.4800, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 1: Use 100% -> validity: 0.7200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+
+Testing model perturbations for fold 1...
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  random_forest (3, 100): validity: 0.6400, accuracy: 0.6800, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  xgboost (3, 100): validity: 0.6800, accuracy: 0.7800, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (3, 100): validity: 0.5600, accuracy: 0.7600, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  random_forest (4, 100): validity: 0.6200, accuracy: 0.6600, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  xgboost (4, 100): validity: 0.6400, accuracy: 0.7600, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (4, 100): validity: 0.5200, accuracy: 0.7400, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 100): validity: 0.7200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 100): validity: 0.6400, accuracy: 0.7600, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 100): validity: 0.5200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  random_forest (6, 100): validity: 0.6200, accuracy: 0.7400, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  xgboost (6, 100): validity: 0.6000, accuracy: 0.7600, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (6, 100): validity: 0.5400, accuracy: 0.7600, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 50): validity: 0.7000, accuracy: 0.7400, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 50): validity: 0.6200, accuracy: 0.7400, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 50): validity: 0.5000, accuracy: 0.7000, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 100): validity: 0.7200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 100): validity: 0.6400, accuracy: 0.7600, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 100): validity: 0.5200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 150): validity: 0.6600, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 150): validity: 0.6200, accuracy: 0.7600, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 150): validity: 0.5400, accuracy: 0.7400, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  random_forest (5, 200): validity: 0.7000, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  xgboost (5, 200): validity: 0.5800, accuracy: 0.7400, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  lightgbm (5, 200): validity: 0.5200, accuracy: 0.7000, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  adaboost (3, 50): validity: 0.6200, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  adaboost (3, 100): validity: 0.5600, accuracy: 0.7400, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  adaboost (3, 150): validity: 0.5400, accuracy: 0.7000, L2: 0.3463, L0: 1.52
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+  adaboost (3, 200): validity: 0.5400, accuracy: 0.7200, L2: 0.3463, L0: 1.52
+
+--- FOLD 2 ANALYSIS ---
+--------------------------------------------------
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+Fold 2 data shapes:
+  Raw train: (4938, 12)
+  Processed - Train: (4938, 12), Test: (1234, 12)
+  Training samples: 4938
+  Test samples: 1234
+  Features: 11
+  Class distribution - Train: [2690 2248]
+  Class distribution - Test: [673 561]
+
+Training baseline model for fold 2...
+  Train accuracy: 0.6932
+  Test accuracy: 0.6896
+Generating counterfactuals for fold 2 using CEML...
+COMPAS feature analysis:
+  Categorical features: ['Two_yr_Recidivism', 'score_factor', 'Age_Above_FourtyFive', 'Age_Below_TwentyFive', 'African_American', 'Asian', 'Hispanic', 'Native_American', 'Other', 'Female', 'Misdemeanor']
+  Continuous features: ['Number_of_Priors']
+Generating counterfactuals using CEML library
+Test set size: 50 samples
+Counterfactual generation complete:
+  Successful: 50/50 (100.00%)
+  Failed: 0/50 (0.00%)
+  Success rate: 100.00%
+  Baseline validity: 0.8000 (40/50)
+  Baseline L2 distance: 0.3773
+  Baseline L0 distance: 1.46
+  Baseline LOF score: 0.3600
+
+Testing data perturbations for fold 2...
+  minor_deletion:
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 0.8000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 5: Remove 5% -> validity: 0.7800, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 10: Remove 10% -> validity: 0.7000, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 15: Remove 15% -> validity: 0.7200, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Remove 20% -> validity: 0.7200, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+  major_deletion:
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 0.8000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Remove 50% -> validity: 0.7200, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+  minor_addition:
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Use 80% -> validity: 0.6400, accuracy: 0.7800, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 5: Use 85% -> validity: 0.7000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 10: Use 90% -> validity: 0.7400, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 15: Use 95% -> validity: 0.7600, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Use 100% -> validity: 0.8000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+  major_addition:
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Use 50% -> validity: 0.7000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Use 100% -> validity: 0.8000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+
+Testing model perturbations for fold 2...
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  random_forest (3, 100): validity: 0.6600, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  xgboost (3, 100): validity: 0.5800, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (3, 100): validity: 0.5400, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  random_forest (4, 100): validity: 0.7000, accuracy: 0.7800, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  xgboost (4, 100): validity: 0.6000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (4, 100): validity: 0.4600, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 100): validity: 0.8000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 100): validity: 0.6600, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 100): validity: 0.5200, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  random_forest (6, 100): validity: 0.7200, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  xgboost (6, 100): validity: 0.6400, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (6, 100): validity: 0.4800, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 50): validity: 0.7800, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 50): validity: 0.6800, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 50): validity: 0.5000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 100): validity: 0.8000, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 100): validity: 0.6600, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 100): validity: 0.5200, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 150): validity: 0.7800, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 150): validity: 0.6600, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 150): validity: 0.4800, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 200): validity: 0.7600, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 200): validity: 0.6600, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 200): validity: 0.4800, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 50): validity: 0.6200, accuracy: 0.8000, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 100): validity: 0.6400, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 150): validity: 0.6400, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 200): validity: 0.6400, accuracy: 0.8200, L2: 0.3773, L0: 1.46
+
+--- FOLD 3 ANALYSIS ---
+--------------------------------------------------
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+Fold 3 data shapes:
+  Raw train: (4938, 12)
+  Processed - Train: (4938, 12), Test: (1234, 12)
+  Training samples: 4938
+  Test samples: 1234
+  Features: 11
+  Class distribution - Train: [2691 2247]
+  Class distribution - Test: [672 562]
+
+Training baseline model for fold 3...
+  Train accuracy: 0.6981
+  Test accuracy: 0.6767
+Generating counterfactuals for fold 3 using CEML...
+COMPAS feature analysis:
+  Categorical features: ['Two_yr_Recidivism', 'score_factor', 'Age_Above_FourtyFive', 'Age_Below_TwentyFive', 'African_American', 'Asian', 'Hispanic', 'Native_American', 'Other', 'Female', 'Misdemeanor']
+  Continuous features: ['Number_of_Priors']
+Generating counterfactuals using CEML library
+Test set size: 50 samples
+Counterfactual generation complete:
+  Successful: 50/50 (100.00%)
+  Failed: 0/50 (0.00%)
+  Success rate: 100.00%
+  Baseline validity: 0.7000 (35/50)
+  Baseline L2 distance: 0.2837
+  Baseline L0 distance: 0.96
+  Baseline LOF score: 0.8400
+
+Testing data perturbations for fold 3...
+  minor_deletion:
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 0.7000, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 5: Remove 5% -> validity: 0.5800, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 10: Remove 10% -> validity: 0.6600, accuracy: 0.6800, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 15: Remove 15% -> validity: 0.6200, accuracy: 0.6400, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Remove 20% -> validity: 0.6200, accuracy: 0.6400, L2: 0.2837, L0: 0.96
+  major_deletion:
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 0.7000, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Remove 50% -> validity: 0.5000, accuracy: 0.6600, L2: 0.2837, L0: 0.96
+  minor_addition:
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Use 80% -> validity: 0.5600, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 5: Use 85% -> validity: 0.5000, accuracy: 0.7400, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 10: Use 90% -> validity: 0.4800, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 15: Use 95% -> validity: 0.6600, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Use 100% -> validity: 0.7000, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+  major_addition:
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Use 50% -> validity: 0.4400, accuracy: 0.7200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Use 100% -> validity: 0.7000, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+
+Testing model perturbations for fold 3...
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  random_forest (3, 100): validity: 0.4600, accuracy: 0.6600, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  xgboost (3, 100): validity: 0.6000, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (3, 100): validity: 0.4400, accuracy: 0.7200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  random_forest (4, 100): validity: 0.6600, accuracy: 0.6800, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  xgboost (4, 100): validity: 0.5000, accuracy: 0.6200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (4, 100): validity: 0.4200, accuracy: 0.6200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 100): validity: 0.7000, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 100): validity: 0.4800, accuracy: 0.6000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 100): validity: 0.4800, accuracy: 0.6600, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  random_forest (6, 100): validity: 0.6400, accuracy: 0.6800, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  xgboost (6, 100): validity: 0.5000, accuracy: 0.6200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (6, 100): validity: 0.4200, accuracy: 0.6200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 50): validity: 0.6400, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 50): validity: 0.5200, accuracy: 0.6200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 50): validity: 0.4400, accuracy: 0.6200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 100): validity: 0.7000, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 100): validity: 0.4800, accuracy: 0.6000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 100): validity: 0.4800, accuracy: 0.6600, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 150): validity: 0.6600, accuracy: 0.7000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 150): validity: 0.5200, accuracy: 0.6000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 150): validity: 0.4400, accuracy: 0.6000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 200): validity: 0.5800, accuracy: 0.7200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 200): validity: 0.5200, accuracy: 0.6000, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 200): validity: 0.4400, accuracy: 0.5800, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 50): validity: 0.5400, accuracy: 0.7200, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 100): validity: 0.4800, accuracy: 0.5800, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 150): validity: 0.4600, accuracy: 0.5800, L2: 0.2837, L0: 0.96
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 200): validity: 0.4800, accuracy: 0.6000, L2: 0.2837, L0: 0.96
+
+--- FOLD 4 ANALYSIS ---
+--------------------------------------------------
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+Fold 4 data shapes:
+  Raw train: (4938, 12)
+  Processed - Train: (4938, 12), Test: (1234, 12)
+  Training samples: 4938
+  Test samples: 1234
+  Features: 11
+  Class distribution - Train: [2691 2247]
+  Class distribution - Test: [672 562]
+
+Training baseline model for fold 4...
+  Train accuracy: 0.6920
+  Test accuracy: 0.6904
+Generating counterfactuals for fold 4 using CEML...
+COMPAS feature analysis:
+  Categorical features: ['Two_yr_Recidivism', 'score_factor', 'Age_Above_FourtyFive', 'Age_Below_TwentyFive', 'African_American', 'Asian', 'Hispanic', 'Native_American', 'Other', 'Female', 'Misdemeanor']
+  Continuous features: ['Number_of_Priors']
+Generating counterfactuals using CEML library
+Test set size: 50 samples
+Counterfactual generation complete:
+  Successful: 50/50 (100.00%)
+  Failed: 0/50 (0.00%)
+  Success rate: 100.00%
+  Baseline validity: 0.7200 (36/50)
+  Baseline L2 distance: 0.3530
+  Baseline L0 distance: 1.68
+  Baseline LOF score: 0.8000
+
+Testing data perturbations for fold 4...
+  minor_deletion:
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 0.7200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 5: Remove 5% -> validity: 0.6600, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 10: Remove 10% -> validity: 0.6000, accuracy: 0.7400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 15: Remove 15% -> validity: 0.6200, accuracy: 0.7400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Remove 20% -> validity: 0.5800, accuracy: 0.7000, L2: 0.3530, L0: 1.68
+  major_deletion:
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 0.7200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Remove 50% -> validity: 0.5200, accuracy: 0.6200, L2: 0.3530, L0: 1.68
+  minor_addition:
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Use 80% -> validity: 0.5800, accuracy: 0.7000, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 5: Use 85% -> validity: 0.5200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 10: Use 90% -> validity: 0.6600, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 15: Use 95% -> validity: 0.7000, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Use 100% -> validity: 0.7200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+  major_addition:
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Use 50% -> validity: 0.4200, accuracy: 0.6800, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Use 100% -> validity: 0.7200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+
+Testing model perturbations for fold 4...
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  random_forest (3, 100): validity: 0.5200, accuracy: 0.7000, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  xgboost (3, 100): validity: 0.5400, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (3, 100): validity: 0.3600, accuracy: 0.6800, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  random_forest (4, 100): validity: 0.5400, accuracy: 0.7000, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  xgboost (4, 100): validity: 0.5000, accuracy: 0.6600, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (4, 100): validity: 0.3600, accuracy: 0.6800, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 100): validity: 0.7200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 100): validity: 0.4200, accuracy: 0.6400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 100): validity: 0.3800, accuracy: 0.6800, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  random_forest (6, 100): validity: 0.6000, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  xgboost (6, 100): validity: 0.4200, accuracy: 0.6200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (6, 100): validity: 0.3800, accuracy: 0.6600, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 50): validity: 0.6200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 50): validity: 0.4400, accuracy: 0.6400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 50): validity: 0.3600, accuracy: 0.6800, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 100): validity: 0.7200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 100): validity: 0.4200, accuracy: 0.6400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 100): validity: 0.3800, accuracy: 0.6800, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 150): validity: 0.6200, accuracy: 0.7200, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 150): validity: 0.4200, accuracy: 0.6400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 150): validity: 0.3800, accuracy: 0.6600, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  random_forest (5, 200): validity: 0.6600, accuracy: 0.7400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  xgboost (5, 200): validity: 0.4200, accuracy: 0.6400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  lightgbm (5, 200): validity: 0.3800, accuracy: 0.6600, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 50): validity: 0.4000, accuracy: 0.6400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 100): validity: 0.4600, accuracy: 0.6400, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 150): validity: 0.4600, accuracy: 0.6800, L2: 0.3530, L0: 1.68
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+  adaboost (3, 200): validity: 0.4600, accuracy: 0.6600, L2: 0.3530, L0: 1.68
+
+4. Generating comprehensive summary across all 5 folds...
+================================================================================
+
+BASELINE PERFORMANCE ACROSS ALL FOLDS (CEML):
+--------------------------------------------------------------------------------
+Model Accuracy: 0.6844 ± 0.0092
+CF Success Rate: 1.0000 ± 0.0000
+CF Validity: 0.7280 ± 0.0371
+CF L2 Distance: 0.3459 ± 0.0329
+CF L0 Distance: 1.4000 ± 0.2410
+CF LOF Score: 0.6880 ± 0.1778
+Individual fold model accuracies: ['0.6704', '0.6947', '0.6896', '0.6767', '0.6904']
+Individual fold CF success rates: ['1.0000', '1.0000', '1.0000', '1.0000', '1.0000']
+Individual fold CF validities: ['0.7000', '0.7200', '0.8000', '0.7000', '0.7200']
+
+DATA PERTURBATION ROBUSTNESS SUMMARY (CEML):
+------------------------------------------------------------------------------------------------------------------------------------------------------
+Perturbation    Bin   Data         Mean Validity Std Validity Mean Accuracy Std Accuracy Mean L2    Mean L0    Validity Δ  Per-Fold Validities
+------------------------------------------------------------------------------------------------------------------------------------------------------
+minor_deletion  0     Remove 0%    0.7280        0.0371       0.7280        0.0371       0.3459     1.40       +0.0000     ['0.700', '0.720', '0.800', '0.700', '0.720']
+minor_deletion  5     Remove 5%    0.6680        0.0652       0.7240        0.0388       0.3459     1.40       -0.0600     ['0.680', '0.640', '0.780', '0.580', '0.660']
+minor_deletion  10    Remove 10%   0.6600        0.0379       0.7280        0.0500       0.3459     1.40       -0.0680     ['0.700', '0.640', '0.700', '0.660', '0.600']
+minor_deletion  15    Remove 15%   0.6320        0.0588       0.7240        0.0585       0.3459     1.40       -0.0960     ['0.540', '0.660', '0.720', '0.620', '0.620']
+minor_deletion  20    Remove 20%   0.6560        0.0512       0.7080        0.0601       0.3459     1.40       -0.0720     ['0.700', '0.660', '0.720', '0.620', '0.580']
+major_deletion  0     Remove 0%    0.7280        0.0371       0.7280        0.0371       0.3459     1.40       +0.0000     ['0.700', '0.720', '0.800', '0.700', '0.720']
+major_deletion  1     Remove 50%   0.5840        0.0889       0.7040        0.0612       0.3459     1.40       -0.1440     ['0.520', '0.660', '0.720', '0.500', '0.520']
+minor_addition  0     Use 80%      0.6080        0.0449       0.7120        0.0349       0.3459     1.40       -0.1200     ['0.580', '0.680', '0.640', '0.560', '0.580']
+minor_addition  5     Use 85%      0.6000        0.0810       0.7360        0.0344       0.3459     1.40       -0.1280     ['0.600', '0.680', '0.700', '0.500', '0.520']
+minor_addition  10    Use 90%      0.6320        0.0882       0.7240        0.0496       0.3459     1.40       -0.0960     ['0.600', '0.680', '0.740', '0.480', '0.660']
+minor_addition  15    Use 95%      0.7040        0.0320       0.7240        0.0388       0.3459     1.40       -0.0240     ['0.700', '0.700', '0.760', '0.660', '0.700']
+minor_addition  20    Use 100%     0.7280        0.0371       0.7280        0.0371       0.3459     1.40       +0.0000     ['0.700', '0.720', '0.800', '0.700', '0.720']
+major_addition  0     Use 50%      0.5240        0.1038       0.7160        0.0480       0.3459     1.40       -0.2040     ['0.580', '0.480', '0.700', '0.440', '0.420']
+major_addition  1     Use 100%     0.7280        0.0371       0.7280        0.0371       0.3459     1.40       +0.0000     ['0.700', '0.720', '0.800', '0.700', '0.720']
+
+MODEL PERTURBATION ROBUSTNESS SUMMARY (CEML):
+------------------------------------------------------------------------------------------------------------------------------------------------------
+Model Configuration            Mean Validity Std Validity Mean Accuracy Std Accuracy Mean L2    Mean L0    Validity Δ  Per-Fold Validities
+------------------------------------------------------------------------------------------------------------------------------------------------------
+random_forest_3_100            0.5600        0.0769       0.7080        0.0574       0.3459     1.40       -0.1680     ['0.520', '0.640', '0.660', '0.460', '0.520']
+xgboost_3_100                  0.5800        0.0607       0.7280        0.0574       0.3459     1.40       -0.1480     ['0.500', '0.680', '0.580', '0.600', '0.540']
+lightgbm_3_100                 0.4520        0.0854       0.7280        0.0466       0.3459     1.40       -0.2760     ['0.360', '0.560', '0.540', '0.440', '0.360']
+random_forest_4_100            0.6240        0.0543       0.7000        0.0420       0.3459     1.40       -0.1040     ['0.600', '0.620', '0.700', '0.660', '0.540']
+xgboost_4_100                  0.5520        0.0574       0.7000        0.0681       0.3459     1.40       -0.1760     ['0.520', '0.640', '0.600', '0.500', '0.500']
+lightgbm_4_100                 0.4320        0.0546       0.7040        0.0612       0.3459     1.40       -0.2960     ['0.400', '0.520', '0.460', '0.420', '0.360']
+random_forest_5_100            0.7280        0.0371       0.7280        0.0371       0.3459     1.40       +0.0000     ['0.700', '0.700', '0.720', '0.720', '0.800', '0.800', '0.700', '0.700', '0.720', '0.720']
+xgboost_5_100                  0.5360        0.0958       0.6880        0.0776       0.3459     1.40       -0.1920     ['0.480', '0.480', '0.640', '0.640', '0.660', '0.660', '0.480', '0.480', '0.420', '0.420']
+lightgbm_5_100                 0.4520        0.0688       0.7000        0.0566       0.3459     1.40       -0.2760     ['0.360', '0.360', '0.520', '0.520', '0.520', '0.520', '0.480', '0.480', '0.380', '0.380']
+random_forest_6_100            0.6360        0.0445       0.7240        0.0445       0.3459     1.40       -0.0920     ['0.600', '0.620', '0.720', '0.640', '0.600']
+xgboost_6_100                  0.5280        0.0806       0.6880        0.0765       0.3459     1.40       -0.2000     ['0.480', '0.600', '0.640', '0.500', '0.420']
+lightgbm_6_100                 0.4320        0.0711       0.6960        0.0709       0.3459     1.40       -0.2960     ['0.340', '0.540', '0.480', '0.420', '0.380']
+random_forest_5_50             0.6800        0.0566       0.7320        0.0371       0.3459     1.40       -0.0480     ['0.660', '0.700', '0.780', '0.640', '0.620']
+xgboost_5_50                   0.5480        0.0891       0.6920        0.0676       0.3459     1.40       -0.1800     ['0.480', '0.620', '0.680', '0.520', '0.440']
+lightgbm_5_50                  0.4320        0.0627       0.6880        0.0627       0.3459     1.40       -0.2960     ['0.360', '0.500', '0.500', '0.440', '0.360']
+random_forest_5_150            0.6720        0.0560       0.7320        0.0449       0.3459     1.40       -0.0560     ['0.640', '0.660', '0.780', '0.660', '0.620']
+xgboost_5_150                  0.5440        0.0862       0.6880        0.0776       0.3459     1.40       -0.1840     ['0.500', '0.620', '0.660', '0.520', '0.420']
+lightgbm_5_150                 0.4400        0.0657       0.6920        0.0786       0.3459     1.40       -0.2880     ['0.360', '0.540', '0.480', '0.440', '0.380']
+random_forest_5_200            0.6760        0.0585       0.7320        0.0392       0.3459     1.40       -0.0520     ['0.680', '0.700', '0.760', '0.580', '0.660']
+xgboost_5_200                  0.5360        0.0804       0.6880        0.0806       0.3459     1.40       -0.1920     ['0.500', '0.580', '0.660', '0.520', '0.420']
+lightgbm_5_200                 0.4360        0.0599       0.6800        0.0800       0.3459     1.40       -0.2920     ['0.360', '0.520', '0.480', '0.440', '0.380']
+adaboost_3_50                  0.5320        0.0845       0.7040        0.0599       0.3459     1.40       -0.1960     ['0.480', '0.620', '0.620', '0.540', '0.400']
+adaboost_3_100                 0.5240        0.0674       0.6840        0.0852       0.3459     1.40       -0.2040     ['0.480', '0.560', '0.640', '0.480', '0.460']
+adaboost_3_150                 0.5240        0.0662       0.6840        0.0794       0.3459     1.40       -0.2040     ['0.520', '0.540', '0.640', '0.460', '0.460']
+adaboost_3_200                 0.5280        0.0627       0.6880        0.0765       0.3459     1.40       -0.2000     ['0.520', '0.540', '0.640', '0.480', '0.460']
+
+================================================================================
+COUNTERFACTUAL ROBUSTNESS INSIGHTS (COMPAS DATASET - CEML - 5 FOLDS)
+================================================================================
+
+[SUMMARY] DATA PERTURBATION INSIGHTS (CEML):
+• Most robust to: minor_addition (avg validity change: -0.0736)
+• Least robust to: major_deletion (avg validity change: -0.1440)
+• Overall data perturbation robustness score: 0.9016 (higher is better)
+
+🤖 MODEL PERTURBATION INSIGHTS (CEML):
+• Most robust to: random (avg validity change: -0.0743)
+• Least robust to: lightgbm (avg validity change: -0.2886)
+• Overall model perturbation robustness score: 0.8136 (higher is better)
+
+⚖️ COMPAS DATASET INSIGHTS (CEML):
+• Dataset contains criminal justice/recidivism prediction features
+• Categorical features: ['Two_yr_Recidivism', 'score_factor', 'Age_Above_FourtyFive', 'Age_Below_TwentyFive', 'African_American', 'Asian', 'Hispanic', 'Native_American', 'Other', 'Female', 'Misdemeanor']
+• Continuous features: ['Number_of_Priors']
+• Baseline counterfactual success rate: 100.00% ± 0.000
+• Baseline counterfactual validity: 0.7280 ± 0.037
+• Baseline model accuracy: 0.6844 ± 0.009
+• COMPAS dataset is widely used for algorithmic fairness research
+• Contains sensitive attributes like race and sex that require careful handling
+• Used CEML library for optimization-based counterfactual generation
+• Results can be compared with DiCE-based analysis for method comparison
+
+================================================================================
+🏁 COMPREHENSIVE COUNTERFACTUAL ROBUSTNESS ANALYSIS COMPLETED (CEML)!
+================================================================================
+[TIME] Completed at: 2025-07-31 21:13:46
+[LOG] Complete analysis saved to: cf_robustness_analysis_ceml_v5_compas_20250731_205911.log
+🔬 Used CEML library for counterfactual generation
+================================================================================

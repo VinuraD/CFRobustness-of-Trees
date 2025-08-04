@@ -101,11 +101,23 @@ def generate_counterfactuals_cfxplorer(x_test, x_train, y_train, model):
         else:
             x_train_array = np.array(x_train, dtype=np.float32)
             
-        # Ensure labels are int32 (this is critical for TensorFlow compatibility)
-        if hasattr(y_train, 'values'):
-            y_train_array = y_train.values.astype(np.int32)
-        else:
-            y_train_array = np.array(y_train, dtype=np.int32)
+        # Ensure labels are proper integer type for CFXplorer compatibility
+        # CFXplorer library expects int32, so we ensure consistent int32 usage
+        try:
+            # Use int32 as CFXplorer library expects this type
+            if hasattr(y_train, 'values'):
+                y_train_array = y_train.values.astype(np.int32)
+            else:
+                y_train_array = np.array(y_train, dtype=np.int32)
+            log_print(f"Successfully converted labels to int32 for CFXplorer compatibility")
+        except Exception as e:
+            log_print(f"Error converting labels to int32: {e}")
+            # If int32 conversion fails, try the original data
+            if hasattr(y_train, 'values'):
+                y_train_array = y_train.values
+            else:
+                y_train_array = np.array(y_train)
+            log_print(f"Using original label data type: {y_train_array.dtype}")
             
         log_print(f"Test data shape: {x_test_array.shape}, dtype: {x_test_array.dtype}")
         log_print(f"Train data shape: {x_train_array.shape}, dtype: {x_train_array.dtype}")

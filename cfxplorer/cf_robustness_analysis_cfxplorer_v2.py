@@ -110,11 +110,23 @@ def generate_counterfactuals_cfxplorer(x_test, x_train, y_train, model):
         else:
             x_train_array = np.array(x_train, dtype=np.float32)
             
-        # Ensure labels are int32 (this is critical for TensorFlow compatibility)
-        if hasattr(y_train, 'values'):
-            y_train_array = y_train.values.astype(np.int32)
-        else:
-            y_train_array = np.array(y_train, dtype=np.int32)
+        # Ensure labels are proper integer type for CFXplorer compatibility
+        # CFXplorer library expects int32, so we ensure consistent int32 usage
+        try:
+            # Use int32 as CFXplorer library expects this type
+            if hasattr(y_train, 'values'):
+                y_train_array = y_train.values.astype(np.int32)
+            else:
+                y_train_array = np.array(y_train, dtype=np.int32)
+            log_print(f"Successfully converted labels to int32 for CFXplorer compatibility")
+        except Exception as e:
+            log_print(f"Error converting labels to int32: {e}")
+            # If int32 conversion fails, try the original data
+            if hasattr(y_train, 'values'):
+                y_train_array = y_train.values
+            else:
+                y_train_array = np.array(y_train)
+            log_print(f"Using original label data type: {y_train_array.dtype}")
             
         log_print(f"Test data shape: {x_test_array.shape}, dtype: {x_test_array.dtype}")
         log_print(f"Train data shape: {x_train_array.shape}, dtype: {x_train_array.dtype}")
@@ -138,6 +150,25 @@ def generate_counterfactuals_cfxplorer(x_test, x_train, y_train, model):
         try:
             # Try to patch the Focus class to use legacy optimizer if available
             import tensorflow as tf
+            
+            # Configure TensorFlow for better int32/int64 compatibility
+            log_print("Configuring TensorFlow for CFXplorer compatibility...")
+            
+            # Set TensorFlow to use int32 by default for better CFXplorer compatibility
+            try:
+                # Disable TensorFlow's automatic mixed precision which can cause dtype issues
+                tf.config.optimizer.set_experimental_options({"auto_mixed_precision": False})
+                log_print("Disabled TensorFlow auto mixed precision")
+            except:
+                pass
+                
+            # Ensure consistent dtype handling
+            try:
+                tf.config.experimental.enable_tensor_float_32_execution(False)
+                log_print("Disabled TensorFlow TF32 execution for consistency")
+            except:
+                pass
+            
             if hasattr(tf.keras.optimizers, 'legacy') and hasattr(tf.keras.optimizers.legacy, 'Adam'):
                 log_print("Using legacy Adam optimizer for TensorFlow compatibility")
                 # Create Focus instance with legacy optimizer support

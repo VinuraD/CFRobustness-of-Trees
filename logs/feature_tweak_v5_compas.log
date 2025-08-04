@@ -1,0 +1,594 @@
+================================================================================
+COUNTERFACTUAL ROBUSTNESS ANALYSIS (FEATURETWEAK v5) - COMPAS DATASET
+================================================================================
+[LOG] Logging session to: cf_robustness_analysis_featuretweak_v5_compas_20250731_221337.log
+[TIME] Started at: 2025-07-31 22:13:37
+================================================================================
+
+1. Loading dataset...
+Original data shape (after removing metadata): (6172, 12)
+Dropped 0 rows with missing values
+Final data shape: (6172, 12)
+Dataset: COMPAS
+Label column: Two_yr_Recidivism
+Features: 12 features
+
+2. Analysis parameters:
+  Number of folds: 5
+  Counterfactual method: FeatureTweak
+Dataset Summary:
+Total samples (after cleaning): 6172
+Number of features: 11
+Label column: Two_yr_Recidivism
+Number of folds: 5
+Fold Summary:
+--------------------------------------------------
+Fold 0: Train=4937 samples, Test=1235 samples
+Fold 1: Train=4937 samples, Test=1235 samples
+Fold 2: Train=4938 samples, Test=1234 samples
+Fold 3: Train=4938 samples, Test=1234 samples
+Fold 4: Train=4938 samples, Test=1234 samples
+--------------------------------------------------
+
+3. Running comprehensive analysis across all 5 folds...
+================================================================================
+
+--- FOLD 0 ANALYSIS ---
+--------------------------------------------------
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+Fold 0 data shapes:
+  Raw train: (4937, 12)
+  Processed - Train: (4937, 12), Test: (1235, 12)
+  Training samples: 4937
+  Test samples: 1235
+  Features: 11
+  Class distribution - Train: [2690 2247]
+  Class distribution - Test: [673 562]
+
+Training baseline model for fold 0...
+  Train accuracy: 0.6956
+  Test accuracy: 0.6704
+Generating counterfactuals using FeatureTweak for fold 0...
+Generating counterfactuals using FeatureTweak algorithm
+Test set size: 1235 samples
+Epsilon parameter: 0.1
+FeatureTweak counterfactual generation complete:
+  Successful: 453/1235 (36.68%)
+  Failed: 782/1235 (63.32%)
+  Success rate: 36.68%
+  Baseline validity: 1.0000 (453/453)
+  Baseline L2 distance: 0.5415
+  Baseline L0 distance: 2.14
+  Baseline LOF score: 0.7086
+
+Testing data perturbations for fold 0...
+  minor_deletion:
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6704
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 5 - Train: 4691 samples, Test: 1235 samples
+    Bin 5: Remove 5% -> validity: 0.9029, accuracy: 0.6713
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 10 - Train: 4444 samples, Test: 1235 samples
+    Bin 10: Remove 10% -> validity: 0.9691, accuracy: 0.6721
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 15 - Train: 4197 samples, Test: 1235 samples
+    Bin 15: Remove 15% -> validity: 0.9581, accuracy: 0.6704
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 20 - Train: 3950 samples, Test: 1235 samples
+    Bin 20: Remove 20% -> validity: 0.9536, accuracy: 0.6696
+  major_deletion:
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6704
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 1 - Train: 2469 samples, Test: 1235 samples
+    Bin 1: Remove 50% -> validity: 0.7439, accuracy: 0.6737
+  minor_addition:
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0 - Train: 3949 samples, Test: 1235 samples
+    Bin 0: Use 80% -> validity: 0.8499, accuracy: 0.6648
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 5 - Train: 4196 samples, Test: 1235 samples
+    Bin 5: Use 85% -> validity: 0.8609, accuracy: 0.6664
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 10 - Train: 4443 samples, Test: 1235 samples
+    Bin 10: Use 90% -> validity: 0.8852, accuracy: 0.6696
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 15 - Train: 4690 samples, Test: 1235 samples
+    Bin 15: Use 95% -> validity: 0.9404, accuracy: 0.6704
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 20 - Train: 4937 samples, Test: 1235 samples
+    Bin 20: Use 100% -> validity: 1.0000, accuracy: 0.6704
+  major_addition:
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0 - Train: 2468 samples, Test: 1235 samples
+    Bin 0: Use 50% -> validity: 0.8079, accuracy: 0.6623
+Fold 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 1: Use 100% -> validity: 1.0000, accuracy: 0.6704
+
+Testing model perturbations for fold 0...
+    random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42}: validity 0.7616, accuracy 0.6656
+    random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42}: validity 0.8278, accuracy 0.6721
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6704
+    random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42}: validity 0.8653, accuracy 0.6745
+    random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42}: validity 0.9625, accuracy 0.6745
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6704
+    random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42}: validity 0.9426, accuracy 0.6729
+    random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42}: validity 0.9558, accuracy 0.6704
+    decision_tree {'max_depth': 3, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      decision_tree {'max_depth': 3, 'random_state': 42}: validity 0.8322, accuracy 0.6745
+    decision_tree {'max_depth': 4, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      decision_tree {'max_depth': 4, 'random_state': 42}: validity 0.7528, accuracy 0.6680
+    decision_tree {'max_depth': 5, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      decision_tree {'max_depth': 5, 'random_state': 42}: validity 0.8146, accuracy 0.6672
+    decision_tree {'max_depth': 6, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      decision_tree {'max_depth': 6, 'random_state': 42}: validity 0.8190, accuracy 0.6591
+
+--- FOLD 1 ANALYSIS ---
+--------------------------------------------------
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+Fold 1 data shapes:
+  Raw train: (4937, 12)
+  Processed - Train: (4937, 12), Test: (1235, 12)
+  Training samples: 4937
+  Test samples: 1235
+  Features: 11
+  Class distribution - Train: [2690 2247]
+  Class distribution - Test: [673 562]
+
+Training baseline model for fold 1...
+  Train accuracy: 0.6933
+  Test accuracy: 0.6947
+Generating counterfactuals using FeatureTweak for fold 1...
+Generating counterfactuals using FeatureTweak algorithm
+Test set size: 1235 samples
+Epsilon parameter: 0.1
+FeatureTweak counterfactual generation complete:
+  Successful: 595/1235 (48.18%)
+  Failed: 640/1235 (51.82%)
+  Success rate: 48.18%
+  Baseline validity: 1.0000 (595/595)
+  Baseline L2 distance: 0.5503
+  Baseline L0 distance: 2.45
+  Baseline LOF score: 0.7916
+
+Testing data perturbations for fold 1...
+  minor_deletion:
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6947
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 5 - Train: 4691 samples, Test: 1235 samples
+    Bin 5: Remove 5% -> validity: 0.9176, accuracy: 0.6931
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 10 - Train: 4444 samples, Test: 1235 samples
+    Bin 10: Remove 10% -> validity: 0.9546, accuracy: 0.6964
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 15 - Train: 4197 samples, Test: 1235 samples
+    Bin 15: Remove 15% -> validity: 0.9429, accuracy: 0.6907
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 20 - Train: 3950 samples, Test: 1235 samples
+    Bin 20: Remove 20% -> validity: 0.9462, accuracy: 0.6923
+  major_deletion:
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 0 - Train: 4937 samples, Test: 1235 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6947
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 1 - Train: 2469 samples, Test: 1235 samples
+    Bin 1: Remove 50% -> validity: 0.9311, accuracy: 0.6915
+  minor_addition:
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 0 - Train: 3949 samples, Test: 1235 samples
+    Bin 0: Use 80% -> validity: 0.8555, accuracy: 0.6947
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 5 - Train: 4196 samples, Test: 1235 samples
+    Bin 5: Use 85% -> validity: 0.8756, accuracy: 0.6972
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 10 - Train: 4443 samples, Test: 1235 samples
+    Bin 10: Use 90% -> validity: 0.9143, accuracy: 0.6980
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 15 - Train: 4690 samples, Test: 1235 samples
+    Bin 15: Use 95% -> validity: 0.9647, accuracy: 0.6915
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 20 - Train: 4937 samples, Test: 1235 samples
+    Bin 20: Use 100% -> validity: 1.0000, accuracy: 0.6947
+  major_addition:
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 0 - Train: 2468 samples, Test: 1235 samples
+    Bin 0: Use 50% -> validity: 0.6050, accuracy: 0.6907
+Fold 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 1 - Train: 4937 samples, Test: 1235 samples
+    Bin 1: Use 100% -> validity: 1.0000, accuracy: 0.6947
+
+Testing model perturbations for fold 1...
+    random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42}: validity 0.6857, accuracy 0.6980
+    random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42}: validity 0.7345, accuracy 0.6988
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6947
+    random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42}: validity 0.9513, accuracy 0.6955
+    random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42}: validity 0.9328, accuracy 0.6939
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6947
+    random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42}: validity 0.9966, accuracy 0.6931
+    random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42}: validity 0.9950, accuracy 0.6923
+    decision_tree {'max_depth': 3, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      decision_tree {'max_depth': 3, 'random_state': 42}: validity 0.7899, accuracy 0.6802
+    decision_tree {'max_depth': 4, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      decision_tree {'max_depth': 4, 'random_state': 42}: validity 0.8319, accuracy 0.6818
+    decision_tree {'max_depth': 5, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      decision_tree {'max_depth': 5, 'random_state': 42}: validity 0.8017, accuracy 0.6923
+    decision_tree {'max_depth': 6, 'random_state': 42} - Train: 4937 samples, Test: 1235 samples
+      decision_tree {'max_depth': 6, 'random_state': 42}: validity 0.9025, accuracy 0.6858
+
+--- FOLD 2 ANALYSIS ---
+--------------------------------------------------
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+Fold 2 data shapes:
+  Raw train: (4938, 12)
+  Processed - Train: (4938, 12), Test: (1234, 12)
+  Training samples: 4938
+  Test samples: 1234
+  Features: 11
+  Class distribution - Train: [2690 2248]
+  Class distribution - Test: [673 561]
+
+Training baseline model for fold 2...
+  Train accuracy: 0.6932
+  Test accuracy: 0.6896
+Generating counterfactuals using FeatureTweak for fold 2...
+Generating counterfactuals using FeatureTweak algorithm
+Test set size: 1234 samples
+Epsilon parameter: 0.1
+FeatureTweak counterfactual generation complete:
+  Successful: 335/1234 (27.15%)
+  Failed: 899/1234 (72.85%)
+  Success rate: 27.15%
+  Baseline validity: 1.0000 (335/335)
+  Baseline L2 distance: 0.5185
+  Baseline L0 distance: 2.43
+  Baseline LOF score: 0.6537
+
+Testing data perturbations for fold 2...
+  minor_deletion:
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6896
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 5 - Train: 4692 samples, Test: 1234 samples
+    Bin 5: Remove 5% -> validity: 0.9164, accuracy: 0.6961
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 10 - Train: 4445 samples, Test: 1234 samples
+    Bin 10: Remove 10% -> validity: 0.8716, accuracy: 0.6888
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 15 - Train: 4198 samples, Test: 1234 samples
+    Bin 15: Remove 15% -> validity: 0.7910, accuracy: 0.6856
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 20 - Train: 3951 samples, Test: 1234 samples
+    Bin 20: Remove 20% -> validity: 0.8866, accuracy: 0.6912
+  major_deletion:
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6896
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 1 - Train: 2469 samples, Test: 1234 samples
+    Bin 1: Remove 50% -> validity: 0.8836, accuracy: 0.6977
+  minor_addition:
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 3950 samples, Test: 1234 samples
+    Bin 0: Use 80% -> validity: 0.7313, accuracy: 0.6799
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 5 - Train: 4197 samples, Test: 1234 samples
+    Bin 5: Use 85% -> validity: 0.7582, accuracy: 0.6807
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 10 - Train: 4444 samples, Test: 1234 samples
+    Bin 10: Use 90% -> validity: 0.8269, accuracy: 0.6848
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 15 - Train: 4691 samples, Test: 1234 samples
+    Bin 15: Use 95% -> validity: 0.9851, accuracy: 0.6904
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 20 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Use 100% -> validity: 1.0000, accuracy: 0.6896
+  major_addition:
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 2469 samples, Test: 1234 samples
+    Bin 0: Use 50% -> validity: 0.7373, accuracy: 0.6815
+Fold 2 - Train: 4938 samples, Test: 1234 samples
+    Bin 1 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Use 100% -> validity: 1.0000, accuracy: 0.6896
+
+Testing model perturbations for fold 2...
+    random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42}: validity 0.6597, accuracy 0.6799
+    random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42}: validity 0.7343, accuracy 0.6807
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6896
+    random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42}: validity 0.9104, accuracy 0.6961
+    random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42}: validity 0.9403, accuracy 0.6912
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6896
+    random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42}: validity 0.9881, accuracy 0.6929
+    random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42}: validity 0.9642, accuracy 0.6896
+    decision_tree {'max_depth': 3, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 3, 'random_state': 42}: validity 0.6716, accuracy 0.6783
+    decision_tree {'max_depth': 4, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 4, 'random_state': 42}: validity 0.8448, accuracy 0.6912
+    decision_tree {'max_depth': 5, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 5, 'random_state': 42}: validity 0.8597, accuracy 0.6912
+    decision_tree {'max_depth': 6, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 6, 'random_state': 42}: validity 0.8209, accuracy 0.6953
+
+--- FOLD 3 ANALYSIS ---
+--------------------------------------------------
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+Fold 3 data shapes:
+  Raw train: (4938, 12)
+  Processed - Train: (4938, 12), Test: (1234, 12)
+  Training samples: 4938
+  Test samples: 1234
+  Features: 11
+  Class distribution - Train: [2691 2247]
+  Class distribution - Test: [672 562]
+
+Training baseline model for fold 3...
+  Train accuracy: 0.6981
+  Test accuracy: 0.6767
+Generating counterfactuals using FeatureTweak for fold 3...
+Generating counterfactuals using FeatureTweak algorithm
+Test set size: 1234 samples
+Epsilon parameter: 0.1
+FeatureTweak counterfactual generation complete:
+  Successful: 629/1234 (50.97%)
+  Failed: 605/1234 (49.03%)
+  Success rate: 50.97%
+  Baseline validity: 1.0000 (629/629)
+  Baseline L2 distance: 0.3793
+  Baseline L0 distance: 1.99
+  Baseline LOF score: 0.8188
+
+Testing data perturbations for fold 3...
+  minor_deletion:
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6767
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 5 - Train: 4692 samples, Test: 1234 samples
+    Bin 5: Remove 5% -> validity: 0.9523, accuracy: 0.6823
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 10 - Train: 4445 samples, Test: 1234 samples
+    Bin 10: Remove 10% -> validity: 0.9412, accuracy: 0.6791
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 15 - Train: 4198 samples, Test: 1234 samples
+    Bin 15: Remove 15% -> validity: 0.9030, accuracy: 0.6734
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 20 - Train: 3951 samples, Test: 1234 samples
+    Bin 20: Remove 20% -> validity: 0.8855, accuracy: 0.6734
+  major_deletion:
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6767
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 1 - Train: 2469 samples, Test: 1234 samples
+    Bin 1: Remove 50% -> validity: 0.9332, accuracy: 0.6759
+  minor_addition:
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 3950 samples, Test: 1234 samples
+    Bin 0: Use 80% -> validity: 0.9062, accuracy: 0.6750
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 5 - Train: 4197 samples, Test: 1234 samples
+    Bin 5: Use 85% -> validity: 0.9269, accuracy: 0.6799
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 10 - Train: 4444 samples, Test: 1234 samples
+    Bin 10: Use 90% -> validity: 0.9316, accuracy: 0.6799
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 15 - Train: 4691 samples, Test: 1234 samples
+    Bin 15: Use 95% -> validity: 0.9968, accuracy: 0.6791
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 20 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Use 100% -> validity: 1.0000, accuracy: 0.6767
+  major_addition:
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 2469 samples, Test: 1234 samples
+    Bin 0: Use 50% -> validity: 0.7854, accuracy: 0.6775
+Fold 3 - Train: 4938 samples, Test: 1234 samples
+    Bin 1 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Use 100% -> validity: 1.0000, accuracy: 0.6767
+
+Testing model perturbations for fold 3...
+    random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42}: validity 0.6630, accuracy 0.6572
+    random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42}: validity 0.8887, accuracy 0.6645
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6767
+    random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42}: validity 0.9666, accuracy 0.6767
+    random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42}: validity 0.9444, accuracy 0.6775
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6767
+    random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42}: validity 0.9984, accuracy 0.6775
+    random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42}: validity 0.9444, accuracy 0.6799
+    decision_tree {'max_depth': 3, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 3, 'random_state': 42}: validity 0.6216, accuracy 0.6629
+    decision_tree {'max_depth': 4, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 4, 'random_state': 42}: validity 0.6725, accuracy 0.6823
+    decision_tree {'max_depth': 5, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 5, 'random_state': 42}: validity 0.6248, accuracy 0.6904
+    decision_tree {'max_depth': 6, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 6, 'random_state': 42}: validity 0.8728, accuracy 0.6775
+
+--- FOLD 4 ANALYSIS ---
+--------------------------------------------------
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+Fold 4 data shapes:
+  Raw train: (4938, 12)
+  Processed - Train: (4938, 12), Test: (1234, 12)
+  Training samples: 4938
+  Test samples: 1234
+  Features: 11
+  Class distribution - Train: [2691 2247]
+  Class distribution - Test: [672 562]
+
+Training baseline model for fold 4...
+  Train accuracy: 0.6920
+  Test accuracy: 0.6904
+Generating counterfactuals using FeatureTweak for fold 4...
+Generating counterfactuals using FeatureTweak algorithm
+Test set size: 1234 samples
+Epsilon parameter: 0.1
+FeatureTweak counterfactual generation complete:
+  Successful: 317/1234 (25.77%)
+  Failed: 917/1234 (74.23%)
+  Success rate: 25.77%
+  Baseline validity: 1.0000 (318/318)
+  Baseline L2 distance: 0.5101
+  Baseline L0 distance: 2.51
+  Baseline LOF score: 0.8616
+
+Testing data perturbations for fold 4...
+  minor_deletion:
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6904
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 5 - Train: 4692 samples, Test: 1234 samples
+    Bin 5: Remove 5% -> validity: 0.9371, accuracy: 0.6856
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 10 - Train: 4445 samples, Test: 1234 samples
+    Bin 10: Remove 10% -> validity: 0.9245, accuracy: 0.6823
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 15 - Train: 4198 samples, Test: 1234 samples
+    Bin 15: Remove 15% -> validity: 0.9465, accuracy: 0.6848
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 20 - Train: 3951 samples, Test: 1234 samples
+    Bin 20: Remove 20% -> validity: 0.9214, accuracy: 0.6799
+  major_deletion:
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 4938 samples, Test: 1234 samples
+    Bin 0: Remove 0% -> validity: 1.0000, accuracy: 0.6904
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 1 - Train: 2469 samples, Test: 1234 samples
+    Bin 1: Remove 50% -> validity: 0.9057, accuracy: 0.6750
+  minor_addition:
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 3950 samples, Test: 1234 samples
+    Bin 0: Use 80% -> validity: 0.9057, accuracy: 0.6840
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 5 - Train: 4197 samples, Test: 1234 samples
+    Bin 5: Use 85% -> validity: 0.7704, accuracy: 0.6840
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 10 - Train: 4444 samples, Test: 1234 samples
+    Bin 10: Use 90% -> validity: 0.9591, accuracy: 0.6856
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 15 - Train: 4691 samples, Test: 1234 samples
+    Bin 15: Use 95% -> validity: 0.9623, accuracy: 0.6864
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 20 - Train: 4938 samples, Test: 1234 samples
+    Bin 20: Use 100% -> validity: 1.0000, accuracy: 0.6904
+  major_addition:
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 0 - Train: 2469 samples, Test: 1234 samples
+    Bin 0: Use 50% -> validity: 0.6258, accuracy: 0.6775
+Fold 4 - Train: 4938 samples, Test: 1234 samples
+    Bin 1 - Train: 4938 samples, Test: 1234 samples
+    Bin 1: Use 100% -> validity: 1.0000, accuracy: 0.6904
+
+Testing model perturbations for fold 4...
+    random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 3, 'n_estimators': 100, 'random_state': 42}: validity 0.6950, accuracy 0.6791
+    random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 4, 'n_estimators': 100, 'random_state': 42}: validity 0.7704, accuracy 0.6831
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6904
+    random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 6, 'n_estimators': 100, 'random_state': 42}: validity 0.9340, accuracy 0.6864
+    random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 50, 'random_state': 42}: validity 0.9686, accuracy 0.6896
+    random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 100, 'random_state': 42}: validity 1.0000, accuracy 0.6904
+    random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 150, 'random_state': 42}: validity 0.9591, accuracy 0.6864
+    random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      random_forest {'max_depth': 5, 'n_estimators': 200, 'random_state': 42}: validity 0.9528, accuracy 0.6848
+    decision_tree {'max_depth': 3, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 3, 'random_state': 42}: validity 0.5220, accuracy 0.6702
+    decision_tree {'max_depth': 4, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 4, 'random_state': 42}: validity 0.9528, accuracy 0.6783
+    decision_tree {'max_depth': 5, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 5, 'random_state': 42}: validity 0.7893, accuracy 0.6645
+    decision_tree {'max_depth': 6, 'random_state': 42} - Train: 4938 samples, Test: 1234 samples
+      decision_tree {'max_depth': 6, 'random_state': 42}: validity 0.8899, accuracy 0.6718
+
+4. Creating comprehensive visualizations...
+Data robustness visualization saved to featuretweak_plots/
+
+================================================================================
+COMPREHENSIVE STATISTICAL SUMMARY
+================================================================================
+Analysis across 5 cross-validation folds
+
+[SUMMARY] BASELINE PERFORMANCE SUMMARY:
+  Baseline CF Validity: 1.0000 ± 0.0000
+  Baseline Model Accuracy: 0.6844 ± 0.0092
+
+[INSIGHTS] DATA PERTURBATION ROBUSTNESS:
+  Minor Deletion:
+    Mean validity: 0.9369 ± 0.0476
+    Min validity: 0.7910
+    Max validity: 1.0000
+  Major Deletion:
+    Mean validity: 0.9397 ± 0.0781
+    Min validity: 0.7439
+    Max validity: 1.0000
+  Minor Addition:
+    Mean validity: 0.9123 ± 0.0789
+    Min validity: 0.7313
+    Max validity: 1.0000
+  Major Addition:
+    Mean validity: 0.8561 ± 0.1553
+    Min validity: 0.6050
+    Max validity: 1.0000
+
+🤖 MODEL PERTURBATION ROBUSTNESS:
+  Overall model robustness:
+    Mean validity: 0.8697 ± 0.1233
+    Min validity: 0.5220
+    Max validity: 1.0000
+
+💡 KEY INSIGHTS FOR COMPAS DATASET:
+  • FeatureTweak handles mixed categorical/numerical criminal justice features
+  • Ordinal encoded variables work well with tree-based epsilon modifications
+  • COMPAS recidivism prediction domain allows interpretable justice interventions
+  • Legal fairness considerations align with tree-based feature importance
+
+[SUCCESS] FeatureTweak robustness analysis completed successfully!
+📁 All results saved and logged to: cf_robustness_analysis_featuretweak_v5_compas_20250731_221337.log

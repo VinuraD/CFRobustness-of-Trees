@@ -70,6 +70,11 @@ class ExperimentRunner:
             'pandas', 'numpy', 'sklearn', 'matplotlib', 'seaborn'
         ]
         
+        # Check for optional but important packages
+        optional_packages = [
+            'tensorflow', 'torch', 'cfxplorer'
+        ]
+        
         missing_packages = []
         for package in required_packages:
             try:
@@ -78,6 +83,19 @@ class ExperimentRunner:
             except ImportError:
                 missing_packages.append(package)
                 self.logger.warning(f"[MISSING] {package} is missing")
+        
+        # Check optional packages but don't fail if missing
+        for package in optional_packages:
+            try:
+                if package == 'tensorflow':
+                    # TensorFlow can take a long time to import, so add a timeout mechanism
+                    self.logger.info(f"[CHECKING] {package} (may take a moment)...")
+                __import__(package)
+                self.logger.info(f"[OK] {package} is available")
+            except ImportError:
+                self.logger.info(f"[OPTIONAL] {package} is not available (some methods may not work)")
+            except Exception as e:
+                self.logger.warning(f"[WARNING] {package} import failed: {e}")
         
         if missing_packages:
             self.logger.warning(f"Missing packages: {', '.join(missing_packages)}")
@@ -175,7 +193,7 @@ class ExperimentRunner:
         
         return experiments
     
-    def run_experiment(self, experiment):
+    def run_experiment(self, experiment, timeout_minutes=30):
         """Run a single experiment sequentially and wait for completion"""
         method = experiment['method']
         dataset = experiment['dataset']
@@ -206,6 +224,7 @@ class ExperimentRunner:
         self.logger.info(f"  Script: {file_path.name}")
         self.logger.info(f"  Log file: {log_file}")
         self.logger.info(f"  Error file: {err_file}")
+        self.logger.info(f"  Timeout: {timeout_minutes} minutes")
         
         try:
             # Run the experiment and wait for completion
@@ -218,8 +237,18 @@ class ExperimentRunner:
                     text=True
                 )
                 
-                # Wait for the process to complete
-                return_code = process.wait()
+                # Wait for the process to complete with a timeout (30 minutes default)
+                timeout = timeout_minutes * 60  # Convert to seconds
+                try:
+                    return_code = process.wait(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    self.logger.error(f"[TIMEOUT] {experiment_id} exceeded {timeout_minutes} minute timeout, terminating...")
+                    process.kill()
+                    process.wait()  # Wait for process to actually terminate
+                    return_code = -1  # Set to failure code
+                    
+                    # Add timeout info to status
+                    self.experiment_status[experiment_id]['timeout'] = True
                 
                 end_time = datetime.now()
                 duration = end_time - self.experiment_status[experiment_id]['start_time']
@@ -232,6 +261,9 @@ class ExperimentRunner:
                 if return_code == 0:
                     self.experiment_status[experiment_id]['status'] = 'completed'
                     self.logger.info(f"[COMPLETED] {experiment_id} (Duration: {duration}, Exit code: {return_code})")
+                elif return_code == -1 and self.experiment_status[experiment_id].get('timeout', False):
+                    self.experiment_status[experiment_id]['status'] = 'timeout'
+                    self.logger.error(f"[TIMEOUT] {experiment_id} (Duration: {duration}, Timeout after {timeout_minutes} minutes)")
                 else:
                     self.experiment_status[experiment_id]['status'] = 'failed'
                     self.logger.error(f"[FAILED] {experiment_id} (Duration: {duration}, Exit code: {return_code})")
@@ -256,7 +288,7 @@ class ExperimentRunner:
             self.experiment_status[experiment_id]['error'] = str(e)
             return False
     
-    def run_all_experiments(self, experiments):
+    def run_all_experiments(self, experiments, timeout_minutes=30):
         """Run all experiments sequentially"""
         self.logger.info(f"[LAUNCH] Starting {len(experiments)} experiments sequentially...")
         
@@ -267,7 +299,7 @@ class ExperimentRunner:
             experiment_id = f"{experiment['method']}_{experiment['version']}"
             self.logger.info(f"\n[{i}/{len(experiments)}] Running {experiment_id}...")
             
-            if self.run_experiment(experiment):
+            if self.run_experiment(experiment, timeout_minutes):
                 success_count += 1
             else:
                 failed_count += 1
@@ -292,6 +324,7 @@ class ExperimentRunner:
         
         completed = []
         failed = []
+        timeout = []
         error = []
         
         for exp_id, status in self.experiment_status.items():
@@ -299,11 +332,14 @@ class ExperimentRunner:
                 completed.append(exp_id)
             elif status['status'] == 'failed':
                 failed.append(exp_id)
+            elif status['status'] == 'timeout':
+                timeout.append(exp_id)
             else:
                 error.append(exp_id)
         
         self.logger.info(f"[SUCCESS] Completed ({len(completed)}): {', '.join(completed) if completed else 'None'}")
         self.logger.info(f"[FAILED] Failed ({len(failed)}): {', '.join(failed) if failed else 'None'}")
+        self.logger.info(f"[TIMEOUT] Timeout ({len(timeout)}): {', '.join(timeout) if timeout else 'None'}")
         self.logger.info(f"[ERROR] Errors ({len(error)}): {', '.join(error) if error else 'None'}")
         
         # Show log file locations
@@ -397,6 +433,8 @@ def main():
                        help='Only check environment and exit')
     parser.add_argument('--show-logs', action='store_true',
                        help='Show log file locations from the latest run')
+    parser.add_argument('--timeout', type=int, default=30,
+                       help='Timeout for each experiment in minutes (default: 30)')
     
     args = parser.parse_args()
     
@@ -447,7 +485,7 @@ def main():
             return 0
     
     # Run experiments sequentially
-    success_count = runner.run_all_experiments(experiments)
+    success_count = runner.run_all_experiments(experiments, args.timeout)
     
     if success_count == 0:
         runner.logger.error("[ERROR] No experiments completed successfully!")
