@@ -253,10 +253,10 @@ def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, basel
                 
                 if pert_type in ['minor_deletion', 'major_deletion']:
                     remove_pct = bin_val if pert_type == 'minor_deletion' else (0 if bin_val == 0 else 50)
-                    log_print(f"    Bin {bin_val}: Remove {remove_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}")
+                    log_print(f"    Bin {bin_val}: Remove {remove_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
                 else:
                     use_pct = 80 + bin_val if pert_type == 'minor_addition' else (50 if bin_val == 0 else 100)
-                    log_print(f"    Bin {bin_val}: Use {use_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}")
+                    log_print(f"    Bin {bin_val}: Use {use_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
                 
             except Exception as e:
                 log_print(f"      Error in {pert_type} bin {bin_val}: {e}")
@@ -332,7 +332,7 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
             }
             results.append(result_entry)
             
-            log_print(f"      {model_type} {params}: validity {metrics['validity']:.4f}, accuracy {accuracy:.4f}")
+            log_print(f"      {model_type} {params}: validity {metrics['validity']:.4f}, accuracy {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
             
         except Exception as e:
             log_print(f"      Error with {model_type} {params}: {e}")
