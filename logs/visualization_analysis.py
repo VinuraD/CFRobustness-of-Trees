@@ -39,7 +39,7 @@ sns.set_palette("husl")
 class CFRobustnessAnalyzer:
     def __init__(self, logs_directory):
         self.logs_dir = logs_directory
-        self.algorithms = ['CEML', 'DiCE', 'feature_tweak', 'NICE']
+        self.algorithms = ['CEML', 'DiCE', 'feature_tweak', 'NICE', 'cfxplorer']
         self.datasets = {
             'v2': 'Spambase',
             'v3': 'German Credit', 
@@ -52,7 +52,7 @@ class CFRobustnessAnalyzer:
         # Storage for parsed data
         self.data_perturbation_results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         self.model_perturbation_results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-        self.baseline_results = defaultdict(lambda: defaultdict(list))
+        self.baseline_results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         
     def parse_log_files(self):
         """Parse all log files and extract performance metrics"""
@@ -99,12 +99,24 @@ class CFRobustnessAnalyzer:
         with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
         
-        # Extract baseline metrics
-        baseline_pattern = r'Baseline counterfactual validity: ([\d.]+) ± ([\d.]+)'
-        baseline_match = re.search(baseline_pattern, content)
+        # Extract baseline metrics - handle both formats
+        baseline_pattern1 = r'Baseline counterfactual validity: ([\d.]+) ± ([\d.]+)'
+        baseline_pattern2 = r'Baseline CF Validity: ([\d.]+) ± ([\d.]+)'
+        
+        baseline_match = re.search(baseline_pattern1, content)
+        if not baseline_match:
+            baseline_match = re.search(baseline_pattern2, content)
+            
         if baseline_match:
             validity = float(baseline_match.group(1))
-            self.baseline_results[algorithm][dataset].append(validity)
+            self.baseline_results[algorithm][dataset]['validity'].append(validity)
+        
+        # Extract baseline LOF score
+        lof_pattern = r'Baseline LOF score: ([\d.]+)'
+        lof_match = re.search(lof_pattern, content)
+        if lof_match:
+            lof_score = float(lof_match.group(1))
+            self.baseline_results[algorithm][dataset]['LOF'].append(lof_score)
         
         # Extract data perturbation results
         self._extract_data_perturbation_results(content, algorithm, dataset)
@@ -135,6 +147,22 @@ class CFRobustnessAnalyzer:
                             self.data_perturbation_results[algorithm][dataset][f'{bin_key}_validity'].append(float(validity))
                             self.data_perturbation_results[algorithm][dataset][f'{bin_key}_accuracy'].append(float(accuracy))
                     
+                    # Also look for L0 and L2 metrics in bin-wise results if available
+                    bin_lines_with_l0_l2 = re.findall(r'Bin (\d+): .*?validity: ([\d.]+), accuracy: ([\d.]+)(?:, L2: ([\d.]+), L0: ([\d.]+))?', perturbation_section)
+                    
+                    if bin_lines_with_l0_l2:
+                        for match in bin_lines_with_l0_l2:
+                            bin_num, validity, accuracy = match[0], match[1], match[2]
+                            l2_val, l0_val = match[3], match[4]
+                            
+                            bin_key = f'{perturbation_type}_bin_{bin_num}'
+                            
+                            # Only add L0 and L2 if they are present in the log
+                            if l2_val:
+                                self.data_perturbation_results[algorithm][dataset][f'{bin_key}_l2'].append(float(l2_val))
+                            if l0_val:
+                                self.data_perturbation_results[algorithm][dataset][f'{bin_key}_l0'].append(float(l0_val))
+                    
                     # Also extract the general metrics for compatibility
                     validity_matches = re.findall(r'validity: ([\d.]+)', perturbation_section)
                     accuracy_matches = re.findall(r'accuracy: ([\d.]+)', perturbation_section)
@@ -156,93 +184,173 @@ class CFRobustnessAnalyzer:
     
     def _extract_model_perturbation_results(self, content, algorithm, dataset):
         """Extract model perturbation summary results"""
-        # Look for the summary table at the end
-        summary_pattern = r'((?:random_forest|xgboost|lightgbm|adaboost)_[\d_]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+)'
         
-        matches = re.findall(summary_pattern, content)
-        
-        if matches:
-            # Group by model type and parameters for perturbation analysis
-            model_groups = {
-                'max_depth_3': {},
-                'max_depth_4': {}, 
-                'max_depth_5': {},
-                'max_depth_6': {},
-                'n_estimators_50': {},
-                'n_estimators_100': {},
-                'n_estimators_150': {},
-                'n_estimators_200': {}
-            }
+        if algorithm == 'cfxplorer':
+            # Handle cfxplorer format: random_forest (depth, n_estimators): validity X.XXXX, accuracy Y.YYYY
+            pattern = r'random_forest \((\d+), (\d+)\): validity ([\d.]+), accuracy ([\d.]+)'
+            matches = re.findall(pattern, content)
             
-            for match in matches:
-                parts = match.split()
-                if len(parts) >= 4:
-                    model_name = parts[0]
-                    validity = float(parts[1])
-                    validity_std = float(parts[2])
-                    accuracy = float(parts[3])
-                    accuracy_std = float(parts[4])
+            if matches:
+                # Group by model type and parameters for perturbation analysis
+                model_groups = {
+                    'max_depth_3': {},
+                    'max_depth_4': {}, 
+                    'max_depth_5': {},
+                    'max_depth_6': {},
+                    'n_estimators_50': {},
+                    'n_estimators_100': {},
+                    'n_estimators_150': {},
+                    'n_estimators_200': {}
+                }
+                
+                for depth, n_est, validity, accuracy in matches:
+                    depth = int(depth)
+                    n_est = int(n_est)
+                    validity = float(validity)
+                    accuracy = float(accuracy)
                     
-                    # Extract model type (random_forest, xgboost, lightgbm, adaboost)
-                    model_type = model_name.split('_')[0] + '_' + model_name.split('_')[1] if model_name.startswith('random_forest') else model_name.split('_')[0]
+                    model_type = 'random_forest'  # cfxplorer only uses random forest
                     
                     # Store for traditional model perturbation analysis
                     self.model_perturbation_results[algorithm][dataset]['validity'].append(validity)
                     self.model_perturbation_results[algorithm][dataset]['accuracy'].append(accuracy)
                     
                     # Group by perturbation type and model type for focused analysis
-                    if '_3_' in model_name:
+                    if depth == 3:
                         if model_type not in model_groups['max_depth_3']:
                             model_groups['max_depth_3'][model_type] = []
                         model_groups['max_depth_3'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif '_4_' in model_name:
+                    elif depth == 4:
                         if model_type not in model_groups['max_depth_4']:
                             model_groups['max_depth_4'][model_type] = []
                         model_groups['max_depth_4'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif '_5_' in model_name:
+                    elif depth == 5:
                         if model_type not in model_groups['max_depth_5']:
                             model_groups['max_depth_5'][model_type] = []
                         model_groups['max_depth_5'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif '_6_' in model_name:
+                    elif depth == 6:
                         if model_type not in model_groups['max_depth_6']:
                             model_groups['max_depth_6'][model_type] = []
                         model_groups['max_depth_6'][model_type].append({'validity': validity, 'accuracy': accuracy})
                     
-                    if '_50' in model_name:
+                    if n_est == 50:
                         if model_type not in model_groups['n_estimators_50']:
                             model_groups['n_estimators_50'][model_type] = []
                         model_groups['n_estimators_50'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif '_100' in model_name:
+                    elif n_est == 100:
                         if model_type not in model_groups['n_estimators_100']:
                             model_groups['n_estimators_100'][model_type] = []
                         model_groups['n_estimators_100'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif '_150' in model_name:
+                    elif n_est == 150:
                         if model_type not in model_groups['n_estimators_150']:
                             model_groups['n_estimators_150'][model_type] = []
                         model_groups['n_estimators_150'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif '_200' in model_name:
+                    elif n_est == 200:
                         if model_type not in model_groups['n_estimators_200']:
                             model_groups['n_estimators_200'][model_type] = []
                         model_groups['n_estimators_200'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                
+                # Store grouped results for perturbation analysis with model type info
+                for group_name, model_type_data in model_groups.items():
+                    for model_type, group_data in model_type_data.items():
+                        if group_data:
+                            avg_validity = np.mean([d['validity'] for d in group_data])
+                            avg_accuracy = np.mean([d['accuracy'] for d in group_data])
+                            
+                            # Store with model type information
+                            key_validity = f'{group_name}_{model_type}_validity'
+                            key_accuracy = f'{group_name}_{model_type}_accuracy'
+                            self.data_perturbation_results[algorithm][dataset][key_validity].append(avg_validity)
+                            self.data_perturbation_results[algorithm][dataset][key_accuracy].append(avg_accuracy)
+        else:
+            # Handle other algorithms with tabular format
+            # Look for the summary table at the end
+            summary_pattern = r'((?:random_forest|xgboost|lightgbm|adaboost)_[\d_]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+)'
             
-            # Store grouped results for perturbation analysis with model type info
-            for group_name, model_type_data in model_groups.items():
-                for model_type, group_data in model_type_data.items():
-                    if group_data:
-                        avg_validity = np.mean([d['validity'] for d in group_data])
-                        avg_accuracy = np.mean([d['accuracy'] for d in group_data])
+            matches = re.findall(summary_pattern, content)
+            
+            if matches:
+                # Group by model type and parameters for perturbation analysis
+                model_groups = {
+                    'max_depth_3': {},
+                    'max_depth_4': {}, 
+                    'max_depth_5': {},
+                    'max_depth_6': {},
+                    'n_estimators_50': {},
+                    'n_estimators_100': {},
+                    'n_estimators_150': {},
+                    'n_estimators_200': {}
+                }
+                
+                for match in matches:
+                    parts = match.split()
+                    if len(parts) >= 4:
+                        model_name = parts[0]
+                        validity = float(parts[1])
+                        validity_std = float(parts[2])
+                        accuracy = float(parts[3])
+                        accuracy_std = float(parts[4])
                         
-                        # Store with model type information
-                        key_validity = f'{group_name}_{model_type}_validity'
-                        key_accuracy = f'{group_name}_{model_type}_accuracy'
-                        self.data_perturbation_results[algorithm][dataset][key_validity].append(avg_validity)
-                        self.data_perturbation_results[algorithm][dataset][key_accuracy].append(avg_accuracy)
+                        # Extract model type (random_forest, xgboost, lightgbm, adaboost)
+                        model_type = model_name.split('_')[0] + '_' + model_name.split('_')[1] if model_name.startswith('random_forest') else model_name.split('_')[0]
+                        
+                        # Store for traditional model perturbation analysis
+                        self.model_perturbation_results[algorithm][dataset]['validity'].append(validity)
+                        self.model_perturbation_results[algorithm][dataset]['accuracy'].append(accuracy)
+                        
+                        # Group by perturbation type and model type for focused analysis
+                        if '_3_' in model_name:
+                            if model_type not in model_groups['max_depth_3']:
+                                model_groups['max_depth_3'][model_type] = []
+                            model_groups['max_depth_3'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                        elif '_4_' in model_name:
+                            if model_type not in model_groups['max_depth_4']:
+                                model_groups['max_depth_4'][model_type] = []
+                            model_groups['max_depth_4'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                        elif '_5_' in model_name:
+                            if model_type not in model_groups['max_depth_5']:
+                                model_groups['max_depth_5'][model_type] = []
+                            model_groups['max_depth_5'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                        elif '_6_' in model_name:
+                            if model_type not in model_groups['max_depth_6']:
+                                model_groups['max_depth_6'][model_type] = []
+                            model_groups['max_depth_6'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                        
+                        if '_50' in model_name:
+                            if model_type not in model_groups['n_estimators_50']:
+                                model_groups['n_estimators_50'][model_type] = []
+                            model_groups['n_estimators_50'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                        elif '_100' in model_name:
+                            if model_type not in model_groups['n_estimators_100']:
+                                model_groups['n_estimators_100'][model_type] = []
+                            model_groups['n_estimators_100'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                        elif '_150' in model_name:
+                            if model_type not in model_groups['n_estimators_150']:
+                                model_groups['n_estimators_150'][model_type] = []
+                            model_groups['n_estimators_150'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                        elif '_200' in model_name:
+                            if model_type not in model_groups['n_estimators_200']:
+                                model_groups['n_estimators_200'][model_type] = []
+                            model_groups['n_estimators_200'][model_type].append({'validity': validity, 'accuracy': accuracy})
+                
+                # Store grouped results for perturbation analysis with model type info
+                for group_name, model_type_data in model_groups.items():
+                    for model_type, group_data in model_type_data.items():
+                        if group_data:
+                            avg_validity = np.mean([d['validity'] for d in group_data])
+                            avg_accuracy = np.mean([d['accuracy'] for d in group_data])
+                            
+                            # Store with model type information
+                            key_validity = f'{group_name}_{model_type}_validity'
+                            key_accuracy = f'{group_name}_{model_type}_accuracy'
+                            self.data_perturbation_results[algorithm][dataset][key_validity].append(avg_validity)
+                            self.data_perturbation_results[algorithm][dataset][key_accuracy].append(avg_accuracy)
     
     def create_perturbation_value_plots(self):
         """Create line plots showing algorithm performance across perturbation values"""
         print("Creating perturbation value plots...")
         
-        available_metrics = ['validity']  # Only validity for now as requested
+        available_metrics = ['validity', 'accuracy', 'l0', 'l2']  # All available metrics
         
         # Data perturbations with their value mappings
         data_perturbation_mappings = {
@@ -264,10 +372,11 @@ class CFRobustnessAnalyzer:
                 for metric in available_metrics:
                     self._create_data_perturbation_value_plot(perturbation_type, dataset, metric, data_perturbation_mappings[perturbation_type])
         
-        # Create plots for model perturbations
+        # Create plots for model perturbations (only for metrics that are available in model perturbations)
+        model_metrics = ['validity', 'accuracy']  # Model perturbations typically only have these
         for perturbation_group, values in model_perturbation_mappings.items():
             for dataset in self.datasets.values():
-                for metric in available_metrics:
+                for metric in model_metrics:
                     self._create_model_perturbation_value_plot(perturbation_group, dataset, metric, values)
     
     def _create_data_perturbation_value_plot(self, perturbation_type, dataset, metric, bin_mapping):
@@ -311,6 +420,7 @@ class CFRobustnessAnalyzer:
                     has_data = True
         
         if not has_data:
+            print(f"No data found for {perturbation_type} - {dataset} - {metric}")
             return
         
         # Create the plot
@@ -324,8 +434,8 @@ class CFRobustnessAnalyzer:
         
         # Set labels and title with professional styling
         ax.set_xlabel(self._get_perturbation_xlabel(perturbation_type), fontsize=14, fontweight='bold')
-        ax.set_ylabel(f'{metric.upper()} Score', fontsize=14, fontweight='bold')
-        ax.set_title(f'{perturbation_type.replace("_", " ").title()} - {dataset}', 
+        ax.set_ylabel(self._get_metric_ylabel(metric), fontsize=14, fontweight='bold')
+        ax.set_title(f'{perturbation_type.replace("_", " ").title()} - {dataset} ({metric.upper()})', 
                     fontsize=16, fontweight='bold', pad=20)
         
         # Style the legend and grid
@@ -344,13 +454,14 @@ class CFRobustnessAnalyzer:
         
         # Save the plot
         img_dir = os.path.join(self.logs_dir, 'img')
-        os.makedirs(img_dir, exist_ok=True)
+        metric_dir = os.path.join(img_dir, metric.upper())
+        os.makedirs(metric_dir, exist_ok=True)
         filename = f'{perturbation_type}_{dataset.replace(" ", "_")}_{metric}_vs_values.png'
-        plt.savefig(os.path.join(img_dir, filename), dpi=300, bbox_inches='tight', 
+        plt.savefig(os.path.join(metric_dir, filename), dpi=300, bbox_inches='tight', 
                    facecolor='white', edgecolor='none')
         plt.close()
         
-        print(f"Generated: {filename}")
+        print(f"Generated: {metric.upper()}/{filename}")
     
     def _create_model_perturbation_value_plot(self, perturbation_group, dataset, metric, values):
         """Create a line plot for model perturbation showing parameter values on x-axis"""
@@ -416,8 +527,8 @@ class CFRobustnessAnalyzer:
         
         # Set labels and title with professional styling
         ax.set_xlabel(perturbation_group.replace('_', ' ').title(), fontsize=14, fontweight='bold')
-        ax.set_ylabel(f'{metric.upper()} Score', fontsize=14, fontweight='bold')
-        ax.set_title(f'Model Perturbation: {perturbation_group.replace("_", " ").title()} - {dataset} (DiCE)', 
+        ax.set_ylabel(self._get_metric_ylabel(metric), fontsize=14, fontweight='bold')
+        ax.set_title(f'Model Perturbation: {perturbation_group.replace("_", " ").title()} - {dataset} (DiCE) ({metric.upper()})', 
                     fontsize=16, fontweight='bold', pad=20)
         
         # Style the legend and grid
@@ -436,13 +547,14 @@ class CFRobustnessAnalyzer:
         
         # Save the plot
         img_dir = os.path.join(self.logs_dir, 'img')
-        os.makedirs(img_dir, exist_ok=True)
+        metric_dir = os.path.join(img_dir, metric.upper())
+        os.makedirs(metric_dir, exist_ok=True)
         filename = f'model_{perturbation_group}_{dataset.replace(" ", "_")}_{metric}_vs_values.png'
-        plt.savefig(os.path.join(img_dir, filename), dpi=300, bbox_inches='tight',
+        plt.savefig(os.path.join(metric_dir, filename), dpi=300, bbox_inches='tight',
                    facecolor='white', edgecolor='none')
         plt.close()
         
-        print(f"Generated: {filename}")
+        print(f"Generated: {metric.upper()}/{filename}")
     
     def _get_perturbation_xlabel(self, perturbation_type):
         """Get appropriate x-axis label for perturbation type"""
@@ -454,6 +566,19 @@ class CFRobustnessAnalyzer:
             return 'Percentage of Data Used (%)'
         else:
             return 'Perturbation Strength'
+    
+    def _get_metric_ylabel(self, metric):
+        """Get appropriate y-axis label for metric type"""
+        if metric == 'validity':
+            return 'Validity Score'
+        elif metric == 'accuracy':
+            return 'Accuracy Score'
+        elif metric == 'l0':
+            return 'L0 Distance'
+        elif metric == 'l2':
+            return 'L2 Distance'
+        else:
+            return f'{metric.upper()} Score'
 
     def create_data_perturbation_visualizations(self):
         """Create visualizations for data perturbation analysis"""
@@ -518,8 +643,9 @@ class CFRobustnessAnalyzer:
         
         plt.tight_layout()
         img_dir = os.path.join(self.logs_dir, 'img')
-        os.makedirs(img_dir, exist_ok=True)
-        plt.savefig(os.path.join(img_dir, 'data_perturbation_line_plots.png'), 
+        general_dir = os.path.join(img_dir, 'GENERAL')
+        os.makedirs(general_dir, exist_ok=True)
+        plt.savefig(os.path.join(general_dir, 'data_perturbation_line_plots.png'), 
                     dpi=300, bbox_inches='tight')
         plt.show()
         
@@ -548,8 +674,9 @@ class CFRobustnessAnalyzer:
         
         plt.tight_layout()
         img_dir = os.path.join(self.logs_dir, 'img')
-        os.makedirs(img_dir, exist_ok=True)
-        plt.savefig(os.path.join(img_dir, 'data_perturbation_bars.png'), 
+        general_dir = os.path.join(img_dir, 'GENERAL')
+        os.makedirs(general_dir, exist_ok=True)
+        plt.savefig(os.path.join(general_dir, 'data_perturbation_bars.png'), 
                     dpi=300, bbox_inches='tight')
         plt.show()
     
@@ -673,8 +800,9 @@ class CFRobustnessAnalyzer:
         
         plt.tight_layout()
         img_dir = os.path.join(self.logs_dir, 'img')
-        os.makedirs(img_dir, exist_ok=True)
-        plt.savefig(os.path.join(img_dir, 'model_perturbation_line_plots.png'), 
+        general_dir = os.path.join(img_dir, 'GENERAL')
+        os.makedirs(general_dir, exist_ok=True)
+        plt.savefig(os.path.join(general_dir, 'model_perturbation_line_plots.png'), 
                     dpi=300, bbox_inches='tight')
         plt.show()
         
@@ -745,9 +873,136 @@ class CFRobustnessAnalyzer:
                           f'{height:.3f}', ha='center', va='bottom')
         
         plt.tight_layout()
-        plt.savefig(os.path.join(self.logs_dir, 'model_perturbation_bars.png'), 
+        plt.savefig(os.path.join(self.logs_dir, 'img', 'GENERAL', 'model_perturbation_bars.png'), 
                     dpi=300, bbox_inches='tight')
         plt.show()
+    
+    def create_lof_baseline_visualizations(self):
+        """Create LOF (Local Outlier Factor) baseline visualizations"""
+        print("Creating LOF baseline visualizations...")
+        
+        # Check if LOF data exists
+        lof_data = []
+        for algorithm in self.algorithms:
+            for dataset in self.datasets.values():
+                if (algorithm in self.baseline_results and 
+                    dataset in self.baseline_results[algorithm] and
+                    'LOF' in self.baseline_results[algorithm][dataset]):
+                    lof_values = self.baseline_results[algorithm][dataset]['LOF']
+                    if lof_values:
+                        for lof_val in lof_values:
+                            lof_data.append({
+                                'Algorithm': algorithm,
+                                'Dataset': dataset,
+                                'LOF_Score': lof_val
+                            })
+        
+        if not lof_data:
+            print("No LOF baseline data found. Skipping LOF visualizations.")
+            return
+        
+        # Create output directory
+        lof_dir = os.path.join(self.logs_dir, 'img', 'LOF')
+        os.makedirs(lof_dir, exist_ok=True)
+        
+        df_lof = pd.DataFrame(lof_data)
+        
+        # 1. LOF Scores by Algorithm (across all datasets)
+        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        
+        # Bar plot by algorithm
+        algorithm_means = df_lof.groupby('Algorithm')['LOF_Score'].mean().sort_values(ascending=True)
+        algorithm_stds = df_lof.groupby('Algorithm')['LOF_Score'].std()
+        
+        bars = axes[0].bar(range(len(algorithm_means)), algorithm_means.values, 
+                          yerr=algorithm_stds[algorithm_means.index].values,
+                          capsize=5, alpha=0.8)
+        axes[0].set_title('LOF Baseline Scores by Algorithm', fontsize=14, fontweight='bold')
+        axes[0].set_xlabel('Algorithm')
+        axes[0].set_ylabel('LOF Score')
+        axes[0].set_xticks(range(len(algorithm_means)))
+        axes[0].set_xticklabels(algorithm_means.index, rotation=45)
+        
+        # Add value labels on bars
+        for i, (bar, val) in enumerate(zip(bars, algorithm_means.values)):
+            axes[0].text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.01,
+                        f'{val:.3f}', ha='center', va='bottom')
+        
+        # Box plot by dataset
+        dataset_order = df_lof.groupby('Dataset')['LOF_Score'].mean().sort_values(ascending=True).index
+        
+        bp = axes[1].boxplot([df_lof[df_lof['Dataset'] == dataset]['LOF_Score'].values 
+                             for dataset in dataset_order], 
+                            labels=dataset_order, patch_artist=True)
+        
+        # Color the boxes
+        colors = plt.cm.Set3(np.linspace(0, 1, len(dataset_order)))
+        for patch, color in zip(bp['boxes'], colors):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        axes[1].set_title('LOF Baseline Score Distribution by Dataset', fontsize=14, fontweight='bold')
+        axes[1].set_xlabel('Dataset')
+        axes[1].set_ylabel('LOF Score')
+        axes[1].tick_params(axis='x', rotation=45)
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_comparison.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 2. LOF Heatmap (Algorithm vs Dataset)
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        # Create pivot table for heatmap
+        pivot_df = df_lof.groupby(['Algorithm', 'Dataset'])['LOF_Score'].mean().unstack()
+        
+        # Create heatmap
+        sns.heatmap(pivot_df, annot=True, fmt='.3f', cmap='RdYlBu_r', 
+                   ax=ax, cbar_kws={'label': 'LOF Score'})
+        ax.set_title('LOF Baseline Scores: Algorithm vs Dataset Heatmap', 
+                    fontsize=14, fontweight='bold')
+        ax.set_xlabel('Dataset')
+        ax.set_ylabel('Algorithm')
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_heatmap.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 3. LOF Score Ranking
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # Create detailed ranking
+        detailed_rankings = []
+        for _, row in df_lof.iterrows():
+            detailed_rankings.append(f"{row['Algorithm']} - {row['Dataset']}")
+        
+        df_detailed = df_lof.copy()
+        df_detailed['Algorithm_Dataset'] = detailed_rankings
+        df_detailed_sorted = df_detailed.groupby('Algorithm_Dataset')['LOF_Score'].mean().sort_values(ascending=True)
+        
+        bars = ax.barh(range(len(df_detailed_sorted)), df_detailed_sorted.values)
+        ax.set_title('LOF Baseline Scores Ranking (Lower = More Outlier-like)', 
+                    fontsize=14, fontweight='bold')
+        ax.set_xlabel('LOF Score')
+        ax.set_ylabel('Algorithm - Dataset')
+        ax.set_yticks(range(len(df_detailed_sorted)))
+        ax.set_yticklabels(df_detailed_sorted.index, fontsize=10)
+        
+        # Add value labels
+        for i, (bar, val) in enumerate(zip(bars, df_detailed_sorted.values)):
+            ax.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height()/2.,
+                   f'{val:.3f}', ha='left', va='center')
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_ranking.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # Save LOF summary data
+        df_lof.to_csv(os.path.join(lof_dir, 'lof_baseline_summary.csv'), index=False)
+        print(f"LOF summary saved to {os.path.join(lof_dir, 'lof_baseline_summary.csv')}")
     
     def create_comprehensive_summary(self):
         """Create a comprehensive summary visualization"""
@@ -847,7 +1102,7 @@ class CFRobustnessAnalyzer:
                               f'{height:.3f}', ha='center', va='bottom')
             
             plt.tight_layout()
-            plt.savefig(os.path.join(self.logs_dir, 'comprehensive_summary.png'), 
+            plt.savefig(os.path.join(self.logs_dir, 'img', 'GENERAL', 'comprehensive_summary.png'), 
                         dpi=300, bbox_inches='tight')
             plt.show()
             
@@ -867,6 +1122,9 @@ class CFRobustnessAnalyzer:
         # Create new perturbation value plots (main focus)
         self.create_perturbation_value_plots()
         
+        # Create LOF baseline visualizations
+        self.create_lof_baseline_visualizations()
+        
         # Skip traditional visualizations as requested
         # self.create_data_perturbation_visualizations()
         # self.create_model_perturbation_visualizations()
@@ -874,9 +1132,13 @@ class CFRobustnessAnalyzer:
         
         print("\n" + "=" * 80)
         print("ANALYSIS COMPLETE!")
-        print("Generated visualizations:")
-        print("- Perturbation value plots: *_vs_values.png")
-        print("  (Shows algorithm performance across perturbation strength)")
+        print("Generated visualizations organized by metric:")
+        print("- img/VALIDITY/: Validity vs perturbation strength plots")
+        print("- img/ACCURACY/: Accuracy vs perturbation strength plots") 
+        print("- img/L0/: L0 distance vs perturbation strength plots")
+        print("- img/L2/: L2 distance vs perturbation strength plots")
+        print("- img/LOF/: LOF baseline analysis plots")
+        print("- img/GENERAL/: Summary and comparison plots")
         print("=" * 80)
 
 

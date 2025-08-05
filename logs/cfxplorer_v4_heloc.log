@@ -1,0 +1,897 @@
+================================================================================
+COUNTERFACTUAL ROBUSTNESS ANALYSIS (CFXPLORER v4) - HELOC DATASET
+================================================================================
+[LOG] Logging session to: cf_robustness_analysis_cfxplorer_v4_heloc_20250804_195934.log
+[TIME] Started at: 2025-08-04 19:59:34
+================================================================================
+
+1. Loading dataset...
+Original data shape (after removing metadata): (10459, 24)
+Dropped 7957 rows with missing values
+Final data shape: (2502, 24)
+Dataset: HELOC
+Label column: RiskPerformance
+Features: 24 features
+
+2. Analysis parameters:
+  Number of folds: 5
+  Counterfactual method: CFXplorer
+Dataset Summary:
+Total samples (after cleaning): 2502
+Number of features: 23
+Label column: RiskPerformance
+Number of folds: 5
+Fold Summary:
+--------------------------------------------------
+Fold 0: Train=2001 samples, Test=501 samples
+Fold 1: Train=2001 samples, Test=501 samples
+Fold 2: Train=2002 samples, Test=500 samples
+Fold 3: Train=2002 samples, Test=500 samples
+Fold 4: Train=2002 samples, Test=500 samples
+--------------------------------------------------
+
+3. Running comprehensive analysis across all 5 folds...
+================================================================================
+
+--- FOLD 0 ANALYSIS ---
+--------------------------------------------------
+Fold 0 - Train: 2001 samples, Test: 501 samples
+Fold 0 - Train: 2001 samples, Test: 501 samples
+Fold 0 data shapes:
+  Raw train: (2001, 24)
+  Processed - Train: (2001, 24), Test: (501, 24)
+  Training samples: 2001
+  Test samples: 501
+  Features: 23
+  Class distribution - Train: [1248  753]
+  Class distribution - Test: [312 189]
+
+Training baseline model for fold 0...
+  Train accuracy: 0.7671
+  Test accuracy: 0.7106
+Generating counterfactuals using CFXplorer for fold 0...
+Generating counterfactuals using CFXplorer algorithm
+Test set size: 501 samples
+TensorFlow default int type: <dtype: 'int64'>
+Successfully converted labels to int64 for platform compatibility
+Final label dtype: int64 (int64)
+Test data shape: (501, 23), dtype: float32
+Train data shape: (2001, 23), dtype: float32
+Train labels shape: (2001,), dtype: int64
+Re-training model with properly typed data for CFXplorer...
+Model prediction test - prediction type: <class 'numpy.int64'>, value: 0
+iteration 1
+iteration 2
+iteration 3
+iteration 4
+iteration 5
+iteration 6
+iteration 7
+iteration 8
+iteration 9
+iteration 10
+iteration 11
+iteration 12
+iteration 13
+iteration 14
+iteration 15
+iteration 16
+iteration 17
+iteration 18
+iteration 19
+iteration 20
+iteration 21
+iteration 22
+iteration 23
+iteration 24
+iteration 25
+iteration 26
+iteration 27
+iteration 28
+iteration 29
+iteration 30
+iteration 31
+iteration 32
+iteration 33
+iteration 34
+iteration 35
+iteration 36
+iteration 37
+iteration 38
+iteration 39
+iteration 40
+iteration 41
+iteration 42
+iteration 43
+iteration 44
+iteration 45
+iteration 46
+iteration 47
+iteration 48
+iteration 49
+iteration 50
+iteration 51
+iteration 52
+iteration 53
+iteration 54
+iteration 55
+iteration 56
+iteration 57
+iteration 58
+iteration 59
+iteration 60
+iteration 61
+iteration 62
+iteration 63
+iteration 64
+iteration 65
+iteration 66
+iteration 67
+iteration 68
+iteration 69
+iteration 70
+iteration 71
+iteration 72
+iteration 73
+iteration 74
+iteration 75
+iteration 76
+iteration 77
+iteration 78
+iteration 79
+iteration 80
+iteration 81
+iteration 82
+iteration 83
+iteration 84
+iteration 85
+iteration 86
+iteration 87
+iteration 88
+iteration 89
+iteration 90
+iteration 91
+iteration 92
+iteration 93
+iteration 94
+iteration 95
+iteration 96
+iteration 97
+iteration 98
+iteration 99
+iteration 100
+The number of rows that are unchanged ever is 127
+The mean distance is 0.1990420293712859
+CFXplorer generation completed. Result type: <class 'numpy.ndarray'>
+CF array shape: (501, 23)
+CFXplorer counterfactual generation complete:
+  Successful: 501/501 (100.00%)
+  Failed: 0/501 (0.00%)
+  Success rate: 100.00%
+  Baseline validity: 0.7585 (380/501)
+  Baseline L2 distance: 0.6304
+  Baseline L0 distance: 20.53
+  Baseline LOF score: 0.9042
+
+Testing data perturbations for fold 0...
+  minor_deletion:
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 0 - Train: 2001 samples, Test: 501 samples
+    Bin 0: Remove 0% -> validity: 0.7585, accuracy: 0.7106
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 5 - Train: 1901 samples, Test: 501 samples
+    Bin 5: Remove 5% -> validity: 0.4431, accuracy: 0.7086
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 10 - Train: 1801 samples, Test: 501 samples
+    Bin 10: Remove 10% -> validity: 0.5190, accuracy: 0.7066
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 15 - Train: 1701 samples, Test: 501 samples
+    Bin 15: Remove 15% -> validity: 0.3892, accuracy: 0.7046
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 20 - Train: 1601 samples, Test: 501 samples
+    Bin 20: Remove 20% -> validity: 0.4631, accuracy: 0.7026
+  major_deletion:
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 0 - Train: 2001 samples, Test: 501 samples
+    Bin 0: Remove 0% -> validity: 0.7585, accuracy: 0.7106
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 1 - Train: 1001 samples, Test: 501 samples
+    Bin 1: Remove 50% -> validity: 0.4232, accuracy: 0.6986
+  minor_addition:
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 0 - Train: 1600 samples, Test: 501 samples
+    Bin 0: Use 80% -> validity: 0.4571, accuracy: 0.7086
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 5 - Train: 1700 samples, Test: 501 samples
+    Bin 5: Use 85% -> validity: 0.4671, accuracy: 0.7126
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 10 - Train: 1800 samples, Test: 501 samples
+    Bin 10: Use 90% -> validity: 0.3832, accuracy: 0.7086
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 15 - Train: 1900 samples, Test: 501 samples
+    Bin 15: Use 95% -> validity: 0.4451, accuracy: 0.7006
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 20 - Train: 2001 samples, Test: 501 samples
+    Bin 20: Use 100% -> validity: 0.7585, accuracy: 0.7106
+  major_addition:
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 0 - Train: 1000 samples, Test: 501 samples
+    Bin 0: Use 50% -> validity: 0.2874, accuracy: 0.6986
+Fold 0 - Train: 2001 samples, Test: 501 samples
+    Bin 1 - Train: 2001 samples, Test: 501 samples
+    Bin 1: Use 100% -> validity: 0.7585, accuracy: 0.7106
+
+Testing model perturbations for fold 0...
+    random_forest (3, 100) - Train: 2001 samples, Test: 501 samples
+      random_forest (3, 100): validity 0.2355, accuracy 0.7046
+    random_forest (4, 100) - Train: 2001 samples, Test: 501 samples
+      random_forest (4, 100): validity 0.2774, accuracy 0.7026
+    random_forest (5, 100) - Train: 2001 samples, Test: 501 samples
+      random_forest (5, 100): validity 0.7585, accuracy 0.7106
+    random_forest (6, 100) - Train: 2001 samples, Test: 501 samples
+      random_forest (6, 100): validity 0.4591, accuracy 0.7066
+    random_forest (5, 50) - Train: 2001 samples, Test: 501 samples
+      random_forest (5, 50): validity 0.5190, accuracy 0.7066
+    random_forest (5, 100) - Train: 2001 samples, Test: 501 samples
+      random_forest (5, 100): validity 0.7585, accuracy 0.7106
+    random_forest (5, 150) - Train: 2001 samples, Test: 501 samples
+      random_forest (5, 150): validity 0.5729, accuracy 0.7106
+    random_forest (5, 200) - Train: 2001 samples, Test: 501 samples
+      random_forest (5, 200): validity 0.5130, accuracy 0.7086
+
+--- FOLD 1 ANALYSIS ---
+--------------------------------------------------
+Fold 1 - Train: 2001 samples, Test: 501 samples
+Fold 1 - Train: 2001 samples, Test: 501 samples
+Fold 1 data shapes:
+  Raw train: (2001, 24)
+  Processed - Train: (2001, 24), Test: (501, 24)
+  Training samples: 2001
+  Test samples: 501
+  Features: 23
+  Class distribution - Train: [1248  753]
+  Class distribution - Test: [312 189]
+
+Training baseline model for fold 1...
+  Train accuracy: 0.7516
+  Test accuracy: 0.7305
+Generating counterfactuals using CFXplorer for fold 1...
+Generating counterfactuals using CFXplorer algorithm
+Test set size: 501 samples
+TensorFlow default int type: <dtype: 'int64'>
+Successfully converted labels to int64 for platform compatibility
+Final label dtype: int64 (int64)
+Test data shape: (501, 23), dtype: float32
+Train data shape: (2001, 23), dtype: float32
+Train labels shape: (2001,), dtype: int64
+Re-training model with properly typed data for CFXplorer...
+Model prediction test - prediction type: <class 'numpy.int64'>, value: 0
+iteration 1
+Error in CFXplorer counterfactual generation: 'The optimizer cannot recognize variable perturbed_features:0. This usually means you are trying to call the optimizer to update different parts of the model separately. Please call `optimizer.build(variables)` with the full list of trainable variables before the training loop or use legacy optimizer `tf.keras.optimizers.legacy.Adam.'
+Full traceback:
+Traceback (most recent call last):
+  File "/home/vinura/tree_robustness/CFRobustness-of-Trees/cfxplorer/cf_robustness_analysis_cfxplorer_v4_heloc.py", line 172, in generate_counterfactuals_cfxplorer
+    cf_array = focus.generate(model_copy, x_test_array)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/cfxplorer/focus.py", line 174, in generate
+    self.optimizer.apply_gradients(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1230, in apply_gradients
+    return super().apply_gradients(grads_and_vars, name=name)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 652, in apply_gradients
+    iteration = self._internal_apply_gradients(grads_and_vars)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1260, in _internal_apply_gradients
+    return tf.__internal__.distribute.interim.maybe_merge_call(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/merge_call_interim.py", line 51, in maybe_merge_call
+    return fn(strategy, *args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1352, in _distributed_apply_gradients_fn
+    distribution.extended.update(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 2992, in update
+    return self._update(var, fn, args, kwargs, group)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 4062, in _update
+    return self._update_non_slot(var, fn, (var,) + tuple(args), kwargs, group)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 4068, in _update_non_slot
+    result = fn(*args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 596, in wrapper
+    return func(*args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1349, in apply_grad_to_update_var
+    return self._update_step(grad, var)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 233, in _update_step
+    raise KeyError(
+KeyError: 'The optimizer cannot recognize variable perturbed_features:0. This usually means you are trying to call the optimizer to update different parts of the model separately. Please call `optimizer.build(variables)` with the full list of trainable variables before the training loop or use legacy optimizer `tf.keras.optimizers.legacy.Adam.'
+No successful counterfactuals to validate
+  Success rate: 0.00%
+  Baseline validity: 0.0000 (0/0)
+  Baseline L2 distance: 0.0000
+  Baseline L0 distance: 0.00
+  Baseline LOF score: 0.0000
+
+Testing data perturbations for fold 1...
+  minor_deletion:
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 0 - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 0: Remove 0% -> validity: 0.0000, accuracy: 0.7305
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 5 - Train: 1901 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 5: Remove 5% -> validity: 0.0000, accuracy: 0.7385
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 10 - Train: 1801 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 10: Remove 10% -> validity: 0.0000, accuracy: 0.7365
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 15 - Train: 1701 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 15: Remove 15% -> validity: 0.0000, accuracy: 0.7365
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 20 - Train: 1601 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 20: Remove 20% -> validity: 0.0000, accuracy: 0.7246
+  major_deletion:
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 0 - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 0: Remove 0% -> validity: 0.0000, accuracy: 0.7305
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 1 - Train: 1001 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 1: Remove 50% -> validity: 0.0000, accuracy: 0.7285
+  minor_addition:
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 0 - Train: 1600 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 0: Use 80% -> validity: 0.0000, accuracy: 0.7365
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 5 - Train: 1700 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 5: Use 85% -> validity: 0.0000, accuracy: 0.7265
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 10 - Train: 1800 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 10: Use 90% -> validity: 0.0000, accuracy: 0.7226
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 15 - Train: 1900 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 15: Use 95% -> validity: 0.0000, accuracy: 0.7146
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 20 - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 20: Use 100% -> validity: 0.0000, accuracy: 0.7305
+  major_addition:
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 0 - Train: 1000 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 0: Use 50% -> validity: 0.0000, accuracy: 0.7166
+Fold 1 - Train: 2001 samples, Test: 501 samples
+    Bin 1 - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+    Bin 1: Use 100% -> validity: 0.0000, accuracy: 0.7305
+
+Testing model perturbations for fold 1...
+    random_forest (3, 100) - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+      random_forest (3, 100): validity 0.0000, accuracy 0.7126
+    random_forest (4, 100) - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+      random_forest (4, 100): validity 0.0000, accuracy 0.7166
+    random_forest (5, 100) - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+      random_forest (5, 100): validity 0.0000, accuracy 0.7305
+    random_forest (6, 100) - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+      random_forest (6, 100): validity 0.0000, accuracy 0.7345
+    random_forest (5, 50) - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+      random_forest (5, 50): validity 0.0000, accuracy 0.7246
+    random_forest (5, 100) - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+      random_forest (5, 100): validity 0.0000, accuracy 0.7305
+    random_forest (5, 150) - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+      random_forest (5, 150): validity 0.0000, accuracy 0.7246
+    random_forest (5, 200) - Train: 2001 samples, Test: 501 samples
+No successful counterfactuals to validate
+      random_forest (5, 200): validity 0.0000, accuracy 0.7226
+
+--- FOLD 2 ANALYSIS ---
+--------------------------------------------------
+Fold 2 - Train: 2002 samples, Test: 500 samples
+Fold 2 - Train: 2002 samples, Test: 500 samples
+Fold 2 data shapes:
+  Raw train: (2002, 24)
+  Processed - Train: (2002, 24), Test: (500, 24)
+  Training samples: 2002
+  Test samples: 500
+  Features: 23
+  Class distribution - Train: [1248  754]
+  Class distribution - Test: [312 188]
+
+Training baseline model for fold 2...
+  Train accuracy: 0.7597
+  Test accuracy: 0.7200
+Generating counterfactuals using CFXplorer for fold 2...
+Generating counterfactuals using CFXplorer algorithm
+Test set size: 500 samples
+TensorFlow default int type: <dtype: 'int64'>
+Successfully converted labels to int64 for platform compatibility
+Final label dtype: int64 (int64)
+Test data shape: (500, 23), dtype: float32
+Train data shape: (2002, 23), dtype: float32
+Train labels shape: (2002,), dtype: int64
+Re-training model with properly typed data for CFXplorer...
+Model prediction test - prediction type: <class 'numpy.int64'>, value: 0
+iteration 1
+Error in CFXplorer counterfactual generation: 'The optimizer cannot recognize variable perturbed_features:0. This usually means you are trying to call the optimizer to update different parts of the model separately. Please call `optimizer.build(variables)` with the full list of trainable variables before the training loop or use legacy optimizer `tf.keras.optimizers.legacy.Adam.'
+Full traceback:
+Traceback (most recent call last):
+  File "/home/vinura/tree_robustness/CFRobustness-of-Trees/cfxplorer/cf_robustness_analysis_cfxplorer_v4_heloc.py", line 172, in generate_counterfactuals_cfxplorer
+    cf_array = focus.generate(model_copy, x_test_array)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/cfxplorer/focus.py", line 174, in generate
+    self.optimizer.apply_gradients(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1230, in apply_gradients
+    return super().apply_gradients(grads_and_vars, name=name)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 652, in apply_gradients
+    iteration = self._internal_apply_gradients(grads_and_vars)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1260, in _internal_apply_gradients
+    return tf.__internal__.distribute.interim.maybe_merge_call(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/merge_call_interim.py", line 51, in maybe_merge_call
+    return fn(strategy, *args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1352, in _distributed_apply_gradients_fn
+    distribution.extended.update(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 2992, in update
+    return self._update(var, fn, args, kwargs, group)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 4062, in _update
+    return self._update_non_slot(var, fn, (var,) + tuple(args), kwargs, group)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 4068, in _update_non_slot
+    result = fn(*args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 596, in wrapper
+    return func(*args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1349, in apply_grad_to_update_var
+    return self._update_step(grad, var)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 233, in _update_step
+    raise KeyError(
+KeyError: 'The optimizer cannot recognize variable perturbed_features:0. This usually means you are trying to call the optimizer to update different parts of the model separately. Please call `optimizer.build(variables)` with the full list of trainable variables before the training loop or use legacy optimizer `tf.keras.optimizers.legacy.Adam.'
+No successful counterfactuals to validate
+  Success rate: 0.00%
+  Baseline validity: 0.0000 (0/0)
+  Baseline L2 distance: 0.0000
+  Baseline L0 distance: 0.00
+  Baseline LOF score: 0.0000
+
+Testing data perturbations for fold 2...
+  minor_deletion:
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Remove 0% -> validity: 0.0000, accuracy: 0.7200
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 5 - Train: 1902 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 5: Remove 5% -> validity: 0.0000, accuracy: 0.7220
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 10 - Train: 1802 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 10: Remove 10% -> validity: 0.0000, accuracy: 0.7280
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 15 - Train: 1702 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 15: Remove 15% -> validity: 0.0000, accuracy: 0.7280
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 20 - Train: 1602 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 20: Remove 20% -> validity: 0.0000, accuracy: 0.7220
+  major_deletion:
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Remove 0% -> validity: 0.0000, accuracy: 0.7200
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 1 - Train: 1001 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 1: Remove 50% -> validity: 0.0000, accuracy: 0.7160
+  minor_addition:
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 1601 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Use 80% -> validity: 0.0000, accuracy: 0.7160
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 5 - Train: 1701 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 5: Use 85% -> validity: 0.0000, accuracy: 0.7280
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 10 - Train: 1801 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 10: Use 90% -> validity: 0.0000, accuracy: 0.7260
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 15 - Train: 1901 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 15: Use 95% -> validity: 0.0000, accuracy: 0.7180
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 20 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 20: Use 100% -> validity: 0.0000, accuracy: 0.7200
+  major_addition:
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 1001 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Use 50% -> validity: 0.0000, accuracy: 0.7260
+Fold 2 - Train: 2002 samples, Test: 500 samples
+    Bin 1 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 1: Use 100% -> validity: 0.0000, accuracy: 0.7200
+
+Testing model perturbations for fold 2...
+    random_forest (3, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (3, 100): validity 0.0000, accuracy 0.7220
+    random_forest (4, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (4, 100): validity 0.0000, accuracy 0.7200
+    random_forest (5, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 100): validity 0.0000, accuracy 0.7200
+    random_forest (6, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (6, 100): validity 0.0000, accuracy 0.7400
+    random_forest (5, 50) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 50): validity 0.0000, accuracy 0.7220
+    random_forest (5, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 100): validity 0.0000, accuracy 0.7200
+    random_forest (5, 150) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 150): validity 0.0000, accuracy 0.7220
+    random_forest (5, 200) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 200): validity 0.0000, accuracy 0.7260
+
+--- FOLD 3 ANALYSIS ---
+--------------------------------------------------
+Fold 3 - Train: 2002 samples, Test: 500 samples
+Fold 3 - Train: 2002 samples, Test: 500 samples
+Fold 3 data shapes:
+  Raw train: (2002, 24)
+  Processed - Train: (2002, 24), Test: (500, 24)
+  Training samples: 2002
+  Test samples: 500
+  Features: 23
+  Class distribution - Train: [1248  754]
+  Class distribution - Test: [312 188]
+
+Training baseline model for fold 3...
+  Train accuracy: 0.7717
+  Test accuracy: 0.7080
+Generating counterfactuals using CFXplorer for fold 3...
+Generating counterfactuals using CFXplorer algorithm
+Test set size: 500 samples
+TensorFlow default int type: <dtype: 'int64'>
+Successfully converted labels to int64 for platform compatibility
+Final label dtype: int64 (int64)
+Test data shape: (500, 23), dtype: float32
+Train data shape: (2002, 23), dtype: float32
+Train labels shape: (2002,), dtype: int64
+Re-training model with properly typed data for CFXplorer...
+Model prediction test - prediction type: <class 'numpy.int64'>, value: 0
+iteration 1
+Error in CFXplorer counterfactual generation: 'The optimizer cannot recognize variable perturbed_features:0. This usually means you are trying to call the optimizer to update different parts of the model separately. Please call `optimizer.build(variables)` with the full list of trainable variables before the training loop or use legacy optimizer `tf.keras.optimizers.legacy.Adam.'
+Full traceback:
+Traceback (most recent call last):
+  File "/home/vinura/tree_robustness/CFRobustness-of-Trees/cfxplorer/cf_robustness_analysis_cfxplorer_v4_heloc.py", line 172, in generate_counterfactuals_cfxplorer
+    cf_array = focus.generate(model_copy, x_test_array)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/cfxplorer/focus.py", line 174, in generate
+    self.optimizer.apply_gradients(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1230, in apply_gradients
+    return super().apply_gradients(grads_and_vars, name=name)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 652, in apply_gradients
+    iteration = self._internal_apply_gradients(grads_and_vars)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1260, in _internal_apply_gradients
+    return tf.__internal__.distribute.interim.maybe_merge_call(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/merge_call_interim.py", line 51, in maybe_merge_call
+    return fn(strategy, *args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1352, in _distributed_apply_gradients_fn
+    distribution.extended.update(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 2992, in update
+    return self._update(var, fn, args, kwargs, group)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 4062, in _update
+    return self._update_non_slot(var, fn, (var,) + tuple(args), kwargs, group)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 4068, in _update_non_slot
+    result = fn(*args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 596, in wrapper
+    return func(*args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1349, in apply_grad_to_update_var
+    return self._update_step(grad, var)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 233, in _update_step
+    raise KeyError(
+KeyError: 'The optimizer cannot recognize variable perturbed_features:0. This usually means you are trying to call the optimizer to update different parts of the model separately. Please call `optimizer.build(variables)` with the full list of trainable variables before the training loop or use legacy optimizer `tf.keras.optimizers.legacy.Adam.'
+No successful counterfactuals to validate
+  Success rate: 0.00%
+  Baseline validity: 0.0000 (0/0)
+  Baseline L2 distance: 0.0000
+  Baseline L0 distance: 0.00
+  Baseline LOF score: 0.0000
+
+Testing data perturbations for fold 3...
+  minor_deletion:
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Remove 0% -> validity: 0.0000, accuracy: 0.7080
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 5 - Train: 1902 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 5: Remove 5% -> validity: 0.0000, accuracy: 0.7060
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 10 - Train: 1802 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 10: Remove 10% -> validity: 0.0000, accuracy: 0.7080
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 15 - Train: 1702 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 15: Remove 15% -> validity: 0.0000, accuracy: 0.7140
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 20 - Train: 1602 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 20: Remove 20% -> validity: 0.0000, accuracy: 0.7100
+  major_deletion:
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Remove 0% -> validity: 0.0000, accuracy: 0.7080
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 1 - Train: 1001 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 1: Remove 50% -> validity: 0.0000, accuracy: 0.7240
+  minor_addition:
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 1601 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Use 80% -> validity: 0.0000, accuracy: 0.7120
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 5 - Train: 1701 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 5: Use 85% -> validity: 0.0000, accuracy: 0.7100
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 10 - Train: 1801 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 10: Use 90% -> validity: 0.0000, accuracy: 0.7140
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 15 - Train: 1901 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 15: Use 95% -> validity: 0.0000, accuracy: 0.7140
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 20 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 20: Use 100% -> validity: 0.0000, accuracy: 0.7080
+  major_addition:
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 1001 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Use 50% -> validity: 0.0000, accuracy: 0.7080
+Fold 3 - Train: 2002 samples, Test: 500 samples
+    Bin 1 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 1: Use 100% -> validity: 0.0000, accuracy: 0.7080
+
+Testing model perturbations for fold 3...
+    random_forest (3, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (3, 100): validity 0.0000, accuracy 0.6980
+    random_forest (4, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (4, 100): validity 0.0000, accuracy 0.7040
+    random_forest (5, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 100): validity 0.0000, accuracy 0.7080
+    random_forest (6, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (6, 100): validity 0.0000, accuracy 0.7160
+    random_forest (5, 50) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 50): validity 0.0000, accuracy 0.7080
+    random_forest (5, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 100): validity 0.0000, accuracy 0.7080
+    random_forest (5, 150) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 150): validity 0.0000, accuracy 0.7060
+    random_forest (5, 200) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 200): validity 0.0000, accuracy 0.7060
+
+--- FOLD 4 ANALYSIS ---
+--------------------------------------------------
+Fold 4 - Train: 2002 samples, Test: 500 samples
+Fold 4 - Train: 2002 samples, Test: 500 samples
+Fold 4 data shapes:
+  Raw train: (2002, 24)
+  Processed - Train: (2002, 24), Test: (500, 24)
+  Training samples: 2002
+  Test samples: 500
+  Features: 23
+  Class distribution - Train: [1248  754]
+  Class distribution - Test: [312 188]
+
+Training baseline model for fold 4...
+  Train accuracy: 0.7677
+  Test accuracy: 0.7020
+Generating counterfactuals using CFXplorer for fold 4...
+Generating counterfactuals using CFXplorer algorithm
+Test set size: 500 samples
+TensorFlow default int type: <dtype: 'int64'>
+Successfully converted labels to int64 for platform compatibility
+Final label dtype: int64 (int64)
+Test data shape: (500, 23), dtype: float32
+Train data shape: (2002, 23), dtype: float32
+Train labels shape: (2002,), dtype: int64
+Re-training model with properly typed data for CFXplorer...
+Model prediction test - prediction type: <class 'numpy.int64'>, value: 0
+iteration 1
+Error in CFXplorer counterfactual generation: 'The optimizer cannot recognize variable perturbed_features:0. This usually means you are trying to call the optimizer to update different parts of the model separately. Please call `optimizer.build(variables)` with the full list of trainable variables before the training loop or use legacy optimizer `tf.keras.optimizers.legacy.Adam.'
+Full traceback:
+Traceback (most recent call last):
+  File "/home/vinura/tree_robustness/CFRobustness-of-Trees/cfxplorer/cf_robustness_analysis_cfxplorer_v4_heloc.py", line 172, in generate_counterfactuals_cfxplorer
+    cf_array = focus.generate(model_copy, x_test_array)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/cfxplorer/focus.py", line 174, in generate
+    self.optimizer.apply_gradients(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1230, in apply_gradients
+    return super().apply_gradients(grads_and_vars, name=name)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 652, in apply_gradients
+    iteration = self._internal_apply_gradients(grads_and_vars)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1260, in _internal_apply_gradients
+    return tf.__internal__.distribute.interim.maybe_merge_call(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/merge_call_interim.py", line 51, in maybe_merge_call
+    return fn(strategy, *args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1352, in _distributed_apply_gradients_fn
+    distribution.extended.update(
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 2992, in update
+    return self._update(var, fn, args, kwargs, group)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 4062, in _update
+    return self._update_non_slot(var, fn, (var,) + tuple(args), kwargs, group)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/distribute/distribute_lib.py", line 4068, in _update_non_slot
+    result = fn(*args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 596, in wrapper
+    return func(*args, **kwargs)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 1349, in apply_grad_to_update_var
+    return self._update_step(grad, var)
+  File "/home/vinura/miniconda3/envs/cs9875/lib/python3.9/site-packages/keras/src/optimizers/optimizer.py", line 233, in _update_step
+    raise KeyError(
+KeyError: 'The optimizer cannot recognize variable perturbed_features:0. This usually means you are trying to call the optimizer to update different parts of the model separately. Please call `optimizer.build(variables)` with the full list of trainable variables before the training loop or use legacy optimizer `tf.keras.optimizers.legacy.Adam.'
+No successful counterfactuals to validate
+  Success rate: 0.00%
+  Baseline validity: 0.0000 (0/0)
+  Baseline L2 distance: 0.0000
+  Baseline L0 distance: 0.00
+  Baseline LOF score: 0.0000
+
+Testing data perturbations for fold 4...
+  minor_deletion:
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Remove 0% -> validity: 0.0000, accuracy: 0.7020
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 5 - Train: 1902 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 5: Remove 5% -> validity: 0.0000, accuracy: 0.7060
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 10 - Train: 1802 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 10: Remove 10% -> validity: 0.0000, accuracy: 0.6940
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 15 - Train: 1702 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 15: Remove 15% -> validity: 0.0000, accuracy: 0.7080
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 20 - Train: 1602 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 20: Remove 20% -> validity: 0.0000, accuracy: 0.6940
+  major_deletion:
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Remove 0% -> validity: 0.0000, accuracy: 0.7020
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 1 - Train: 1001 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 1: Remove 50% -> validity: 0.0000, accuracy: 0.7060
+  minor_addition:
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 1601 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Use 80% -> validity: 0.0000, accuracy: 0.7080
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 5 - Train: 1701 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 5: Use 85% -> validity: 0.0000, accuracy: 0.6980
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 10 - Train: 1801 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 10: Use 90% -> validity: 0.0000, accuracy: 0.7080
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 15 - Train: 1901 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 15: Use 95% -> validity: 0.0000, accuracy: 0.7080
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 20 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 20: Use 100% -> validity: 0.0000, accuracy: 0.7020
+  major_addition:
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 0 - Train: 1001 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 0: Use 50% -> validity: 0.0000, accuracy: 0.6940
+Fold 4 - Train: 2002 samples, Test: 500 samples
+    Bin 1 - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+    Bin 1: Use 100% -> validity: 0.0000, accuracy: 0.7020
+
+Testing model perturbations for fold 4...
+    random_forest (3, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (3, 100): validity 0.0000, accuracy 0.6940
+    random_forest (4, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (4, 100): validity 0.0000, accuracy 0.7040
+    random_forest (5, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 100): validity 0.0000, accuracy 0.7020
+    random_forest (6, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (6, 100): validity 0.0000, accuracy 0.7000
+    random_forest (5, 50) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 50): validity 0.0000, accuracy 0.7060
+    random_forest (5, 100) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 100): validity 0.0000, accuracy 0.7020
+    random_forest (5, 150) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 150): validity 0.0000, accuracy 0.7000
+    random_forest (5, 200) - Train: 2002 samples, Test: 500 samples
+No successful counterfactuals to validate
+      random_forest (5, 200): validity 0.0000, accuracy 0.7060
+
+4. Creating comprehensive visualizations...
+Data robustness visualization saved to cfxplorer_plots/
+
+================================================================================
+COMPREHENSIVE STATISTICAL SUMMARY
+================================================================================
+Analysis across 5 cross-validation folds
+
+[SUMMARY] BASELINE PERFORMANCE SUMMARY:
+  Baseline CF Validity: 0.1517 ± 0.3034
+  Baseline Model Accuracy: 0.7142 ± 0.0100
+
+[INSIGHTS] DATA PERTURBATION ROBUSTNESS:
+  Minor Deletion:
+    Mean validity: 0.1029 ± 0.2137
+    Min validity: 0.0000
+    Max validity: 0.7585
+  Major Deletion:
+    Mean validity: 0.1182 ± 0.2479
+    Min validity: 0.0000
+    Max validity: 0.7585
+  Minor Addition:
+    Mean validity: 0.1004 ± 0.2093
+    Min validity: 0.0000
+    Max validity: 0.7585
+  Major Addition:
+    Mean validity: 0.1046 ± 0.2342
+    Min validity: 0.0000
+    Max validity: 0.7585
+
+🤖 MODEL PERTURBATION ROBUSTNESS:
+  Overall model robustness:
+    Mean validity: 0.1023 ± 0.2200
+    Min validity: 0.0000
+    Max validity: 0.7585
+
+💡 KEY INSIGHTS FOR HELOC DATASET:
+  • CFXplorer processes pure numerical features efficiently
+  • HELOC financial data provides challenging CF generation scenarios
+  • Numerical features allow for continuous perturbations
+  • Focus algorithm adapts well to high-dimensional numerical data
+
+[SUCCESS] CFXplorer robustness analysis completed successfully!
+📁 All results saved and logged to: cf_robustness_analysis_cfxplorer_v4_heloc_20250804_195934.log
