@@ -473,6 +473,33 @@ def print_statistical_summary(all_results):
     log_print(f"  • Mixed feature types provide diverse actionable counterfactual paths")
     log_print(f"  • Financial domain benefits from interpretable tree-based explanations")
 
+
+def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx):
+    """
+    Save generated counterfactuals to CSV file
+    
+    Args:
+        cf_list: DataFrame with counterfactuals
+        cf_method: Name of the CF method (e.g., 'DiCE', 'CEML')
+        dataset_name: Name of the dataset (e.g., 'Spambase', 'German-Credit')
+        fold_idx: Fold number
+    """
+    try:
+        # Create counterfactuals directory if it doesn't exist
+        cf_dir = os.path.join(os.path.dirname(__file__), '..', 'counterfactuals')
+        os.makedirs(cf_dir, exist_ok=True)
+        
+        # Format filename: cf_method__dataset__fold#.csv
+        filename = f"{cf_method}__{dataset_name}__fold{fold_idx}.csv"
+        filepath = os.path.join(cf_dir, filename)
+        
+        # Save counterfactuals to CSV
+        cf_list.to_csv(filepath, index=False)
+        print(f"    Saved counterfactuals to: {filename}")
+        
+    except Exception as e:
+        print(f"    Error saving counterfactuals to CSV: {e}")
+
 def main():
     """Main execution function"""
     # Setup logging
@@ -570,6 +597,9 @@ def main():
                 X_test, y_test, baseline_model, eps=0.1
             )
             
+            # Save counterfactuals to CSV
+            save_counterfactuals_to_csv(baseline_cf_list, "FeatureTweak", "German-Credit", fold_idx)
+            
             # Calculate baseline metrics
             baseline_metrics = calculate_comprehensive_metrics(
                 baseline_model, baseline_cf_list, X_test, X_train
@@ -580,6 +610,9 @@ def main():
             log_print(f"  Baseline L2 distance: {baseline_metrics['l2_distance']:.4f}")
             log_print(f"  Baseline L0 distance: {baseline_metrics['l0_distance']:.2f}")
             log_print(f"  Baseline LOF score: {baseline_metrics['lof_score']:.4f}")
+            
+            # Log baseline metrics in standardized format for visualization parsing
+            log_print(f"    Bin 0: Remove 0% -> validity: {baseline_metrics['validity']:.4f}, accuracy: {test_accuracy:.4f}, L2: {baseline_metrics['l2_distance']:.4f}, L0: {baseline_metrics['l0_distance']:.2f}, LOF: {baseline_metrics['lof_score']:.4f}")
             
             # Test the SAME counterfactuals on perturbed models
             data_pert_results = run_data_perturbations(

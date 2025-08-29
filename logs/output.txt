@@ -1,0 +1,109 @@
+Traceback (most recent call last):
+  File "visualization_analysis.py", line 1514, in main
+    analyzer.run_complete_analysis()
+  File "visualization_analysis.py", line 1472, in run_complete_analysis
+    self.parse_log_files()
+  File "visualization_analysis.py", line 115, in parse_log_files
+    self._parse_single_log_file(log_path, algorithm, dataset)
+  File "visualization_analysis.py", line 128, in _parse_single_log_file
+    self._parse_ocean_log_file(content, algorithm, dataset)
+  File "visualization_analysis.py", line 215, in _parse_ocean_log_file
+    self._extract_ocean_model_perturbation_results(content, algorithm, dataset)
+  File "visualization_analysis.py", line 367, in _extract_ocean_model_perturbation_results
+    accuracy = float(accuracy)
+ValueError: could not convert string to float: '0.90750.0131'
+Script started - calling main()
+Starting CFRobustness analysis...
+Logs directory: d:\Github\CFRobustness-of-Trees\logs
+Creating analyzer instance...
+Running complete analysis...
+================================================================================
+COUNTERFACTUAL ROBUSTNESS VISUALIZATION ANALYSIS
+================================================================================
+Parsing log files...
+Processing CEML_v2.log...
+Completed processing CEML_v2.log
+Processing CEML_v3.log...
+Completed processing CEML_v3.log
+Processing CEML_v4_heloc.log...
+Completed processing CEML_v4_heloc.log
+Processing CEML_v5_compas.log...
+Completed processing CEML_v5_compas.log
+Processing DiCE_v2.log...
+Completed processing DiCE_v2.log
+Processing DiCE_v3.log...
+Completed processing DiCE_v3.log
+Processing DiCE_v4_heloc.log...
+Completed processing DiCE_v4_heloc.log
+Processing DiCE_v5_compas.log...
+Completed processing DiCE_v5_compas.log
+Processing feature_tweak_v2.log...
+Completed processing feature_tweak_v2.log
+Processing feature_tweak_v3.log...
+Completed processing feature_tweak_v3.log
+Processing feature_tweak_v4_heloc.log...
+Completed processing feature_tweak_v4_heloc.log
+Processing feature_tweak_v5_compas.log...
+Completed processing feature_tweak_v5_compas.log
+Processing NICE_v2.log...
+Completed processing NICE_v2.log
+Processing NICE_v3.log...
+Completed processing NICE_v3.log
+Processing NICE_v4_heloc.log...
+Completed processing NICE_v4_heloc.log
+Processing NICE_v5_compas.log...
+Completed processing NICE_v5_compas.log
+Processing cfxplorer_v2.log...
+Completed processing cfxplorer_v2.log
+Processing cfxplorer_v3.log...
+Completed processing cfxplorer_v3.log
+Processing cfxplorer_v4_heloc.log...
+Completed processing cfxplorer_v4_heloc.log
+Processing cfxplorer_v5_compas.log...
+Completed processing cfxplorer_v5_compas.log
+Processing ocean_v2.log...
+Using OCEAN parser for OCEAN Spambase
+Starting OCEAN parsing for OCEAN - Spambase
+Found OCEAN baseline validity: 0.4153
+No OCEAN baseline LOF found
+Extracting OCEAN data perturbations...
+Extracting OCEAN data perturbations for Spambase
+Found OCEAN DATA_DELETION section for Spambase
+Found 12 amount entries for DATA_DELETION
+OCEAN DATA_DELETION Amount 0: Validity=0.4153, Accuracy=0.9522
+OCEAN DATA_DELETION Amount 5: Validity=0.4146, Accuracy=0.9531
+OCEAN DATA_DELETION Amount 10: Validity=0.4232, Accuracy=0.9531
+OCEAN DATA_DELETION Amount 15: Validity=0.4179, Accuracy=0.9529
+OCEAN DATA_DELETION Amount 20: Validity=0.4209, Accuracy=0.9518
+OCEAN DATA_DELETION Amount 0: Validity=0.4209, Accuracy=0.9518
+OCEAN DATA_DELETION Amount 5: Validity=0.4179, Accuracy=0.9529
+OCEAN DATA_DELETION Amount 10: Validity=0.4232, Accuracy=0.9531
+OCEAN DATA_DELETION Amount 15: Validity=0.4146, Accuracy=0.9531
+OCEAN DATA_DELETION Amount 20: Validity=0.4153, Accuracy=0.9522
+OCEAN DATA_DELETION Amount 0: Validity=0.414, Accuracy=0.9464
+OCEAN DATA_DELETION Amount 1: Validity=0.4153, Accuracy=0.9522
+OCEAN DATA_DELETION averages: Validity=0.4178, Accuracy=0.9521
+Found OCEAN MINOR_ADDITION section for Spambase
+Found 7 amount entries for MINOR_ADDITION
+OCEAN MINOR_ADDITION Amount 0: Validity=0.4209, Accuracy=0.9518
+OCEAN MINOR_ADDITION Amount 5: Validity=0.4179, Accuracy=0.9529
+OCEAN MINOR_ADDITION Amount 10: Validity=0.4232, Accuracy=0.9531
+OCEAN MINOR_ADDITION Amount 15: Validity=0.4146, Accuracy=0.9531
+OCEAN MINOR_ADDITION Amount 20: Validity=0.4153, Accuracy=0.9522
+OCEAN MINOR_ADDITION Amount 0: Validity=0.414, Accuracy=0.9464
+OCEAN MINOR_ADDITION Amount 1: Validity=0.4153, Accuracy=0.9522
+OCEAN MINOR_ADDITION averages: Validity=0.4173, Accuracy=0.9517
+Found OCEAN MAJOR_ADDITION section for Spambase
+Found 2 amount entries for MAJOR_ADDITION
+OCEAN MAJOR_ADDITION Amount 0: Validity=0.414, Accuracy=0.9464
+OCEAN MAJOR_ADDITION Amount 1: Validity=0.4153, Accuracy=0.9522
+OCEAN MAJOR_ADDITION averages: Validity=0.4146, Accuracy=0.9493
+Extracting OCEAN CF distances for Spambase
+Found 1 CF L2 distance values for Spambase
+OCEAN CF L2 distance: 0.519
+Found 1 CF L0 distance values for Spambase
+OCEAN CF L0 distance: 19.764
+Extracting OCEAN model perturbations...
+Found 16 OCEAN model perturbation results for Spambase
+ERROR in main: ValueError: could not convert string to float: '0.90750.0131'
+Script completed

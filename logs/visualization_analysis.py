@@ -5,11 +5,23 @@ This script analyzes the log files from different counterfactual algorithms
 and creates comprehensive visualizations comparing their performance across
 different types of data and model perturbations.
 
+Supported Algorithms:
+- CEML: Counterfactual Explanations for Machine Learning
+- DiCE: Diverse Counterfactual Explanations
+- feature_tweak: Feature Tweak counterfactual method
+- NICE: Nearest Instance Counterfactual Explanations
+- cfxplorer: Counterfactual Explorer
+- OCEAN: Optimized Counterfactual Explanations Analysis (NEW)
+
 Datasets mapping:
 - v2: Spambase
 - v3: German Credit  
 - v4: HELOC
 - v5: COMPAS
+
+Note: OCEAN currently has logs for German Credit (v3) dataset.
+The system is designed to automatically detect and parse OCEAN logs
+for other datasets when they become available.
 """
 
 import os
@@ -39,7 +51,7 @@ sns.set_palette("husl")
 class CFRobustnessAnalyzer:
     def __init__(self, logs_directory):
         self.logs_dir = logs_directory
-        self.algorithms = ['CEML', 'DiCE', 'feature_tweak', 'NICE', 'cfxplorer']
+        self.algorithms = ['CEML', 'DiCE', 'feature_tweak', 'NICE', 'cfxplorer', 'OCEAN']
         self.datasets = {
             'v2': 'Spambase',
             'v3': 'German Credit', 
@@ -48,6 +60,7 @@ class CFRobustnessAnalyzer:
         }
         self.metrics = ['validity', 'accuracy', 'L2', 'L0']
         self.data_perturbations = ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
+        # Note: OCEAN format uses 'data_deletion' instead of 'minor_deletion' in some cases
         
         # Storage for parsed data
         self.data_perturbation_results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -63,13 +76,22 @@ class CFRobustnessAnalyzer:
                 # Priority order: .log files first, then .out files (for backward compatibility)
                 log_file = None
                 
-                # Try .log files first
-                if version == 'v4':
-                    log_candidates = [f"{algorithm}_{version}_heloc.log"]
-                elif version == 'v5':
-                    log_candidates = [f"{algorithm}_{version}_compas.log"]
+                # Special handling for OCEAN - different file naming pattern
+                if algorithm == 'OCEAN':
+                    if version == 'v4':
+                        log_candidates = [f"ocean_{version}_heloc.log"]
+                    elif version == 'v5':
+                        log_candidates = [f"ocean_{version}_compas.log"]
+                    else:
+                        log_candidates = [f"ocean_{version}.log"]
                 else:
-                    log_candidates = [f"{algorithm}_{version}.log"]
+                    # Original logic for other algorithms
+                    if version == 'v4':
+                        log_candidates = [f"{algorithm}_{version}_heloc.log"]
+                    elif version == 'v5':
+                        log_candidates = [f"{algorithm}_{version}_compas.log"]
+                    else:
+                        log_candidates = [f"{algorithm}_{version}.log"]
                 
                 # For NICE, also try .out files as fallback
                 if algorithm == 'NICE':
@@ -91,13 +113,32 @@ class CFRobustnessAnalyzer:
                 if log_file:
                     print(f"Processing {log_file}...")
                     self._parse_single_log_file(log_path, algorithm, dataset)
+                    print(f"Completed processing {log_file}")
                 else:
                     print(f"Warning: No log file found for {algorithm} {version}")
     
     def _parse_single_log_file(self, log_path, algorithm, dataset):
         """Parse a single log file and extract metrics"""
-        with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
-            content = f.read()
+        # Try multiple encodings to handle ± symbols properly
+        content = None
+        for encoding in ['utf-8', 'latin1', 'cp1252']:
+            try:
+                with open(log_path, 'r', encoding=encoding) as f:
+                    content = f.read()
+                print(f"Successfully read {log_path} with {encoding} encoding")
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if content is None:
+            print(f"Failed to read {log_path} with any encoding")
+            return
+        
+        # Special handling for OCEAN format
+        if algorithm == 'OCEAN':
+            print(f"Using OCEAN parser for {algorithm} {dataset}")
+            self._parse_ocean_log_file(content, algorithm, dataset)
+            return
         
         # Extract baseline metrics - handle both formats
         baseline_pattern1 = r'Baseline counterfactual validity: ([\d.]+) ± ([\d.]+)'
@@ -123,6 +164,275 @@ class CFRobustnessAnalyzer:
         
         # Extract model perturbation results  
         self._extract_model_perturbation_results(content, algorithm, dataset)
+    
+    def _parse_ocean_log_file(self, content, algorithm, dataset):
+        """Parse OCEAN log file format specifically"""
+        print(f"Starting OCEAN parsing for {algorithm} - {dataset}")
+        
+        # Extract baseline metrics from OCEAN format - handle corrupted ± symbols
+        # CF Validity: 0.3780 ± 0.0431 (handle both ± and � encoding, or corrupted format)
+        baseline_validity_pattern = r'CF Validity: ([\d.]+)(?:\s*[±�]?\s*[\d.]+)?'
+        baseline_match = re.search(baseline_validity_pattern, content)
+        if baseline_match:
+            validity = float(baseline_match.group(1))
+            self.baseline_results[algorithm][dataset]['validity'].append(validity)
+            print(f"Found OCEAN baseline validity: {validity}")
+        else:
+            print("No OCEAN baseline validity found")
+        
+        # CF LOF Score: 0.7180 ± 0.0736 (handle both ± and � encoding, or corrupted format)
+        baseline_lof_pattern = r'CF LOF Score: ([\d.]+)(?:\s*[±�]?\s*[\d.]+)?'
+        lof_match = re.search(baseline_lof_pattern, content)
+        if lof_match:
+            lof_score = float(lof_match.group(1))
+            self.baseline_results[algorithm][dataset]['LOF'].append(lof_score)
+            print(f"Found OCEAN baseline LOF: {lof_score}")
+        else:
+            # Try alternative OCEAN pattern - extract from baseline bin (Bin 0: Remove 0%)
+            baseline_bin_pattern = r'Bin 0: Remove 0%.*?LOF: ([-+]?[\d.]+)'
+            lof_matches = re.findall(baseline_bin_pattern, content)
+            if lof_matches:
+                # Take the mean of all baseline LOF values across folds
+                lof_values = [float(lof) for lof in lof_matches]
+                avg_lof = sum(lof_values) / len(lof_values)
+                self.baseline_results[algorithm][dataset]['LOF'].append(avg_lof)
+                print(f"Found OCEAN baseline LOF from bins: {avg_lof:.4f} (average of {len(lof_values)} values)")
+            else:
+                print("No OCEAN baseline LOF found")
+        
+        # Also try to extract additional baseline metrics for completeness
+        # Model Accuracy: 0.7370 ± 0.0218
+        baseline_accuracy_pattern = r'Model Accuracy: ([\d.]+) [±�] ([\d.]+)'
+        accuracy_match = re.search(baseline_accuracy_pattern, content)
+        if accuracy_match:
+            accuracy = float(accuracy_match.group(1))
+            accuracy_std = float(accuracy_match.group(2))
+            self.baseline_results[algorithm][dataset]['accuracy'].append(accuracy)
+            print(f"Found OCEAN baseline accuracy: {accuracy} ± {accuracy_std}")
+        
+        # CF L2 Distance: 1.8840 ± 0.0291
+        baseline_l2_pattern = r'CF L2 Distance: ([\d.]+) [±�] ([\d.]+)'
+        l2_match = re.search(baseline_l2_pattern, content)
+        if l2_match:
+            l2_score = float(l2_match.group(1))
+            l2_std = float(l2_match.group(2))
+            self.baseline_results[algorithm][dataset]['L2'].append(l2_score)
+            print(f"Found OCEAN baseline L2: {l2_score} ± {l2_std}")
+        
+        # CF L0 Distance: 8.0270 ± 0.1119
+        baseline_l0_pattern = r'CF L0 Distance: ([\d.]+) [±�] ([\d.]+)'
+        l0_match = re.search(baseline_l0_pattern, content)
+        if l0_match:
+            l0_score = float(l0_match.group(1))
+            l0_std = float(l0_match.group(2))
+            self.baseline_results[algorithm][dataset]['L0'].append(l0_score)
+            print(f"Found OCEAN baseline L0: {l0_score} ± {l0_std}")
+        
+        # Extract data perturbation results from OCEAN summary
+        print("Extracting OCEAN data perturbations...")
+        self._extract_ocean_data_perturbation_results(content, algorithm, dataset)
+        
+        # Extract model perturbation results from OCEAN
+        print("Extracting OCEAN model perturbations...")
+        self._extract_ocean_model_perturbation_results(content, algorithm, dataset)
+        
+        print(f"Completed OCEAN parsing for {algorithm} - {dataset}")
+    
+    def _extract_ocean_data_perturbation_results(self, content, algorithm, dataset):
+        """Extract OCEAN data perturbation results from summary section"""
+        # Parse updated OCEAN summary format
+        # DATA_DELETION:
+        #   Amount 0 (100.0% data): Accuracy=0.7370±0.0218, Validity=0.3780±0.0431
+        #   Amount 5 (95.0% data): Accuracy=0.7220±0.0199, Validity=0.3760±0.0350
+        
+        print(f"Extracting OCEAN data perturbations for {dataset}")
+        
+        # Map OCEAN perturbation names to our standard names
+        ocean_to_standard = {
+            'DATA_DELETION': 'minor_deletion',
+            'MINOR_ADDITION': 'minor_addition', 
+            'MAJOR_ADDITION': 'major_addition'
+        }
+        
+        # Also try parsing from fold-by-fold data if summary not available
+        fold_pattern = r'Fold \d+ - Train: \d+ samples, Test: \d+ samples\n.*?Bin (\d+): .*? -> validity: ([\d.]+), accuracy: ([\d.]+), L2: ([\d.]+), L0: ([\d.]+)'
+        
+        # Parse from summary section first
+        for ocean_type, standard_type in ocean_to_standard.items():
+            # Find the section for this perturbation type in summary
+            pattern = f'{ocean_type}:(.*?)(?=\\n\\n[A-Z_]+:|\\nMODEL PERTURBATION|$)'
+            match = re.search(pattern, content, re.DOTALL)
+            
+            if match:
+                section = match.group(1)
+                print(f"Found OCEAN {ocean_type} section for {dataset}")
+                
+                # Updated pattern to handle multiple encoding formats:
+                # 1. Proper: Amount 0 (100.0% data): Accuracy=0.7370±0.0218, Validity=0.3780±0.0431
+                # 2. With �: Amount 0 (100.0% data): Accuracy=0.7370�0.0218, Validity=0.3780�0.0431  
+                # 3. Concatenated: Amount 0 (100.0% data): Accuracy=0.90750.0131, Validity=0.41530.1042
+                
+                # First try the � pattern
+                amount_pattern_1 = r"Amount (\d+) \([^)]+\): Accuracy=([\d.]+)�[\d.]+, Validity=([\d.]+)�[\d.]+"
+                amounts = re.findall(amount_pattern_1, section)
+                
+                # If that fails, try the ± pattern
+                if not amounts:
+                    amount_pattern_2 = r"Amount (\d+) \([^)]+\): Accuracy=([\d.]+)±[\d.]+, Validity=([\d.]+)±[\d.]+"
+                    amounts = re.findall(amount_pattern_2, section)
+                
+                # If that also fails, try the concatenated pattern (extract first decimal number)
+                if not amounts:
+                    # Pattern to capture the full potential concatenated string
+                    amount_pattern_3 = r"Amount (\d+) \([^)]+\): Accuracy=([0-9.]+), Validity=([0-9.]+)"
+                    potential_amounts = re.findall(amount_pattern_3, section)
+                    
+                    # For concatenated format, extract the first valid decimal number
+                    amounts = []
+                    for amount, acc_str, val_str in potential_amounts:
+                        # Check if we have a concatenated format (contains multiple decimal points)
+                        if acc_str.count('.') > 1 or val_str.count('.') > 1:
+                            # Extract first 4-digit decimal number: 0.90750.0131 -> 0.9075
+                            acc_match = re.match(r'(\d+\.\d{4})', acc_str)
+                            val_match = re.match(r'(\d+\.\d{4})', val_str)
+                            
+                            if acc_match and val_match:
+                                accuracy = acc_match.group(1)
+                                validity = val_match.group(1)
+                                amounts.append((amount, accuracy, validity))
+                        else:
+                            # Normal case - use as is
+                            amounts.append((amount, acc_str, val_str))
+                
+                if amounts:
+                    print(f"Found {len(amounts)} amount entries for {ocean_type}")
+                    
+                    # Store individual results with validation
+                    for amount, accuracy, validity in amounts:
+                        # Ensure values are properly converted to float
+                        try:
+                            accuracy_float = float(accuracy)
+                            validity_float = float(validity)
+                            
+                            bin_key = f'{standard_type}_bin_{amount}'
+                            self.data_perturbation_results[algorithm][dataset][f'{bin_key}_validity'].append(validity_float)
+                            self.data_perturbation_results[algorithm][dataset][f'{bin_key}_accuracy'].append(accuracy_float)
+                            
+                            # OCEAN doesn't provide L0/L2 in summary, set to 0 for consistency
+                            self.data_perturbation_results[algorithm][dataset][f'{bin_key}_l2'].append(0)
+                            self.data_perturbation_results[algorithm][dataset][f'{bin_key}_l0'].append(0)
+                            print(f"OCEAN {ocean_type} Amount {amount}: Validity={validity_float}, Accuracy={accuracy_float}")
+                        except ValueError as e:
+                            print(f"ERROR: Could not convert OCEAN values to float - Amount {amount}, Accuracy='{accuracy}', Validity='{validity}': {e}")
+                            continue
+                    
+                    # Also store general metrics (average across amounts)
+                    # Calculate from successfully processed values only
+                    valid_amounts = []
+                    for amount, accuracy, validity in amounts:
+                        try:
+                            accuracy_float = float(accuracy)
+                            validity_float = float(validity)
+                            valid_amounts.append((amount, accuracy_float, validity_float))
+                        except ValueError:
+                            continue
+                    
+                    if valid_amounts:
+                        avg_validity = np.mean([v[2] for v in valid_amounts])
+                        avg_accuracy = np.mean([v[1] for v in valid_amounts])
+                    
+                    self.data_perturbation_results[algorithm][dataset][f'{standard_type}_validity'].append(avg_validity)
+                    self.data_perturbation_results[algorithm][dataset][f'{standard_type}_accuracy'].append(avg_accuracy)
+                    # OCEAN doesn't provide L0/L2 in perturbation results, set to 0
+                    self.data_perturbation_results[algorithm][dataset][f'{standard_type}_l2'].append(0)
+                    self.data_perturbation_results[algorithm][dataset][f'{standard_type}_l0'].append(0)
+                    print(f"OCEAN {ocean_type} averages: Validity={avg_validity:.4f}, Accuracy={avg_accuracy:.4f}")
+                else:
+                    print(f"No amount entries found for OCEAN {ocean_type} in {dataset}")
+            else:
+                print(f"No OCEAN {ocean_type} section found for {dataset}")
+        
+        # Parse fold-by-fold data to extract L2 and L0 values
+        self._extract_ocean_fold_metrics(content, algorithm, dataset)
+        
+        # Also parse CF distance metrics from the summary
+        self._extract_ocean_cf_distances(content, algorithm, dataset)
+    
+    def _extract_ocean_model_perturbation_results(self, content, algorithm, dataset):
+        """Extract OCEAN model perturbation results"""
+        # Parse updated OCEAN model perturbation format (handle both ± and � encoding)
+        # rf_50_3 {'n_estimators': 50, 'max_depth': 3}: Accuracy=0.7120±0.0081, Validity=0.0530±0.0129
+        
+        # Updated pattern for new naming convention - handle corrupted ± symbols
+        model_pattern = r'rf_(\d+)_(\d+) \{[^}]+\}: Accuracy=([\d.]+)(?:[±�]?[\d.]+)?, Validity=([\d.]+)(?:[±�]?[\d.]+)?'
+        matches = re.findall(model_pattern, content)
+        
+        if matches:
+            print(f"Found {len(matches)} OCEAN model perturbation results for {dataset}")
+            
+            # Group by model parameters for analysis (similar to existing algorithms)
+            model_groups = {
+                'max_depth_3': {},
+                'max_depth_4': {},
+                'max_depth_5': {}, 
+                'max_depth_6': {},
+                'max_depth_7': {},
+                'n_estimators_50': {},
+                'n_estimators_100': {},
+                'n_estimators_150': {},
+                'n_estimators_200': {}
+            }
+            
+            for n_estimators, max_depth, accuracy, validity in matches:
+                n_estimators = int(n_estimators)
+                max_depth = int(max_depth)
+                accuracy = float(accuracy)
+                validity = float(validity)
+                
+                # Store for traditional model perturbation analysis
+                self.model_perturbation_results[algorithm][dataset]['validity'].append(validity)
+                self.model_perturbation_results[algorithm][dataset]['accuracy'].append(accuracy)
+                
+                # Group by actual parameters for better analysis
+                depth_key = f'max_depth_{max_depth}'
+                n_est_key = f'n_estimators_{n_estimators}'
+                model_type = 'random_forest'
+                
+                # Store in appropriate groups
+                if depth_key in model_groups:
+                    if model_type not in model_groups[depth_key]:
+                        model_groups[depth_key][model_type] = []
+                    model_groups[depth_key][model_type].append({'validity': validity, 'accuracy': accuracy})
+                
+                if n_est_key in model_groups:
+                    if model_type not in model_groups[n_est_key]:
+                        model_groups[n_est_key][model_type] = []
+                    model_groups[n_est_key][model_type].append({'validity': validity, 'accuracy': accuracy})
+                
+                # Also store generic model results for compatibility
+                model_id = f"{n_estimators}_{max_depth}"
+                key_validity = f'model_{model_id}_{model_type}_validity'
+                key_accuracy = f'model_{model_id}_{model_type}_accuracy'
+                self.data_perturbation_results[algorithm][dataset][key_validity].append(validity)
+                self.data_perturbation_results[algorithm][dataset][key_accuracy].append(accuracy)
+                
+                print(f"OCEAN model rf_{n_estimators}_{max_depth}: Validity={validity:.4f}, Accuracy={accuracy:.4f}")
+            
+            # Store grouped results for perturbation analysis with model type info
+            for group_name, model_type_data in model_groups.items():
+                for model_type, group_data in model_type_data.items():
+                    if group_data:
+                        avg_validity = np.mean([d['validity'] for d in group_data])
+                        avg_accuracy = np.mean([d['accuracy'] for d in group_data])
+                        
+                        # Store with model type information
+                        key_validity = f'{group_name}_{model_type}_validity'
+                        key_accuracy = f'{group_name}_{model_type}_accuracy'
+                        self.data_perturbation_results[algorithm][dataset][key_validity].append(avg_validity)
+                        self.data_perturbation_results[algorithm][dataset][key_accuracy].append(avg_accuracy)
+                        print(f"OCEAN: Grouped {group_name} {model_type} - Validity: {avg_validity:.4f}, Accuracy: {avg_accuracy:.4f}")
+        else:
+            print(f"No OCEAN model perturbation results found for {dataset}")
     
     def _extract_data_perturbation_results(self, content, algorithm, dataset):
         """Extract data perturbation results from log content"""
@@ -191,77 +501,15 @@ class CFRobustnessAnalyzer:
             matches = re.findall(pattern, content)
             
             if matches:
-                # Group by model type and parameters for perturbation analysis
-                model_groups = {
-                    'max_depth_3': {},
-                    'max_depth_4': {}, 
-                    'max_depth_5': {},
-                    'max_depth_6': {},
-                    'n_estimators_50': {},
-                    'n_estimators_100': {},
-                    'n_estimators_150': {},
-                    'n_estimators_200': {}
-                }
-                
                 for depth, n_est, validity, accuracy in matches:
                     depth = int(depth)
                     n_est = int(n_est)
                     validity = float(validity)
                     accuracy = float(accuracy)
                     
-                    model_type = 'random_forest'  # cfxplorer only uses random forest
-                    
                     # Store for traditional model perturbation analysis
                     self.model_perturbation_results[algorithm][dataset]['validity'].append(validity)
                     self.model_perturbation_results[algorithm][dataset]['accuracy'].append(accuracy)
-                    
-                    # Group by perturbation type and model type for focused analysis
-                    if depth == 3:
-                        if model_type not in model_groups['max_depth_3']:
-                            model_groups['max_depth_3'][model_type] = []
-                        model_groups['max_depth_3'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif depth == 4:
-                        if model_type not in model_groups['max_depth_4']:
-                            model_groups['max_depth_4'][model_type] = []
-                        model_groups['max_depth_4'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif depth == 5:
-                        if model_type not in model_groups['max_depth_5']:
-                            model_groups['max_depth_5'][model_type] = []
-                        model_groups['max_depth_5'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif depth == 6:
-                        if model_type not in model_groups['max_depth_6']:
-                            model_groups['max_depth_6'][model_type] = []
-                        model_groups['max_depth_6'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    
-                    if n_est == 50:
-                        if model_type not in model_groups['n_estimators_50']:
-                            model_groups['n_estimators_50'][model_type] = []
-                        model_groups['n_estimators_50'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif n_est == 100:
-                        if model_type not in model_groups['n_estimators_100']:
-                            model_groups['n_estimators_100'][model_type] = []
-                        model_groups['n_estimators_100'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif n_est == 150:
-                        if model_type not in model_groups['n_estimators_150']:
-                            model_groups['n_estimators_150'][model_type] = []
-                        model_groups['n_estimators_150'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                    elif n_est == 200:
-                        if model_type not in model_groups['n_estimators_200']:
-                            model_groups['n_estimators_200'][model_type] = []
-                        model_groups['n_estimators_200'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                
-                # Store grouped results for perturbation analysis with model type info
-                for group_name, model_type_data in model_groups.items():
-                    for model_type, group_data in model_type_data.items():
-                        if group_data:
-                            avg_validity = np.mean([d['validity'] for d in group_data])
-                            avg_accuracy = np.mean([d['accuracy'] for d in group_data])
-                            
-                            # Store with model type information
-                            key_validity = f'{group_name}_{model_type}_validity'
-                            key_accuracy = f'{group_name}_{model_type}_accuracy'
-                            self.data_perturbation_results[algorithm][dataset][key_validity].append(avg_validity)
-                            self.data_perturbation_results[algorithm][dataset][key_accuracy].append(avg_accuracy)
         else:
             # Handle other algorithms with tabular format
             # Look for the summary table at the end
@@ -270,83 +518,516 @@ class CFRobustnessAnalyzer:
             matches = re.findall(summary_pattern, content)
             
             if matches:
-                # Group by model type and parameters for perturbation analysis
-                model_groups = {
-                    'max_depth_3': {},
-                    'max_depth_4': {}, 
-                    'max_depth_5': {},
-                    'max_depth_6': {},
-                    'n_estimators_50': {},
-                    'n_estimators_100': {},
-                    'n_estimators_150': {},
-                    'n_estimators_200': {}
-                }
-                
                 for match in matches:
                     parts = match.split()
                     if len(parts) >= 4:
                         model_name = parts[0]
                         validity = float(parts[1])
-                        validity_std = float(parts[2])
                         accuracy = float(parts[3])
-                        accuracy_std = float(parts[4])
-                        
-                        # Extract model type (random_forest, xgboost, lightgbm, adaboost)
-                        model_type = model_name.split('_')[0] + '_' + model_name.split('_')[1] if model_name.startswith('random_forest') else model_name.split('_')[0]
                         
                         # Store for traditional model perturbation analysis
                         self.model_perturbation_results[algorithm][dataset]['validity'].append(validity)
                         self.model_perturbation_results[algorithm][dataset]['accuracy'].append(accuracy)
-                        
-                        # Group by perturbation type and model type for focused analysis
-                        if '_3_' in model_name:
-                            if model_type not in model_groups['max_depth_3']:
-                                model_groups['max_depth_3'][model_type] = []
-                            model_groups['max_depth_3'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                        elif '_4_' in model_name:
-                            if model_type not in model_groups['max_depth_4']:
-                                model_groups['max_depth_4'][model_type] = []
-                            model_groups['max_depth_4'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                        elif '_5_' in model_name:
-                            if model_type not in model_groups['max_depth_5']:
-                                model_groups['max_depth_5'][model_type] = []
-                            model_groups['max_depth_5'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                        elif '_6_' in model_name:
-                            if model_type not in model_groups['max_depth_6']:
-                                model_groups['max_depth_6'][model_type] = []
-                            model_groups['max_depth_6'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                        
-                        if '_50' in model_name:
-                            if model_type not in model_groups['n_estimators_50']:
-                                model_groups['n_estimators_50'][model_type] = []
-                            model_groups['n_estimators_50'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                        elif '_100' in model_name:
-                            if model_type not in model_groups['n_estimators_100']:
-                                model_groups['n_estimators_100'][model_type] = []
-                            model_groups['n_estimators_100'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                        elif '_150' in model_name:
-                            if model_type not in model_groups['n_estimators_150']:
-                                model_groups['n_estimators_150'][model_type] = []
-                            model_groups['n_estimators_150'][model_type].append({'validity': validity, 'accuracy': accuracy})
-                        elif '_200' in model_name:
-                            if model_type not in model_groups['n_estimators_200']:
-                                model_groups['n_estimators_200'][model_type] = []
-                            model_groups['n_estimators_200'][model_type].append({'validity': validity, 'accuracy': accuracy})
+
+    def _extract_ocean_fold_metrics(self, content, algorithm, dataset):
+        """Extract L2 and L0 metrics from OCEAN fold-by-fold data"""
+        # Parse fold-by-fold data to extract L2 and L0 values
+        # Bin 0: Remove 0% -> validity: 0.4400, accuracy: 0.7500, L2: 1.8768, L0: 8.02
+        
+        fold_data = {}
+        
+        # Map perturbation types based on the section names in fold data
+        perturbation_mappings = {
+            'data_deletion': 'minor_deletion',
+            'minor_addition': 'minor_addition',
+            'major_addition': 'major_addition'
+        }
+        
+        for fold_type, standard_type in perturbation_mappings.items():
+            # Find all bin entries for this perturbation type
+            pattern = f'{fold_type}:(.*?)(?=\\n\\s*[a-z_]+:|\\nTesting model perturbations|=== Processing Fold)'
+            
+            sections = re.findall(pattern, content, re.DOTALL)
+            
+            if sections:
+                print(f"Found {len(sections)} {fold_type} sections in fold data")
                 
-                # Store grouped results for perturbation analysis with model type info
-                for group_name, model_type_data in model_groups.items():
-                    for model_type, group_data in model_type_data.items():
-                        if group_data:
-                            avg_validity = np.mean([d['validity'] for d in group_data])
-                            avg_accuracy = np.mean([d['accuracy'] for d in group_data])
+                for section in sections:
+                    # Extract bin data: Bin X: ... -> validity: Y, accuracy: Z, L2: A, L0: B
+                    bin_pattern = r'Bin (\d+): .*? -> validity: ([\d.]+), accuracy: ([\d.]+), L2: ([\d.]+), L0: ([\d.]+)'
+                    bin_matches = re.findall(bin_pattern, section)
+                    
+                    for bin_num, validity, accuracy, l2, l0 in bin_matches:
+                        bin_key = f'{standard_type}_bin_{bin_num}'
+                        
+                        # Store L2 and L0 values that were missing from summary
+                        if f'{bin_key}_l2' not in fold_data:
+                            fold_data[f'{bin_key}_l2'] = []
+                        if f'{bin_key}_l0' not in fold_data:
+                            fold_data[f'{bin_key}_l0'] = []
                             
-                            # Store with model type information
-                            key_validity = f'{group_name}_{model_type}_validity'
-                            key_accuracy = f'{group_name}_{model_type}_accuracy'
-                            self.data_perturbation_results[algorithm][dataset][key_validity].append(avg_validity)
-                            self.data_perturbation_results[algorithm][dataset][key_accuracy].append(avg_accuracy)
-    
-    def create_perturbation_value_plots(self):
+                        fold_data[f'{bin_key}_l2'].append(float(l2))
+                        fold_data[f'{bin_key}_l0'].append(float(l0))
+        
+        # Update the stored data with L2 and L0 values
+        for key, values in fold_data.items():
+            if values:  # Only update if we have data
+                # Replace the placeholder 0 values with actual averages
+                avg_value = np.mean(values)
+                # Clear existing 0 values and add the real average
+                if key in self.data_perturbation_results[algorithm][dataset]:
+                    self.data_perturbation_results[algorithm][dataset][key] = [avg_value]
+                print(f"Updated OCEAN {key}: {avg_value:.4f}")
+
+    def _extract_ocean_cf_distances(self, content, algorithm, dataset):
+        """Extract CF L2 and L0 distance metrics from OCEAN summary"""
+        # Parse CF distance metrics: CF L2 Distance: 1.8840 ± 0.0291
+        print(f"Extracting OCEAN CF distances for {dataset}")
+        
+        # L2 distance pattern - handle multiple formats
+        # Try � symbol first
+        l2_pattern_1 = r'CF L2 Distance: ([\d.]+) � [\d.]+'
+        l2_matches = re.findall(l2_pattern_1, content)
+        
+        # If that fails, try ± symbol
+        if not l2_matches:
+            l2_pattern_2 = r'CF L2 Distance: ([\d.]+) ± [\d.]+'
+            l2_matches = re.findall(l2_pattern_2, content)
+        
+        # If that also fails, try concatenated format
+        if not l2_matches:
+            l2_pattern_3 = r'CF L2 Distance: ([\d.]+)[\d.]+'
+            l2_matches = re.findall(l2_pattern_3, content)
+        
+        # L0 distance pattern - handle multiple formats  
+        # Try � symbol first
+        l0_pattern_1 = r'CF L0 Distance: ([\d.]+) � [\d.]+'
+        l0_matches = re.findall(l0_pattern_1, content)
+        
+        # If that fails, try ± symbol
+        if not l0_matches:
+            l0_pattern_2 = r'CF L0 Distance: ([\d.]+) ± [\d.]+'
+            l0_matches = re.findall(l0_pattern_2, content)
+        
+        # If that also fails, try concatenated format
+        if not l0_matches:
+            l0_pattern_3 = r'CF L0 Distance: ([\d.]+)[\d.]+'
+            l0_matches = re.findall(l0_pattern_3, content)
+        
+        if l2_matches:
+            print(f"Found {len(l2_matches)} CF L2 distance values for {dataset}")
+            # Store in general CF metrics (not perturbation-specific)
+            if 'cf_l2' not in self.data_perturbation_results[algorithm][dataset]:
+                self.data_perturbation_results[algorithm][dataset]['cf_l2'] = []
+            for l2_val in l2_matches:
+                self.data_perturbation_results[algorithm][dataset]['cf_l2'].append(float(l2_val))
+                print(f"OCEAN CF L2 distance: {l2_val}")
+                
+        if l0_matches:
+            print(f"Found {len(l0_matches)} CF L0 distance values for {dataset}")
+            # Store in general CF metrics (not perturbation-specific)
+            if 'cf_l0' not in self.data_perturbation_results[algorithm][dataset]:
+                self.data_perturbation_results[algorithm][dataset]['cf_l0'] = []
+            for l0_val in l0_matches:
+                self.data_perturbation_results[algorithm][dataset]['cf_l0'].append(float(l0_val))
+                print(f"OCEAN CF L0 distance: {l0_val}")
+                        
+        if not l2_matches and not l0_matches:
+            print(f"No CF distance metrics found for OCEAN {dataset}")
+
+    def create_l2_baseline_visualizations(self):
+        """Create L2 (L2 Distance) baseline visualizations with log scale"""
+        print("Creating L2 baseline visualizations...")
+        
+        # Check if L2 data exists
+        l2_data = []
+        for algorithm in self.algorithms:
+            for dataset in self.datasets.values():
+                if (algorithm in self.baseline_results and 
+                    dataset in self.baseline_results[algorithm] and
+                    'L2' in self.baseline_results[algorithm][dataset]):
+                    l2_values = self.baseline_results[algorithm][dataset]['L2']
+                    if l2_values:
+                        for l2_val in l2_values:
+                            # Convert to log scale to handle extreme values
+                            log_l2 = np.log10(abs(l2_val)) if l2_val != 0 else 0
+                            l2_data.append({
+                                'Algorithm': algorithm,
+                                'Dataset': dataset,
+                                'L2_Score': l2_val,
+                                'Log_L2_Score': log_l2
+                            })
+        
+        if not l2_data:
+            print("No L2 baseline data found. Skipping L2 visualizations.")
+            return
+        
+        # Create output directory
+        l2_dir = os.path.join(self.logs_dir, 'img', 'L2_BASELINE')
+        os.makedirs(l2_dir, exist_ok=True)
+        
+        df_l2 = pd.DataFrame(l2_data)
+        print(f"L2 data summary:")
+        print(f"Original L2 range: {df_l2['L2_Score'].min():.2f} to {df_l2['L2_Score'].max():.2f}")
+        print(f"Log L2 range: {df_l2['Log_L2_Score'].min():.2f} to {df_l2['Log_L2_Score'].max():.2f}")
+        
+        # 1. L2 Scores by Algorithm - Original Scale (Line Plot)
+        fig, ax = plt.subplots(figsize=(12, 8))
+        algorithm_means = df_l2.groupby('Algorithm')['L2_Score'].mean().sort_values(ascending=True)
+        algorithm_stds = df_l2.groupby('Algorithm')['L2_Score'].std()
+        
+        x_positions = range(len(algorithm_means))
+        line = ax.errorbar(x_positions, algorithm_means.values, 
+                          yerr=algorithm_stds[algorithm_means.index].values,
+                          marker='o', linewidth=2, markersize=8, capsize=5, 
+                          capthick=2, alpha=0.8, color='green')
+        
+        # Add value labels near each marker
+        for i, (x, y, std) in enumerate(zip(x_positions, algorithm_means.values, algorithm_stds[algorithm_means.index].values)):
+            ax.annotate(f'{y:.2e}', (x, y), textcoords="offset points", 
+                       xytext=(0,15), ha='center', fontsize=9, fontweight='bold',
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+        
+        ax.set_title('L2 Baseline Scores by Algorithm (Original Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Algorithm', fontsize=14, fontweight='bold')
+        ax.set_ylabel('L2 Score', fontsize=14, fontweight='bold')
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels([alg.upper() for alg in algorithm_means.index], rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(l2_dir, 'l2_baseline_by_algorithm_original.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 2. L2 Scores by Algorithm - Log Scale (Line Plot)
+        fig, ax = plt.subplots(figsize=(12, 8))
+        log_algorithm_means = df_l2.groupby('Algorithm')['Log_L2_Score'].mean().sort_values(ascending=True)
+        log_algorithm_stds = df_l2.groupby('Algorithm')['Log_L2_Score'].std()
+        
+        x_positions_log = range(len(log_algorithm_means))
+        line_log = ax.errorbar(x_positions_log, log_algorithm_means.values, 
+                              yerr=log_algorithm_stds[log_algorithm_means.index].values,
+                              marker='s', linewidth=2, markersize=8, capsize=5, 
+                              capthick=2, alpha=0.8, color='orange')
+        
+        # Add value labels near each marker
+        for i, (x, y, std) in enumerate(zip(x_positions_log, log_algorithm_means.values, log_algorithm_stds[log_algorithm_means.index].values)):
+            ax.annotate(f'{y:.2f}', (x, y), textcoords="offset points", 
+                       xytext=(0,15), ha='center', fontsize=9, fontweight='bold',
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+        
+        ax.set_title('L2 Baseline Scores by Algorithm (Log₁₀ Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Algorithm', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Log₁₀(|L2 Score|)', fontsize=14, fontweight='bold')
+        ax.set_xticks(x_positions_log)
+        ax.set_xticklabels([alg.upper() for alg in log_algorithm_means.index], rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(l2_dir, 'l2_baseline_by_algorithm_log.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 3. L2 Scores by Dataset - Original Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        dataset_order = df_l2.groupby('Dataset')['L2_Score'].mean().sort_values(ascending=True).index
+        
+        bp = ax.boxplot([df_l2[df_l2['Dataset'] == dataset]['L2_Score'].values 
+                        for dataset in dataset_order], 
+                       labels=[dataset.upper() for dataset in dataset_order], patch_artist=True)
+        
+        # Color the boxes
+        colors = plt.cm.Set3(np.linspace(0, 1, len(dataset_order)))
+        for patch, color in zip(bp['boxes'], colors):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        ax.set_title('L2 Baseline Score Distribution by Dataset (Original Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('L2 Score', fontsize=14, fontweight='bold')
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(l2_dir, 'l2_baseline_by_dataset_original.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 4. L2 Scores by Dataset - Log Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        log_dataset_order = df_l2.groupby('Dataset')['Log_L2_Score'].mean().sort_values(ascending=True).index
+        
+        bp_log = ax.boxplot([df_l2[df_l2['Dataset'] == dataset]['Log_L2_Score'].values 
+                            for dataset in log_dataset_order], 
+                           labels=[dataset.upper() for dataset in log_dataset_order], patch_artist=True)
+        
+        # Color the boxes
+        colors_log = plt.cm.Set3(np.linspace(0, 1, len(log_dataset_order)))
+        for patch, color in zip(bp_log['boxes'], colors_log):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        ax.set_title('L2 Baseline Score Distribution by Dataset (Log₁₀ Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Log₁₀(|L2 Score|)', fontsize=14, fontweight='bold')
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(l2_dir, 'l2_baseline_by_dataset_log.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 5. L2 Heatmap - Original Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        pivot_df_orig = df_l2.groupby(['Algorithm', 'Dataset'])['L2_Score'].mean().unstack()
+        
+        sns.heatmap(pivot_df_orig, annot=True, fmt='.2e', cmap='RdYlBu_r', 
+                   ax=ax, cbar_kws={'label': 'L2 Score'})
+        ax.set_title('L2 Baseline Scores: Algorithm vs Dataset (Original Scale)', 
+                    fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Algorithm', fontsize=14, fontweight='bold')
+        
+        # Update labels to uppercase
+        ax.set_xticklabels([label.get_text().upper() for label in ax.get_xticklabels()])
+        ax.set_yticklabels([label.get_text().upper() for label in ax.get_yticklabels()])
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(l2_dir, 'l2_baseline_heatmap_original.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 6. L2 Heatmap - Log Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        pivot_df_log = df_l2.groupby(['Algorithm', 'Dataset'])['Log_L2_Score'].mean().unstack()
+        
+        sns.heatmap(pivot_df_log, annot=True, fmt='.2f', cmap='RdYlBu_r', 
+                   ax=ax, cbar_kws={'label': 'Log₁₀(|L2 Score|)'})
+        ax.set_title('L2 Baseline Scores: Algorithm vs Dataset (Log₁₀ Scale)', 
+                    fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Algorithm', fontsize=14, fontweight='bold')
+        
+        # Update labels to uppercase
+        ax.set_xticklabels([label.get_text().upper() for label in ax.get_xticklabels()])
+        ax.set_yticklabels([label.get_text().upper() for label in ax.get_yticklabels()])
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(l2_dir, 'l2_baseline_heatmap_log.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # Save L2 summary data with both scales
+        summary_df = df_l2.groupby(['Algorithm', 'Dataset']).agg({
+            'L2_Score': ['mean', 'std', 'count'],
+            'Log_L2_Score': ['mean', 'std']
+        }).round(4)
+        summary_df.to_csv(os.path.join(l2_dir, 'l2_baseline_summary.csv'))
+        
+        print(f"L2 baseline visualizations saved to: {l2_dir}")
+        print("Generated files:")
+        print("- l2_baseline_by_algorithm_original.png")
+        print("- l2_baseline_by_algorithm_log.png")
+        print("- l2_baseline_by_dataset_original.png")
+        print("- l2_baseline_by_dataset_log.png")
+        print("- l2_baseline_heatmap_original.png")
+        print("- l2_baseline_heatmap_log.png")
+        print("- l2_baseline_summary.csv")
+
+    def create_l0_baseline_visualizations(self):
+        """Create L0 (L0 Distance) baseline visualizations with log scale"""
+        print("Creating L0 baseline visualizations...")
+        
+        # Check if L0 data exists
+        l0_data = []
+        for algorithm in self.algorithms:
+            for dataset in self.datasets.values():
+                if (algorithm in self.baseline_results and 
+                    dataset in self.baseline_results[algorithm] and
+                    'L0' in self.baseline_results[algorithm][dataset]):
+                    l0_values = self.baseline_results[algorithm][dataset]['L0']
+                    if l0_values:
+                        for l0_val in l0_values:
+                            # Convert to log scale to handle extreme values
+                            log_l0 = np.log10(abs(l0_val)) if l0_val != 0 else 0
+                            l0_data.append({
+                                'Algorithm': algorithm,
+                                'Dataset': dataset,
+                                'L0_Score': l0_val,
+                                'Log_L0_Score': log_l0
+                            })
+        
+        if not l0_data:
+            print("No L0 baseline data found. Skipping L0 visualizations.")
+            return
+        
+        # Create output directory
+        l0_dir = os.path.join(self.logs_dir, 'img', 'L0_BASELINE')
+        os.makedirs(l0_dir, exist_ok=True)
+        
+        df_l0 = pd.DataFrame(l0_data)
+        print(f"L0 data summary:")
+        print(f"Original L0 range: {df_l0['L0_Score'].min():.2f} to {df_l0['L0_Score'].max():.2f}")
+        print(f"Log L0 range: {df_l0['Log_L0_Score'].min():.2f} to {df_l0['Log_L0_Score'].max():.2f}")
+        
+        # 1. L0 Scores by Algorithm - Original Scale (Line Plot)
+        fig, ax = plt.subplots(figsize=(12, 8))
+        algorithm_means = df_l0.groupby('Algorithm')['L0_Score'].mean().sort_values(ascending=True)
+        algorithm_stds = df_l0.groupby('Algorithm')['L0_Score'].std()
+        
+        x_positions = range(len(algorithm_means))
+        line = ax.errorbar(x_positions, algorithm_means.values, 
+                          yerr=algorithm_stds[algorithm_means.index].values,
+                          marker='o', linewidth=2, markersize=8, capsize=5, 
+                          capthick=2, alpha=0.8, color='purple')
+        
+        # Add value labels near each marker
+        for i, (x, y, std) in enumerate(zip(x_positions, algorithm_means.values, algorithm_stds[algorithm_means.index].values)):
+            ax.annotate(f'{y:.1f}', (x, y), textcoords="offset points", 
+                       xytext=(0,15), ha='center', fontsize=9, fontweight='bold',
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+        
+        ax.set_title('L0 Baseline Scores by Algorithm (Original Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Algorithm', fontsize=14, fontweight='bold')
+        ax.set_ylabel('L0 Score', fontsize=14, fontweight='bold')
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels([alg.upper() for alg in algorithm_means.index], rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(l0_dir, 'l0_baseline_by_algorithm_original.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 2. L0 Scores by Algorithm - Log Scale (Line Plot)
+        fig, ax = plt.subplots(figsize=(12, 8))
+        log_algorithm_means = df_l0.groupby('Algorithm')['Log_L0_Score'].mean().sort_values(ascending=True)
+        log_algorithm_stds = df_l0.groupby('Algorithm')['Log_L0_Score'].std()
+        
+        x_positions_log = range(len(log_algorithm_means))
+        line_log = ax.errorbar(x_positions_log, log_algorithm_means.values, 
+                              yerr=log_algorithm_stds[log_algorithm_means.index].values,
+                              marker='s', linewidth=2, markersize=8, capsize=5, 
+                              capthick=2, alpha=0.8, color='green')
+        
+        # Add value labels near each marker
+        for i, (x, y, std) in enumerate(zip(x_positions_log, log_algorithm_means.values, log_algorithm_stds[log_algorithm_means.index].values)):
+            ax.annotate(f'{y:.2f}', (x, y), textcoords="offset points", 
+                       xytext=(0,15), ha='center', fontsize=9, fontweight='bold',
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+        
+        ax.set_title('L0 Baseline Scores by Algorithm (Log₁₀ Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Algorithm', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Log₁₀(|L0 Score|)', fontsize=14, fontweight='bold')
+        ax.set_xticks(x_positions_log)
+        ax.set_xticklabels([alg.upper() for alg in log_algorithm_means.index], rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(l0_dir, 'l0_baseline_by_algorithm_log.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 3. L0 Scores by Dataset - Original Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        dataset_order = df_l0.groupby('Dataset')['L0_Score'].mean().sort_values(ascending=True).index
+        
+        bp = ax.boxplot([df_l0[df_l0['Dataset'] == dataset]['L0_Score'].values 
+                        for dataset in dataset_order], 
+                       labels=[dataset.upper() for dataset in dataset_order], patch_artist=True)
+        
+        # Color the boxes
+        colors = plt.cm.Set3(np.linspace(0, 1, len(dataset_order)))
+        for patch, color in zip(bp['boxes'], colors):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        ax.set_title('L0 Baseline Score Distribution by Dataset (Original Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('L0 Score', fontsize=14, fontweight='bold')
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(l0_dir, 'l0_baseline_by_dataset_original.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 4. L0 Scores by Dataset - Log Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        log_dataset_order = df_l0.groupby('Dataset')['Log_L0_Score'].mean().sort_values(ascending=True).index
+        
+        bp_log = ax.boxplot([df_l0[df_l0['Dataset'] == dataset]['Log_L0_Score'].values 
+                            for dataset in log_dataset_order], 
+                           labels=[dataset.upper() for dataset in log_dataset_order], patch_artist=True)
+        
+        # Color the boxes
+        colors_log = plt.cm.Set3(np.linspace(0, 1, len(log_dataset_order)))
+        for patch, color in zip(bp_log['boxes'], colors_log):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        ax.set_title('L0 Baseline Score Distribution by Dataset (Log₁₀ Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Log₁₀(|L0 Score|)', fontsize=14, fontweight='bold')
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(l0_dir, 'l0_baseline_by_dataset_log.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 5. L0 Heatmap - Original Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        pivot_df_orig = df_l0.groupby(['Algorithm', 'Dataset'])['L0_Score'].mean().unstack()
+        
+        sns.heatmap(pivot_df_orig, annot=True, fmt='.1f', cmap='RdYlBu_r', 
+                   ax=ax, cbar_kws={'label': 'L0 Score'})
+        ax.set_title('L0 Baseline Scores: Algorithm vs Dataset (Original Scale)', 
+                    fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Algorithm', fontsize=14, fontweight='bold')
+        
+        # Update labels to uppercase
+        ax.set_xticklabels([label.get_text().upper() for label in ax.get_xticklabels()])
+        ax.set_yticklabels([label.get_text().upper() for label in ax.get_yticklabels()])
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(l0_dir, 'l0_baseline_heatmap_original.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 6. L0 Heatmap - Log Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        pivot_df_log = df_l0.groupby(['Algorithm', 'Dataset'])['Log_L0_Score'].mean().unstack()
+        
+        sns.heatmap(pivot_df_log, annot=True, fmt='.2f', cmap='RdYlBu_r', 
+                   ax=ax, cbar_kws={'label': 'Log₁₀(|L0 Score|)'})
+        ax.set_title('L0 Baseline Scores: Algorithm vs Dataset (Log₁₀ Scale)', 
+                    fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Algorithm', fontsize=14, fontweight='bold')
+        
+        # Update labels to uppercase
+        ax.set_xticklabels([label.get_text().upper() for label in ax.get_xticklabels()])
+        ax.set_yticklabels([label.get_text().upper() for label in ax.get_yticklabels()])
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(l0_dir, 'l0_baseline_heatmap_log.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # Save L0 summary data with both scales
+        summary_df = df_l0.groupby(['Algorithm', 'Dataset']).agg({
+            'L0_Score': ['mean', 'std', 'count'],
+            'Log_L0_Score': ['mean', 'std']
+        }).round(4)
+        summary_df.to_csv(os.path.join(l0_dir, 'l0_baseline_summary.csv'))
+        
+        print(f"L0 baseline visualizations saved to: {l0_dir}")
+        print("Generated files:")
+        print("- l0_baseline_by_algorithm_original.png")
+        print("- l0_baseline_by_algorithm_log.png")
+        print("- l0_baseline_by_dataset_original.png")
+        print("- l0_baseline_by_dataset_log.png")
+        print("- l0_baseline_heatmap_original.png")
+        print("- l0_baseline_heatmap_log.png")
+        print("- l0_baseline_summary.csv")
         """Create line plots showing algorithm performance across perturbation values"""
         print("Creating perturbation value plots...")
         
@@ -466,7 +1147,7 @@ class CFRobustnessAnalyzer:
     def _create_model_perturbation_value_plot(self, perturbation_group, dataset, metric, values):
         """Create a line plot for model perturbation showing parameter values on x-axis"""
         
-        # Only use DiCE algorithm for model perturbations
+        # Only use DiCE algorithm for model perturburbations
         algorithm = 'DiCE'
         
         if not (algorithm in self.data_perturbation_results and 
@@ -878,7 +1559,7 @@ class CFRobustnessAnalyzer:
         plt.show()
     
     def create_lof_baseline_visualizations(self):
-        """Create LOF (Local Outlier Factor) baseline visualizations"""
+        """Create LOF (Local Outlier Factor) baseline visualizations with log scale"""
         print("Creating LOF baseline visualizations...")
         
         # Check if LOF data exists
@@ -891,10 +1572,14 @@ class CFRobustnessAnalyzer:
                     lof_values = self.baseline_results[algorithm][dataset]['LOF']
                     if lof_values:
                         for lof_val in lof_values:
+                            # Convert to log scale to handle extreme values
+                            # Use absolute value for log transformation since LOF can be negative
+                            log_lof = np.log10(abs(lof_val)) if lof_val != 0 else 0
                             lof_data.append({
                                 'Algorithm': algorithm,
                                 'Dataset': dataset,
-                                'LOF_Score': lof_val
+                                'LOF_Score': lof_val,
+                                'Log_LOF_Score': log_lof
                             })
         
         if not lof_data:
@@ -902,38 +1587,77 @@ class CFRobustnessAnalyzer:
             return
         
         # Create output directory
-        lof_dir = os.path.join(self.logs_dir, 'img', 'LOF')
+        lof_dir = os.path.join(self.logs_dir, 'img', 'LOF_BASELINE')
         os.makedirs(lof_dir, exist_ok=True)
         
         df_lof = pd.DataFrame(lof_data)
+        print(f"LOF data summary:")
+        print(f"Original LOF range: {df_lof['LOF_Score'].min():.2f} to {df_lof['LOF_Score'].max():.2f}")
+        print(f"Log LOF range: {df_lof['Log_LOF_Score'].min():.2f} to {df_lof['Log_LOF_Score'].max():.2f}")
         
-        # 1. LOF Scores by Algorithm (across all datasets)
-        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-        
-        # Bar plot by algorithm
+        # 1. LOF Scores by Algorithm - Original Scale (Line Plot)
+        fig, ax = plt.subplots(figsize=(12, 8))
         algorithm_means = df_lof.groupby('Algorithm')['LOF_Score'].mean().sort_values(ascending=True)
         algorithm_stds = df_lof.groupby('Algorithm')['LOF_Score'].std()
         
-        bars = axes[0].bar(range(len(algorithm_means)), algorithm_means.values, 
+        x_positions = range(len(algorithm_means))
+        line = ax.errorbar(x_positions, algorithm_means.values, 
                           yerr=algorithm_stds[algorithm_means.index].values,
-                          capsize=5, alpha=0.8)
-        axes[0].set_title('LOF Baseline Scores by Algorithm', fontsize=14, fontweight='bold')
-        axes[0].set_xlabel('Algorithm')
-        axes[0].set_ylabel('LOF Score')
-        axes[0].set_xticks(range(len(algorithm_means)))
-        axes[0].set_xticklabels(algorithm_means.index, rotation=45)
+                          marker='o', linewidth=2, markersize=8, capsize=5, 
+                          capthick=2, alpha=0.8, color='blue')
         
-        # Add value labels on bars
-        for i, (bar, val) in enumerate(zip(bars, algorithm_means.values)):
-            axes[0].text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.01,
-                        f'{val:.3f}', ha='center', va='bottom')
+        # Add value labels near each marker
+        for i, (x, y, std) in enumerate(zip(x_positions, algorithm_means.values, algorithm_stds[algorithm_means.index].values)):
+            ax.annotate(f'{y:.2e}', (x, y), textcoords="offset points", 
+                       xytext=(0,15), ha='center', fontsize=9, fontweight='bold',
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
         
-        # Box plot by dataset
+        ax.set_title('LOF Baseline Scores by Algorithm (Original Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Algorithm', fontsize=14, fontweight='bold')
+        ax.set_ylabel('LOF Score', fontsize=14, fontweight='bold')
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels([alg.upper() for alg in algorithm_means.index], rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_by_algorithm_original.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 2. LOF Scores by Algorithm - Log Scale (Line Plot)
+        fig, ax = plt.subplots(figsize=(12, 8))
+        log_algorithm_means = df_lof.groupby('Algorithm')['Log_LOF_Score'].mean().sort_values(ascending=True)
+        log_algorithm_stds = df_lof.groupby('Algorithm')['Log_LOF_Score'].std()
+        
+        x_positions_log = range(len(log_algorithm_means))
+        line_log = ax.errorbar(x_positions_log, log_algorithm_means.values, 
+                              yerr=log_algorithm_stds[log_algorithm_means.index].values,
+                              marker='s', linewidth=2, markersize=8, capsize=5, 
+                              capthick=2, alpha=0.8, color='red')
+        
+        # Add value labels near each marker
+        for i, (x, y, std) in enumerate(zip(x_positions_log, log_algorithm_means.values, log_algorithm_stds[log_algorithm_means.index].values)):
+            ax.annotate(f'{y:.2f}', (x, y), textcoords="offset points", 
+                       xytext=(0,15), ha='center', fontsize=9, fontweight='bold',
+                       bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+        
+        ax.set_title('LOF Baseline Scores by Algorithm (Log₁₀ Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Algorithm', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Log₁₀(|LOF Score|)', fontsize=14, fontweight='bold')
+        ax.set_xticks(x_positions_log)
+        ax.set_xticklabels([alg.upper() for alg in log_algorithm_means.index], rotation=45)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_by_algorithm_log.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 3. LOF Scores by Dataset - Original Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
         dataset_order = df_lof.groupby('Dataset')['LOF_Score'].mean().sort_values(ascending=True).index
         
-        bp = axes[1].boxplot([df_lof[df_lof['Dataset'] == dataset]['LOF_Score'].values 
-                             for dataset in dataset_order], 
-                            labels=dataset_order, patch_artist=True)
+        bp = ax.boxplot([df_lof[df_lof['Dataset'] == dataset]['LOF_Score'].values 
+                        for dataset in dataset_order], 
+                       labels=[dataset.upper() for dataset in dataset_order], patch_artist=True)
         
         # Color the boxes
         colors = plt.cm.Set3(np.linspace(0, 1, len(dataset_order)))
@@ -941,66 +1665,96 @@ class CFRobustnessAnalyzer:
             patch.set_facecolor(color)
             patch.set_alpha(0.7)
         
-        axes[1].set_title('LOF Baseline Score Distribution by Dataset', fontsize=14, fontweight='bold')
-        axes[1].set_xlabel('Dataset')
-        axes[1].set_ylabel('LOF Score')
-        axes[1].tick_params(axis='x', rotation=45)
-        
+        ax.set_title('LOF Baseline Score Distribution by Dataset (Original Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('LOF Score', fontsize=14, fontweight='bold')
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig(os.path.join(lof_dir, 'lof_baseline_comparison.png'), 
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_by_dataset_original.png'), 
                     dpi=300, bbox_inches='tight')
         plt.show()
         
-        # 2. LOF Heatmap (Algorithm vs Dataset)
-        fig, ax = plt.subplots(figsize=(10, 8))
-        
-        # Create pivot table for heatmap
-        pivot_df = df_lof.groupby(['Algorithm', 'Dataset'])['LOF_Score'].mean().unstack()
-        
-        # Create heatmap
-        sns.heatmap(pivot_df, annot=True, fmt='.3f', cmap='RdYlBu_r', 
-                   ax=ax, cbar_kws={'label': 'LOF Score'})
-        ax.set_title('LOF Baseline Scores: Algorithm vs Dataset Heatmap', 
-                    fontsize=14, fontweight='bold')
-        ax.set_xlabel('Dataset')
-        ax.set_ylabel('Algorithm')
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(lof_dir, 'lof_baseline_heatmap.png'), 
-                    dpi=300, bbox_inches='tight')
-        plt.show()
-        
-        # 3. LOF Score Ranking
+        # 4. LOF Scores by Dataset - Log Scale
         fig, ax = plt.subplots(figsize=(12, 8))
+        log_dataset_order = df_lof.groupby('Dataset')['Log_LOF_Score'].mean().sort_values(ascending=True).index
         
-        # Create detailed ranking
-        detailed_rankings = []
-        for _, row in df_lof.iterrows():
-            detailed_rankings.append(f"{row['Algorithm']} - {row['Dataset']}")
+        bp_log = ax.boxplot([df_lof[df_lof['Dataset'] == dataset]['Log_LOF_Score'].values 
+                            for dataset in log_dataset_order], 
+                           labels=[dataset.upper() for dataset in log_dataset_order], patch_artist=True)
         
-        df_detailed = df_lof.copy()
-        df_detailed['Algorithm_Dataset'] = detailed_rankings
-        df_detailed_sorted = df_detailed.groupby('Algorithm_Dataset')['LOF_Score'].mean().sort_values(ascending=True)
+        # Color the boxes
+        colors_log = plt.cm.Set3(np.linspace(0, 1, len(log_dataset_order)))
+        for patch, color in zip(bp_log['boxes'], colors_log):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
         
-        bars = ax.barh(range(len(df_detailed_sorted)), df_detailed_sorted.values)
-        ax.set_title('LOF Baseline Scores Ranking (Lower = More Outlier-like)', 
-                    fontsize=14, fontweight='bold')
-        ax.set_xlabel('LOF Score')
-        ax.set_ylabel('Algorithm - Dataset')
-        ax.set_yticks(range(len(df_detailed_sorted)))
-        ax.set_yticklabels(df_detailed_sorted.index, fontsize=10)
-        
-        # Add value labels
-        for i, (bar, val) in enumerate(zip(bars, df_detailed_sorted.values)):
-            ax.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height()/2.,
-                   f'{val:.3f}', ha='left', va='center')
-        
+        ax.set_title('LOF Baseline Score Distribution by Dataset (Log₁₀ Scale)', fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Log₁₀(|LOF Score|)', fontsize=14, fontweight='bold')
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig(os.path.join(lof_dir, 'lof_baseline_ranking.png'), 
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_by_dataset_log.png'), 
                     dpi=300, bbox_inches='tight')
         plt.show()
         
-        # Save LOF summary data
+        # 5. LOF Heatmap - Original Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        pivot_df_orig = df_lof.groupby(['Algorithm', 'Dataset'])['LOF_Score'].mean().unstack()
+        
+        sns.heatmap(pivot_df_orig, annot=True, fmt='.2e', cmap='RdYlBu_r', 
+                   ax=ax, cbar_kws={'label': 'LOF Score'})
+        ax.set_title('LOF Baseline Scores: Algorithm vs Dataset (Original Scale)', 
+                    fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Algorithm', fontsize=14, fontweight='bold')
+        
+        # Update labels to uppercase
+        ax.set_xticklabels([label.get_text().upper() for label in ax.get_xticklabels()])
+        ax.set_yticklabels([label.get_text().upper() for label in ax.get_yticklabels()])
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_heatmap_original.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # 6. LOF Heatmap - Log Scale
+        fig, ax = plt.subplots(figsize=(12, 8))
+        pivot_df_log = df_lof.groupby(['Algorithm', 'Dataset'])['Log_LOF_Score'].mean().unstack()
+        
+        sns.heatmap(pivot_df_log, annot=True, fmt='.2f', cmap='RdYlBu_r', 
+                   ax=ax, cbar_kws={'label': 'Log₁₀(|LOF Score|)'})
+        ax.set_title('LOF Baseline Scores: Algorithm vs Dataset (Log₁₀ Scale)', 
+                    fontsize=16, fontweight='bold')
+        ax.set_xlabel('Dataset', fontsize=14, fontweight='bold')
+        ax.set_ylabel('Algorithm', fontsize=14, fontweight='bold')
+        
+        # Update labels to uppercase
+        ax.set_xticklabels([label.get_text().upper() for label in ax.get_xticklabels()])
+        ax.set_yticklabels([label.get_text().upper() for label in ax.get_yticklabels()])
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(lof_dir, 'lof_baseline_heatmap_log.png'), 
+                    dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        # Save LOF summary data with both scales
+        summary_df = df_lof.groupby(['Algorithm', 'Dataset']).agg({
+            'LOF_Score': ['mean', 'std', 'count'],
+            'Log_LOF_Score': ['mean', 'std']
+        }).round(4)
+        summary_df.to_csv(os.path.join(lof_dir, 'lof_baseline_summary.csv'))
+        
+        print(f"LOF baseline visualizations saved to: {lof_dir}")
+        print("Generated files:")
+        print("- lof_baseline_by_algorithm_original.png")
+        print("- lof_baseline_by_algorithm_log.png")
+        print("- lof_baseline_by_dataset_original.png")
+        print("- lof_baseline_by_dataset_log.png")
+        print("- lof_baseline_heatmap_original.png")
+        print("- lof_baseline_heatmap_log.png")
+        print("- lof_baseline_summary.csv")
         df_lof.to_csv(os.path.join(lof_dir, 'lof_baseline_summary.csv'), index=False)
         print(f"LOF summary saved to {os.path.join(lof_dir, 'lof_baseline_summary.csv')}")
     
@@ -1051,7 +1805,7 @@ class CFRobustnessAnalyzer:
                 alg_data = df_summary[df_summary['Algorithm'] == algorithm]
                 if not alg_data.empty:
                     datasets = alg_data['Dataset'].values
-                    robustness = alg_data['Overall_Robustness'].values
+                    robustness = alg_data['Overall_Robustness'].values;
                     
                     axes[0,0].plot(datasets, robustness, 
                                  marker='o', label=algorithm, linewidth=2, markersize=8)
@@ -1110,6 +1864,91 @@ class CFRobustnessAnalyzer:
             df_summary.to_csv(os.path.join(self.logs_dir, 'robustness_summary.csv'), index=False)
             print(f"Summary data saved to {os.path.join(self.logs_dir, 'robustness_summary.csv')}")
     
+    def print_algorithm_coverage(self):
+        """Print a summary of which algorithms and datasets have available data"""
+        print("\n" + "=" * 60)
+        print("ALGORITHM AND DATASET COVERAGE SUMMARY")
+        print("=" * 60)
+        
+        # Check for log files
+        print("\nLog File Availability:")
+        print("-" * 30)
+        
+        coverage_matrix = {}
+        for algorithm in self.algorithms:
+            coverage_matrix[algorithm] = {}
+            for version, dataset in self.datasets.items():
+                # Check the same logic as in parse_log_files
+                log_file = None
+                
+                if algorithm == 'OCEAN':
+                    if version == 'v4':
+                        log_candidates = [f"ocean_{version}_heloc.log"]
+                    elif version == 'v5':
+                        log_candidates = [f"ocean_{version}_compas.log"]
+                    else:
+                        log_candidates = [f"ocean_{version}.log"]
+                else:
+                    if version == 'v4':
+                        log_candidates = [f"{algorithm}_{version}_heloc.log"]
+                    elif version == 'v5':
+                        log_candidates = [f"{algorithm}_{version}_compas.log"]
+                    else:
+                        log_candidates = [f"{algorithm}_{version}.log"]
+                
+                # For NICE, also try .out files as fallback
+                if algorithm == 'NICE':
+                    if version == 'v4':
+                        log_candidates.append(f"{algorithm}_{version}_heloc.out")
+                    elif version == 'v5':
+                        log_candidates.append(f"{algorithm}_{version}_compas.out")
+                    else:
+                        log_candidates.append(f"{algorithm}_{version}.out")
+                
+                # Find the first existing file
+                for candidate in log_candidates:
+                    candidate_path = os.path.join(self.logs_dir, candidate)
+                    if os.path.exists(candidate_path):
+                        log_file = candidate
+                        break
+                
+                coverage_matrix[algorithm][dataset] = "✓" if log_file else "✗"
+        
+        # Print coverage matrix
+        header = f"{'Algorithm':<15}"
+        for dataset in self.datasets.values():
+            header += f"{dataset:<15}"
+        print(header)
+        print("-" * len(header))
+        
+        for algorithm in self.algorithms:
+            row = f"{algorithm:<15}"
+            for dataset in self.datasets.values():
+                row += f"{coverage_matrix[algorithm][dataset]:<15}"
+            print(row)
+        
+        # Special note for OCEAN
+        print(f"\nSpecial Notes:")
+        print(f"- OCEAN currently has log data for German Credit dataset")
+        print(f"- OCEAN integration is ready for future datasets (HELOC, COMPAS, Spambase)")
+        print(f"- OCEAN uses a different log format which is automatically detected and parsed")
+        
+        # Check parsed data availability
+        print(f"\nParsed Data Summary:")
+        print("-" * 30)
+        
+        for algorithm in self.algorithms:
+            if algorithm in self.baseline_results:
+                datasets_with_data = list(self.baseline_results[algorithm].keys())
+                if datasets_with_data:
+                    print(f"{algorithm}: {', '.join(datasets_with_data)}")
+                else:
+                    print(f"{algorithm}: No parsed data")
+            else:
+                print(f"{algorithm}: No parsed data")
+        
+        print("=" * 60)
+
     def run_complete_analysis(self):
         """Run the complete analysis pipeline"""
         print("=" * 80)
@@ -1119,11 +1958,13 @@ class CFRobustnessAnalyzer:
         # Parse all log files
         self.parse_log_files()
         
-        # Create new perturbation value plots (main focus)
-        self.create_perturbation_value_plots()
+        # Print coverage summary (helpful for understanding OCEAN availability)
+        self.print_algorithm_coverage()
         
-        # Create LOF baseline visualizations
+        # Create baseline visualizations for all metrics
         self.create_lof_baseline_visualizations()
+        self.create_l2_baseline_visualizations()  
+        self.create_l0_baseline_visualizations()
         
         # Skip traditional visualizations as requested
         # self.create_data_perturbation_visualizations()
@@ -1132,27 +1973,37 @@ class CFRobustnessAnalyzer:
         
         print("\n" + "=" * 80)
         print("ANALYSIS COMPLETE!")
-        print("Generated visualizations organized by metric:")
-        print("- img/VALIDITY/: Validity vs perturbation strength plots")
-        print("- img/ACCURACY/: Accuracy vs perturbation strength plots") 
-        print("- img/L0/: L0 distance vs perturbation strength plots")
-        print("- img/L2/: L2 distance vs perturbation strength plots")
-        print("- img/LOF/: LOF baseline analysis plots")
-        print("- img/GENERAL/: Summary and comparison plots")
+        print("Generated baseline visualizations organized by metric:")
+        print("- img/LOF_BASELINE/: LOF baseline comparison plots")
+        print("- img/L2_BASELINE/: L2 distance baseline comparison plots") 
+        print("- img/L0_BASELINE/: L0 distance baseline comparison plots")
+        print("\nNOTE: OCEAN data is included in all applicable visualizations")
+        print("All plots generated as separate figures with both original and log scales")
         print("=" * 80)
-
-
 def main():
     """Main function to run the analysis"""
-    # Get the current directory (logs folder)
-    logs_directory = os.path.dirname(os.path.abspath(__file__))
+    print("Starting CFRobustness analysis...")
     
-    # Create analyzer instance
-    analyzer = CFRobustnessAnalyzer(logs_directory)
-    
-    # Run complete analysis
-    analyzer.run_complete_analysis()
+    try:
+        # Get the current directory (logs folder)
+        logs_directory = os.path.dirname(os.path.abspath(__file__))
+        print(f"Logs directory: {logs_directory}")
+        
+        # Create analyzer instance
+        print("Creating analyzer instance...")
+        analyzer = CFRobustnessAnalyzer(logs_directory)
+        
+        # Run complete analysis
+        print("Running complete analysis...")
+        analyzer.run_complete_analysis()
+        print("Analysis completed!")
+    except Exception as e:
+        print(f"ERROR in main: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
+    print("Script started - calling main()")
     main()
+    print("Script completed")

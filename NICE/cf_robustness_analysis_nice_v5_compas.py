@@ -297,6 +297,33 @@ def calculate_validity(model, cf_list, x_test):
     metrics = calculate_comprehensive_metrics(model, cf_list, x_test, dummy_train)
     return metrics['validity'], metrics['flipped'], metrics['total']
 
+
+def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx):
+    """
+    Save generated counterfactuals to CSV file
+    
+    Args:
+        cf_list: DataFrame with counterfactuals
+        cf_method: Name of the CF method (e.g., 'DiCE', 'CEML')
+        dataset_name: Name of the dataset (e.g., 'Spambase', 'German-Credit')
+        fold_idx: Fold number
+    """
+    try:
+        # Create counterfactuals directory if it doesn't exist
+        cf_dir = os.path.join(os.path.dirname(__file__), '..', 'counterfactuals')
+        os.makedirs(cf_dir, exist_ok=True)
+        
+        # Format filename: cf_method__dataset__fold#.csv
+        filename = f"{cf_method}__{dataset_name}__fold{fold_idx}.csv"
+        filepath = os.path.join(cf_dir, filename)
+        
+        # Save counterfactuals to CSV
+        cf_list.to_csv(filepath, index=False)
+        print(f"    Saved counterfactuals to: {filename}")
+        
+    except Exception as e:
+        print(f"    Error saving counterfactuals to CSV: {e}")
+
 def main():
     # Setup logging
     logger, log_filename = setup_logging()
@@ -456,6 +483,15 @@ def main():
                 X_test, X_train, y_train, baseline_model, cat_feat, num_feat
             )
             
+            # Save counterfactuals to CSV
+
+            
+            save_counterfactuals_to_csv(cf_list, "NICE", "COMPAS", fold)
+
+            
+            
+
+            
             all_fold_results['baseline_success_rate'].append(success_rate)
             
             # Calculate comprehensive metrics for baseline model
@@ -470,6 +506,9 @@ def main():
             log_print(f"  Baseline L2 distance: {baseline_metrics['l2_distance']:.4f}")
             log_print(f"  Baseline L0 distance: {baseline_metrics['l0_distance']:.2f}")
             log_print(f"  Baseline LOF score: {baseline_metrics['lof_score']:.4f}")
+            
+            # Log baseline metrics in standardized format for visualization parsing
+            log_print(f"    Bin 0: Remove 0% -> validity: {baseline_metrics[\'validity\']:.4f}, accuracy: {test_acc:.4f}, L2: {baseline_metrics[\'l2_distance\']:.4f}, L0: {baseline_metrics[\'l0_distance\']:.2f}, LOF: {baseline_metrics[\'lof_score\']:.4f}")
             
             # Test counterfactuals on data perturbed models
             log_print(f"\nTesting data perturbations for fold {fold}...")
