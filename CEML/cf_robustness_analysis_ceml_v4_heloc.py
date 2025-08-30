@@ -265,7 +265,7 @@ def calculate_validity(model, cf_list, x_test):
     return metrics['validity'], metrics['flipped'], metrics['total']
 
 
-def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx):
+def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx, cf_type="baseline"):
     """
     Save generated counterfactuals to CSV file
     
@@ -281,7 +281,7 @@ def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx):
         os.makedirs(cf_dir, exist_ok=True)
         
         # Format filename: cf_method__dataset__fold#.csv
-        filename = f"{cf_method}__{dataset_name}__fold{fold_idx}.csv"
+        filename = f"{cf_method}__{dataset_name}__{cf_type}__fold{fold_idx}.csv"
         filepath = os.path.join(cf_dir, filename)
         
         # Save counterfactuals to CSV
@@ -468,7 +468,7 @@ def main():
             # Save counterfactuals to CSV
 
             
-            save_counterfactuals_to_csv(cf_list, "CEML", "HELOC", fold)
+            save_counterfactuals_to_csv(cf_list, "CEML", "HELOC", fold, "baseline")
 
             
             
@@ -828,4 +828,13 @@ def main():
     log_print(f"{'='*80}")
 
 if __name__ == "__main__":
-    main() 
+    try:
+        main()
+    except Exception as e:
+        print(f"\n{'='*80}")
+        print("❌ ANALYSIS TERMINATED DUE TO UNEXPECTED ERROR")
+        print(f"{'='*80}")
+        print(f"[ERROR] {type(e).__name__}: {str(e)}")
+        print(f"[TIME] Error occurred at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"{'='*80}")
+        raise 

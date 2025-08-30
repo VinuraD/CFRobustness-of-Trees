@@ -603,7 +603,7 @@ def print_statistical_summary(all_results):
     log_print(f"  • Focus algorithm adapts to fairness-critical domains")
 
 
-def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx):
+def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx, cf_type="baseline"):
     """
     Save generated counterfactuals to CSV file
     
@@ -619,7 +619,7 @@ def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx):
         os.makedirs(cf_dir, exist_ok=True)
         
         # Format filename: cf_method__dataset__fold#.csv
-        filename = f"{cf_method}__{dataset_name}__fold{fold_idx}.csv"
+        filename = f"{cf_method}__{dataset_name}__{cf_type}__fold{fold_idx}.csv"
         filepath = os.path.join(cf_dir, filename)
         
         # Save counterfactuals to CSV
@@ -727,7 +727,7 @@ def main():
             )
             
             # Save counterfactuals to CSV
-            save_counterfactuals_to_csv(baseline_cf_list, "CFXplorer", "COMPAS", fold_idx)
+            save_counterfactuals_to_csv(baseline_cf_list, "CFXplorer", "COMPAS", fold_idx, "baseline")
             
             # Calculate baseline metrics
             baseline_metrics = calculate_comprehensive_metrics(
@@ -789,4 +789,13 @@ def main():
             logger.removeHandler(handler)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"\n{'='*80}")
+        print("❌ ANALYSIS TERMINATED DUE TO UNEXPECTED ERROR")
+        print(f"{'='*80}")
+        print(f"[ERROR] {type(e).__name__}: {str(e)}")
+        print(f"[TIME] Error occurred at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"{'='*80}")
+        raise
