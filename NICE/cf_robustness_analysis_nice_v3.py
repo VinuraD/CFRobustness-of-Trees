@@ -493,7 +493,7 @@ def main():
             log_print(f"  Baseline LOF score: {baseline_metrics['lof_score']:.4f}")
             
             # Log baseline metrics in standardized format for visualization parsing
-            log_print(f"    Bin 0: Remove 0% -> validity: {baseline_metrics[\'validity\']:.4f}, accuracy: {test_acc:.4f}, L2: {baseline_metrics[\'l2_distance\']:.4f}, L0: {baseline_metrics[\'l0_distance\']:.2f}, LOF: {baseline_metrics[\'lof_score\']:.4f}")
+            log_print(f"    Bin 0: Remove 0% -> validity: {baseline_metrics['validity']:.4f}, accuracy: {test_acc:.4f}, L2: {baseline_metrics['l2_distance']:.4f}, L0: {baseline_metrics['l0_distance']:.2f}, LOF: {baseline_metrics['lof_score']:.4f}")
             
             # Test counterfactuals on data perturbed models
             log_print(f"\nTesting data perturbations for fold {fold}...")
