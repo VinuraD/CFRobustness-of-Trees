@@ -193,7 +193,7 @@ class ExperimentRunner:
         
         return experiments
     
-    def run_experiment(self, experiment, timeout_minutes=30):
+    def run_experiment(self, experiment, timeout_minutes=None):
         """Run a single experiment sequentially and wait for completion"""
         method = experiment['method']
         dataset = experiment['dataset']
@@ -224,7 +224,10 @@ class ExperimentRunner:
         self.logger.info(f"  Script: {file_path.name}")
         self.logger.info(f"  Log file: {log_file}")
         self.logger.info(f"  Error file: {err_file}")
-        self.logger.info(f"  Timeout: {timeout_minutes} minutes")
+        if timeout_minutes is not None:
+            self.logger.info(f"  Timeout: {timeout_minutes} minutes")
+        else:
+            self.logger.info(f"  Timeout: None (unlimited)")
         
         try:
             # Run the experiment and wait for completion
@@ -237,18 +240,22 @@ class ExperimentRunner:
                     text=True
                 )
                 
-                # Wait for the process to complete with a timeout (30 minutes default)
-                timeout = timeout_minutes * 60  # Convert to seconds
-                try:
-                    return_code = process.wait(timeout=timeout)
-                except subprocess.TimeoutExpired:
-                    self.logger.error(f"[TIMEOUT] {experiment_id} exceeded {timeout_minutes} minute timeout, terminating...")
-                    process.kill()
-                    process.wait()  # Wait for process to actually terminate
-                    return_code = -1  # Set to failure code
-                    
-                    # Add timeout info to status
-                    self.experiment_status[experiment_id]['timeout'] = True
+                # Wait for the process to complete with optional timeout
+                if timeout_minutes is not None:
+                    timeout = timeout_minutes * 60  # Convert to seconds
+                    try:
+                        return_code = process.wait(timeout=timeout)
+                    except subprocess.TimeoutExpired:
+                        self.logger.error(f"[TIMEOUT] {experiment_id} exceeded {timeout_minutes} minute timeout, terminating...")
+                        process.kill()
+                        process.wait()  # Wait for process to actually terminate
+                        return_code = -1  # Set to failure code
+                        
+                        # Add timeout info to status
+                        self.experiment_status[experiment_id]['timeout'] = True
+                else:
+                    # No timeout - wait indefinitely
+                    return_code = process.wait()
                 
                 end_time = datetime.now()
                 duration = end_time - self.experiment_status[experiment_id]['start_time']
@@ -263,7 +270,8 @@ class ExperimentRunner:
                     self.logger.info(f"[COMPLETED] {experiment_id} (Duration: {duration}, Exit code: {return_code})")
                 elif return_code == -1 and self.experiment_status[experiment_id].get('timeout', False):
                     self.experiment_status[experiment_id]['status'] = 'timeout'
-                    self.logger.error(f"[TIMEOUT] {experiment_id} (Duration: {duration}, Timeout after {timeout_minutes} minutes)")
+                    timeout_msg = f"{timeout_minutes} minutes" if timeout_minutes is not None else "unknown"
+                    self.logger.error(f"[TIMEOUT] {experiment_id} (Duration: {duration}, Timeout after {timeout_msg})")
                 else:
                     self.experiment_status[experiment_id]['status'] = 'failed'
                     self.logger.error(f"[FAILED] {experiment_id} (Duration: {duration}, Exit code: {return_code})")
@@ -288,7 +296,7 @@ class ExperimentRunner:
             self.experiment_status[experiment_id]['error'] = str(e)
             return False
     
-    def run_all_experiments(self, experiments, timeout_minutes=30):
+    def run_all_experiments(self, experiments, timeout_minutes=None):
         """Run all experiments sequentially"""
         self.logger.info(f"[LAUNCH] Starting {len(experiments)} experiments sequentially...")
         
@@ -433,8 +441,8 @@ def main():
                        help='Only check environment and exit')
     parser.add_argument('--show-logs', action='store_true',
                        help='Show log file locations from the latest run')
-    parser.add_argument('--timeout', type=int, default=30,
-                       help='Timeout for each experiment in minutes (default: 30)')
+    parser.add_argument('--timeout', type=int, default=None,
+                       help='Timeout for each experiment in minutes (default: no timeout)')
     
     args = parser.parse_args()
     

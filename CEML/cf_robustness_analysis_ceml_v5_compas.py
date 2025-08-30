@@ -141,6 +141,17 @@ def generate_counterfactuals_ceml(x_test, y_test, model, method='ceml', total_cf
     log_print(f"Generating counterfactuals using CEML library")
     log_print(f"Test set size: {len(x_test)} samples")
     
+    # Validate CEML imports and setup
+    try:
+        log_print(f"Validating CEML setup...")
+        log_print(f"  Model type: {type(model)}")
+        log_print(f"  X_test shape: {x_test.shape}")
+        log_print(f"  Y_test shape: {y_test.shape}")
+        log_print(f"  X_test dtypes: {x_test.dtypes.unique()}")
+        log_print(f"  Model classes: {getattr(model, 'classes_', 'Unknown')}")
+    except Exception as e:
+        log_print(f"  Error during CEML validation: {e}")
+    
     x_test = x_test.reset_index(drop=True)
     y_test = y_test.reset_index(drop=True)
     

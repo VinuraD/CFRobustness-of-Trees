@@ -8,7 +8,10 @@ This script evaluates the robustness of counterfactual explanations across two s
 
 The workflow is:
 1. Generate counterfactual explanations on unperturbed data with a baseline model
-2. Run DATA PERTURBATION tests:
+2            # Use a subset of test data for faster CF generation (CEML is slower than DiCE)
+            test_subset_size = min(50, len(X_test))  # Use smaller subset for CEML
+            X_test_subset = X_test.iloc[:test_subset_size]
+            y_test_subset = pd.Series(y_test[:test_subset_size])n DATA PERTURBATION tests:
    - Train models with the same architecture on different perturbed datasets
    - Evaluate how valid the original counterfactuals remain
 3. Run MODEL PERTURBATION tests:
@@ -132,61 +135,110 @@ def generate_counterfactuals_ceml(x_test, y_test, model, method='ceml', total_cf
         cf_list: DataFrame with counterfactuals and success flag
         success_rate: Proportion of successful generations
     """
-    log_print(f"Generating counterfactuals using CEML library")
-    log_print(f"Test set size: {len(x_test)} samples")
-    
-    x_test = x_test.reset_index(drop=True)
-    y_test = y_test.reset_index(drop=True)
-    
-    # Initialize results storage
-    cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
-    
-    successful_cfs = 0
-    failed_cfs = 0
-    
-    # CEML optimizer arguments
-    opt_args = {"max_iter": 100, "epsilon": 1e-4}
-    
-    for i in range(len(x_test)):
-        query_instance = x_test.iloc[i].values
-        y_true = y_test.iloc[i]
-        y_target = 1 - y_true  # Flip the class
+    try:
+        log_print(f"Generating counterfactuals using CEML library")
+        log_print(f"Test set size: {len(x_test)} samples")
         
+        # Validate CEML imports and setup
         try:
-            # Generate counterfactual using CEML
-            result = generate_counterfactual(
+            log_print(f"Validating CEML setup...")
+            log_print(f"  Model type: {type(model)}")
+            log_print(f"  X_test shape: {x_test.shape}")
+            log_print(f"  Y_test shape: {y_test.shape}")
+            log_print(f"  X_test dtypes: {x_test.dtypes.unique()}")
+            log_print(f"  Model classes: {getattr(model, 'classes_', 'Unknown')}")
+        except Exception as e:
+            log_print(f"  Error during CEML validation: {e}")
+        
+        x_test = x_test.reset_index(drop=True)
+        y_test = y_test.reset_index(drop=True)
+        
+        # Initialize results storage
+        cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
+        
+        successful_cfs = 0
+        failed_cfs = 0
+        
+        # CEML optimizer arguments
+        opt_args = {"max_iter": 100, "epsilon": 1e-4}
+        
+        # Test CEML with first instance to catch early errors
+        try:
+            log_print(f"Testing CEML with first instance...")
+            test_instance = x_test.iloc[0].values
+            test_target = 1 - y_test.iloc[0]
+            test_result = generate_counterfactual(
                 model, 
-                x=query_instance, 
-                y_target=y_target,
+                x=test_instance, 
+                y_target=test_target,
                 optimizer_args=opt_args
             )
+            log_print(f"  CEML test successful. Result type: {type(test_result)}")
+        except Exception as e:
+            log_print(f"  CEML test failed: {type(e).__name__}: {str(e)}")
+            log_print(f"  This may indicate a CEML library compatibility issue")
+        
+        log_print(f"Starting counterfactual generation loop...")
+        
+        for i in range(len(x_test)):
+            log_print(f"  Processing instance {i+1}/{len(x_test)}...")
+            query_instance = x_test.iloc[i].values
+            y_true = y_test.iloc[i]
+            y_target = 1 - y_true  # Flip the class
             
-            if result is not None and 'x_cf' in result:
-                cf_features = result['x_cf']
-                cf_class = result.get('y_cf', y_target)
+            try:
+                # Generate counterfactual using CEML
+                result = generate_counterfactual(
+                    model, 
+                    x=query_instance, 
+                    y_target=y_target,
+                    optimizer_args=opt_args
+                )
                 
-                # Store counterfactual
-                cf_row = list(cf_features) + [cf_class, True]
-                cf_list.loc[i] = cf_row
-                successful_cfs += 1
-            else:
-                # No counterfactual generated, use original with success=False
+                if result is not None and 'x_cf' in result:
+                    cf_features = result[0]['x_cf']
+                    cf_class = result[0].get('y_cf', y_target)
+                    
+                    # Store counterfactual
+                    cf_row = list(cf_features) + [cf_class, True]
+                    cf_list.loc[i] = cf_row
+                    successful_cfs += 1
+                    log_print(f"    ✓ Successful CF generated for instance {i}")
+                else:
+                    # No counterfactual generated, use original with success=False
+                    default_row = list(query_instance) + [y_true, False]
+                    cf_list.loc[i] = default_row
+                    failed_cfs += 1
+                    log_print(f"    ✗ No CF generated for instance {i} (result: {result})")
+                    
+            except Exception as e:
+                # Failed to generate counterfactual, use original with success=False
+                log_print(f"    ✗ Exception for instance {i}: {type(e).__name__}: {str(e)}")
                 default_row = list(query_instance) + [y_true, False]
                 cf_list.loc[i] = default_row
                 failed_cfs += 1
-                
-        except Exception as e:
-            # Failed to generate counterfactual, use original with success=False
+        
+        success_rate = successful_cfs / len(x_test)
+        log_print(f"Counterfactual generation complete:")
+        log_print(f"  Successful: {successful_cfs}/{len(x_test)} ({success_rate:.2%})")
+        log_print(f"  Failed: {failed_cfs}/{len(x_test)} ({(1-success_rate):.2%})")
+        
+        return cf_list, success_rate
+
+    except Exception as e:
+        # Fallback: return empty counterfactuals if CEML completely fails
+        log_print(f"CEML generation completely failed: {type(e).__name__}: {str(e)}")
+        log_print(f"Returning empty counterfactuals with all failures")
+        
+        # Create fallback result with all failed CFs
+        cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
+        for i in range(len(x_test)):
+            query_instance = x_test.iloc[i].values
+            y_true = y_test.iloc[i]
             default_row = list(query_instance) + [y_true, False]
             cf_list.loc[i] = default_row
-            failed_cfs += 1
-    
-    success_rate = successful_cfs / len(x_test)
-    log_print(f"Counterfactual generation complete:")
-    log_print(f"  Successful: {successful_cfs}/{len(x_test)} ({success_rate:.2%})")
-    log_print(f"  Failed: {failed_cfs}/{len(x_test)} ({(1-success_rate):.2%})")
-    
-    return cf_list, success_rate
+        
+        return cf_list, 0.0
 
 def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
     """
