@@ -245,7 +245,7 @@ def main():
     print("COUNTERFACTUAL ROBUSTNESS MODEL PERTURBATIONS LINE PLOTS")
     print("="*70)
     
-    datasets = ['german_credit', 'spambase', 'heloc']
+    datasets = ['german_credit', 'spambase', 'heloc', 'compas']
     all_created_plots = []
     
     for dataset_name in datasets:

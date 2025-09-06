@@ -157,22 +157,21 @@ class ExperimentDataReader:
         self.structured_data = None
         
         # Determine file paths based on dataset
-        if dataset_name.lower() in ['german_credit', 'spambase', 'heloc']:
+        if dataset_name.lower() in ['german_credit', 'spambase', 'heloc', 'compas']:
             # Use separate files for these datasets
             dataset_prefix = {
                 'german_credit': 'German_Credit',
                 'spambase': 'Spambase', 
-                'heloc': 'Heloc'
+                'heloc': 'Heloc',
+                'compas': 'Compas'
             }[dataset_name.lower()]
             
             self.model_file = f"summary_tables/{dataset_prefix}_model_perturb.xlsx"
             self.data_file = f"summary_tables/{dataset_prefix}_data_perturb.xlsx"
             self.is_separate_files = True
         else:
-            # Single file for other datasets (like COMPAS)
-            file_mapping = {
-                'compas': "summary_tables/Compas_all_Updated.xlsx"
-            }
+            # Single file for other datasets
+            file_mapping = {}
             self.single_file = file_mapping.get(dataset_name.lower())
             self.is_separate_files = False
     
