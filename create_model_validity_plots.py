@@ -283,7 +283,7 @@ def create_model_perturbation_grid_plots(datasets, save_dir="visualizations"):
             continue
         
         # Create 2x4 grid (2 types x 4 methods)
-        fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+        fig, axes = plt.subplots(2, 4, figsize=(16, 6))  # Reduced height from 6.5 to 6
         
         for method_idx, method in enumerate(cf_methods):
             if method not in reader.model_data:
@@ -320,8 +320,8 @@ def create_model_perturbation_grid_plots(datasets, save_dir="visualizations"):
                                 
                                 if pd.notna(mean_val):
                                     x_values.append(n_est)
-                                    y_values.append(mean_val * 100)
-                                    y_errors.append(std_val * 100 if pd.notna(std_val) else 0)
+                                    y_values.append(mean_val)  # Keep as 0-1 range
+                                    y_errors.append(std_val if pd.notna(std_val) else 0)
                     else:
                         filtered_configs = [c for c in data['configs'] if c['n_estimators'] == fixed_value]
                         x_values = []
@@ -339,8 +339,8 @@ def create_model_perturbation_grid_plots(datasets, save_dir="visualizations"):
                                 
                                 if pd.notna(mean_val):
                                     x_values.append(max_d)
-                                    y_values.append(mean_val * 100)
-                                    y_errors.append(std_val * 100 if pd.notna(std_val) else 0)
+                                    y_values.append(mean_val)  # Keep as 0-1 range
+                                    y_errors.append(std_val if pd.notna(std_val) else 0)
                     
                     # Plot the line
                     if x_values:
@@ -350,7 +350,7 @@ def create_model_perturbation_grid_plots(datasets, save_dir="visualizations"):
                                    capsize=3, capthick=1.5, elinewidth=1)
                 
                 # Customize subplot
-                ax.set_ylim(0, 105)
+                ax.set_ylim(0, 1.05)  # Changed from 0-105 to 0-1.05
                 ax.grid(True, alpha=0.3, linestyle='--')
                 
                 # Set x-axis based on available data
@@ -382,7 +382,36 @@ def create_model_perturbation_grid_plots(datasets, save_dir="visualizations"):
             ax.set_ylabel('')
             ax.set_title('')
         
-        plt.tight_layout()
+        # Add y-axis labels to all subplots
+        for row in range(2):
+            for col in range(4):
+                ax = axes[row, col]
+                ax.set_ylabel('validity', fontsize=10)
+        
+        # Add x-axis labels based on row
+        for row in range(2):
+            for col in range(4):
+                ax = axes[row, col]
+                if row == 0:  # First row - n_estimators
+                    ax.set_xlabel('n-est', fontsize=10)
+                else:  # Second row - max_depth
+                    ax.set_xlabel('max-dep.', fontsize=10)
+        
+        # Add some space to the left and between rows, adjust layout
+        plt.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.2, hspace=0.4, wspace=0.3)
+        
+        # Add master roman numerals at the bottom for each column
+        roman_numerals = ['(i)', '(ii)', '(iii)', '(iv)']
+        for col in range(4):
+            # Position at bottom of entire figure for each column
+            fig.text(0.2 + col * 0.18, 0.05, roman_numerals[col], fontsize=14, weight='bold', 
+                    ha='center', va='center')
+        
+        # Add row labels to the left of the y-axis labels using the added space
+        row_labels = ['A', 'B']
+        for row in range(2):
+            fig.text(0.05, 0.8 - row * 0.4, row_labels[row], fontsize=16, weight='bold', 
+                    ha='center', va='center')
         
         # Save the grid plot
         os.makedirs(save_dir, exist_ok=True)
