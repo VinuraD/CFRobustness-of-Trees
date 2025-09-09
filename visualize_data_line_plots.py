@@ -11,19 +11,31 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from baseline_data_reader import ExperimentDataReader
 import os
+import argparse
 
 # Set style for better looking plots
 plt.style.use('default')
 sns.set_palette("husl")
 
-# Set consistent font styling
-plt.rcParams['font.family'] = 'Times New Roman'
-plt.rcParams['font.size'] = 12
-plt.rcParams['axes.titlesize'] = 14
-plt.rcParams['axes.labelsize'] = 12
-plt.rcParams['legend.fontsize'] = 11
-plt.rcParams['xtick.labelsize'] = 11
-plt.rcParams['ytick.labelsize'] = 11
+# Set consistent font styling - Palatino font, size 14
+import matplotlib as mpl
+import matplotlib.font_manager as fm
+
+# Try different Palatino font names that might be available on Windows
+palatino_options = [
+    'Palatino',
+    'Palatino Linotype', 
+    'Book Antiqua',  # Similar serif font often available on Windows
+    'Times New Roman',
+    'serif'
+]
+
+mpl.rcParams.update({
+    "text.usetex": False,
+    "font.family": "serif",
+    "font.serif": palatino_options,
+    "font.size": 14,
+})
 
 def load_dataset_data(dataset_name):
     """Load dataset data and return the reader object"""
@@ -34,6 +46,15 @@ def load_dataset_data(dataset_name):
     else:
         raise ValueError(f"Failed to load {dataset_name} data")
 
+def convert_bins_to_percentages(bins, perturbation_type):
+    """Convert bin values to their corresponding percentages based on perturbation type"""
+    if 'major' in perturbation_type:
+        # For major addition/deletion: bin=0 is 0%, bin=1 is 50%
+        return [bin_val * 50 for bin_val in bins]
+    else:
+        # For minor addition/deletion: bin=0 is 0%, bin=5 is 5%, bin=10 is 10%, etc.
+        return bins  # bins already represent percentages directly
+
 def create_line_plot_for_perturbation(data_dict, perturbation_type, dataset_name, save_dir="visualizations/data_perturb"):
     """Create a line plot for a specific perturbation type across all methods"""
     
@@ -41,7 +62,7 @@ def create_line_plot_for_perturbation(data_dict, perturbation_type, dataset_name
         os.makedirs(save_dir)
     
     # Set up the plot
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(8, 4))
     
     # Define colors for methods
     colors = {
@@ -63,36 +84,37 @@ def create_line_plot_for_perturbation(data_dict, perturbation_type, dataset_name
             validity_means = [d['mean_validity'] for d in bin_data]
             validity_stds = [d['std_validity'] if pd.notna(d['std_validity']) else 0 for d in bin_data]
             
+            # Convert bins to percentages
+            percentage_bins = convert_bins_to_percentages(bins, perturbation_type)
+            
             # Plot line with error bars
-            plt.errorbar(bins, validity_means, yerr=validity_stds, 
+            plt.errorbar(percentage_bins, validity_means, yerr=validity_stds, 
                         label=method, color=colors[method], 
                         marker='o', linewidth=2.5, markersize=8, capsize=5)
     
     # Customize the plot
-    plt.xlabel('Bin', fontweight='bold')
-    plt.ylabel('Mean Validity', fontweight='bold')
-    plt.title(f'{dataset_name.replace("_", " ").title()} - {perturbation_type.replace("_", " ").title()}: Mean Validity vs Bin', 
-              fontweight='bold', pad=20)
+    plt.xlabel('Perturbation Percentage (%)', fontweight='bold', fontfamily='serif', fontsize=14)
+    plt.ylabel('Mean Validity', fontweight='bold', fontfamily='serif', fontsize=14)
+    plt.title(f'{dataset_name.replace("_", " ").title()} - {perturbation_type.replace("_", " ").title()}: Mean Validity vs Perturbation %', 
+              fontweight='bold', pad=20, fontfamily='serif', fontsize=16)
     
-    # Place legend at top right corner
-    plt.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
+    # Remove legend - will be created separately
     plt.grid(True, alpha=0.3)
     
     # Set reasonable axis limits and integer ticks for x-axis
     plt.ylim(0, 1.1)  # Validity should be between 0 and 1
     
-    # Set x-axis to show integer values only
-    # Set x-axis to show integer values only
+    # Set x-axis to show percentage values
     if bins:
-        all_bins = sorted(set(bins))
-        plt.xticks(all_bins)
-        plt.xlim(min(all_bins) - 0.5, max(all_bins) + 0.5)
+        all_percentage_bins = sorted(set(convert_bins_to_percentages(bins, perturbation_type)))
+        plt.xticks(all_percentage_bins)
+        plt.xlim(min(all_percentage_bins) - 0.5, max(all_percentage_bins) + 0.5)
     
     # Improve layout
     plt.tight_layout()
     
     # Save the plot
-    plot_path = os.path.join(save_dir, f'{dataset_name}_{perturbation_type}_validity_vs_bin.png')
+    plot_path = os.path.join(save_dir, f'{dataset_name}_{perturbation_type}_validity_vs_percentage.png')
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     print(f"OK: Saved validity plot: {plot_path}")
     
@@ -107,7 +129,7 @@ def create_accuracy_line_plot_for_perturbation(data_dict, perturbation_type, dat
         os.makedirs(save_dir)
     
     # Set up the plot
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(8, 4))
     
     # Define colors for methods
     colors = {
@@ -129,41 +151,193 @@ def create_accuracy_line_plot_for_perturbation(data_dict, perturbation_type, dat
             accuracy_means = [d['mean_accuracy'] for d in bin_data]
             accuracy_stds = [d['std_accuracy'] if pd.notna(d['std_accuracy']) else 0 for d in bin_data]
             
+            # Convert bins to percentages
+            percentage_bins = convert_bins_to_percentages(bins, perturbation_type)
+            
             # Plot line with error bars
-            plt.errorbar(bins, accuracy_means, yerr=accuracy_stds, 
+            plt.errorbar(percentage_bins, accuracy_means, yerr=accuracy_stds, 
                         label=method, color=colors[method], 
                         marker='s', linewidth=2.5, markersize=8, capsize=5)
     
     # Customize the plot
-    plt.xlabel('Bin', fontweight='bold')
-    plt.ylabel('Mean Accuracy', fontweight='bold')
-    plt.title(f'{dataset_name.replace("_", " ").title()} - {perturbation_type.replace("_", " ").title()}: Mean Accuracy vs Bin', 
-              fontweight='bold', pad=20)
+    plt.xlabel('Perturbation Percentage (%)', fontweight='bold', fontfamily='serif', fontsize=14)
+    plt.ylabel('Mean Accuracy', fontweight='bold', fontfamily='serif', fontsize=14)
+    plt.title(f'{dataset_name.replace("_", " ").title()} - {perturbation_type.replace("_", " ").title()}: Mean Accuracy vs Perturbation %', 
+              fontweight='bold', pad=20, fontfamily='serif', fontsize=16)
     
-    # Place legend at top right corner
-    plt.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
+    # Remove legend - will be created separately
     plt.grid(True, alpha=0.3)
     
     # Set reasonable axis limits and integer ticks for x-axis
     plt.ylim(0, 1.1)  # Accuracy should be between 0 and 1
     
-    # Set x-axis to show integer values only
+    # Set x-axis to show percentage values
     if bins:
-        all_bins = sorted(set(bins))
-        plt.xticks(all_bins)
-        plt.xlim(min(all_bins) - 0.5, max(all_bins) + 0.5)
+        all_percentage_bins = sorted(set(convert_bins_to_percentages(bins, perturbation_type)))
+        plt.xticks(all_percentage_bins)
+        plt.xlim(min(all_percentage_bins) - 0.5, max(all_percentage_bins) + 0.5)
     
     # Improve layout
     plt.tight_layout()
     
     # Save the plot
-    plot_path = os.path.join(save_dir, f'{dataset_name}_{perturbation_type}_accuracy_vs_bin.png')
+    plot_path = os.path.join(save_dir, f'{dataset_name}_{perturbation_type}_accuracy_vs_percentage.png')
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     print(f"OK: Saved accuracy plot: {plot_path}")
     
     plt.close()  # Close the figure to free memory
     
     return plot_path
+
+def create_data_perturbation_grid_plot(datasets, save_dir="visualizations"):
+    """Create 3x4 grid plot for data perturbations (3 datasets x 4 perturbation types)"""
+    
+    perturbation_types = ['major_deletion', 'major_addition', 'minor_deletion', 'minor_addition']
+    
+    # Create figure with 3x4 subplots
+    fig, axes = plt.subplots(3, 4, figsize=(16, 12))
+    
+    # Colors for methods
+    colors = {
+        'DICE': '#1f77b4',      # Blue
+        'NICE': '#ff7f0e',      # Orange  
+        'FOCUS': '#2ca02c',     # Green (previously cfxplorer)
+        'OCEAN': '#d62728',     # Red
+        'FEATURE TWEAK': '#9467bd',  # Purple
+        'CEML': '#8c564b'       # Brown
+    }
+    
+    for dataset_idx, dataset_name in enumerate(datasets):
+        print(f"Processing {dataset_name} for grid plot...")
+        
+        # Load data for this dataset
+        reader = load_dataset_data(dataset_name)
+        
+        if reader is None or not reader.data_data:
+            print(f"ERROR: No data available for {dataset_name}")
+            continue
+            
+        for perturb_idx, perturbation_type in enumerate(perturbation_types):
+            ax = axes[dataset_idx, perturb_idx]
+            
+            # Plot each method
+            for method in ['DICE', 'NICE', 'FOCUS', 'OCEAN', 'FEATURE TWEAK', 'CEML']:
+                if method in reader.data_data and perturbation_type in reader.data_data[method]:
+                    bin_data = reader.data_data[method][perturbation_type]
+                    
+                    # Extract data
+                    bins = [d['bin'] for d in bin_data]
+                    validity_means = [d['mean_validity'] for d in bin_data]
+                    validity_stds = [d['std_validity'] if pd.notna(d['std_validity']) else 0 for d in bin_data]
+                    
+                    # Convert bins to percentages
+                    percentage_bins = convert_bins_to_percentages(bins, perturbation_type)
+                    
+                    # Plot line with error bars
+                    ax.errorbar(percentage_bins, validity_means, yerr=validity_stds, 
+                               color=colors[method], marker='o', linewidth=2, markersize=6, capsize=3)
+            
+            # Customize subplot
+            ax.set_ylim(0, 1.1)
+            ax.grid(True, alpha=0.3)
+            
+            # Set x-axis based on perturbation type
+            if bins:
+                all_percentage_bins = sorted(set(convert_bins_to_percentages(bins, perturbation_type)))
+                ax.set_xticks(all_percentage_bins)
+                ax.set_xlim(min(all_percentage_bins) - 0.5, max(all_percentage_bins) + 0.5)
+    
+    # Remove individual subplot labels and titles for clean grid
+    for ax in axes.flat:
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_title('')
+    
+    plt.tight_layout()
+    
+    # Save the grid plot
+    os.makedirs(save_dir, exist_ok=True)
+    grid_path = os.path.join(save_dir, 'data_perturbation_grid_plot.png')
+    plt.savefig(grid_path, dpi=300, bbox_inches='tight')
+    print(f"Created data perturbation grid plot: {grid_path}")
+    plt.close()
+    
+    return grid_path
+
+def create_heloc_perturbation_grid_plot(save_dir="visualizations"):
+    """Create 1x4 grid plot for HELOC data perturbations"""
+    
+    perturbation_types = ['major_deletion', 'major_addition', 'minor_deletion', 'minor_addition']
+    dataset_name = 'heloc'
+    
+    # Create figure with 1x4 subplots
+    fig, axes = plt.subplots(1, 4, figsize=(16, 4))
+    
+    # Colors for methods
+    colors = {
+        'DICE': '#1f77b4',      # Blue
+        'NICE': '#ff7f0e',      # Orange  
+        'FOCUS': '#2ca02c',     # Green (previously cfxplorer)
+        'OCEAN': '#d62728',     # Red
+        'FEATURE TWEAK': '#9467bd',  # Purple
+        'CEML': '#8c564b'       # Brown
+    }
+    
+    print(f"Processing {dataset_name} for 1x4 grid plot...")
+    
+    # Load data for HELOC
+    reader = load_dataset_data(dataset_name)
+    
+    if reader is None or not reader.data_data:
+        print(f"ERROR: No data available for {dataset_name}")
+        return None
+        
+    for perturb_idx, perturbation_type in enumerate(perturbation_types):
+        ax = axes[perturb_idx]
+        
+        # Plot each method
+        for method in ['DICE', 'NICE', 'FOCUS', 'OCEAN', 'FEATURE TWEAK', 'CEML']:
+            if method in reader.data_data and perturbation_type in reader.data_data[method]:
+                bin_data = reader.data_data[method][perturbation_type]
+                
+                # Extract data
+                bins = [d['bin'] for d in bin_data]
+                validity_means = [d['mean_validity'] for d in bin_data]
+                validity_stds = [d['std_validity'] if pd.notna(d['std_validity']) else 0 for d in bin_data]
+                
+                # Convert bins to percentages
+                percentage_bins = convert_bins_to_percentages(bins, perturbation_type)
+                
+                # Plot line with error bars
+                ax.errorbar(percentage_bins, validity_means, yerr=validity_stds, 
+                           color=colors[method], marker='o', linewidth=2, markersize=6, capsize=3)
+        
+        # Customize subplot
+        ax.set_ylim(0, 1.1)
+        ax.grid(True, alpha=0.3)
+        
+        # Set x-axis based on perturbation type
+        if bins:
+            all_percentage_bins = sorted(set(convert_bins_to_percentages(bins, perturbation_type)))
+            ax.set_xticks(all_percentage_bins)
+            ax.set_xlim(min(all_percentage_bins) - 0.5, max(all_percentage_bins) + 0.5)
+    
+    # Remove individual subplot labels and titles for clean grid
+    for ax in axes.flat:
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_title('')
+    
+    plt.tight_layout()
+    
+    # Save the grid plot
+    os.makedirs(save_dir, exist_ok=True)
+    grid_path = os.path.join(save_dir, 'heloc_data_perturbation_grid_plot.png')
+    plt.savefig(grid_path, dpi=300, bbox_inches='tight')
+    print(f"Created HELOC data perturbation grid plot: {grid_path}")
+    plt.close()
+    
+    return grid_path
 
 def create_all_data_perturbation_plots(reader, dataset_name, save_dir="visualizations/data_perturb"):
     """Create line plots for all data perturbation types"""
@@ -221,11 +395,31 @@ def display_data_summary(reader, dataset_name):
 
 def main():
     """Main function to create all data perturbations line plots for all datasets"""
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Generate data perturbation visualizations')
+    parser.add_argument('--gridplot', action='store_true', help='Generate 3x4 grid plot instead of individual plots')
+    args = parser.parse_args()
+    
     print("="*70)
     print("COUNTERFACTUAL ROBUSTNESS DATA PERTURBATIONS LINE PLOTS")
     print("="*70)
     
     datasets = ['german_credit', 'spambase', 'heloc', 'compas']
+    
+    if args.gridplot:
+        print("Creating grid plots...")
+        # Create 3x4 grid: compas, german_credit, spambase
+        grid_datasets = ['compas', 'german_credit', 'spambase']
+        grid_path_3x4 = create_data_perturbation_grid_plot(grid_datasets)
+        print(f"3x4 Grid plot created: {grid_path_3x4}")
+        
+        # Create 1x4 grid for HELOC
+        grid_path_1x4 = create_heloc_perturbation_grid_plot()
+        print(f"1x4 HELOC Grid plot created: {grid_path_1x4}")
+        return
+    
+    # Regular individual plots
     all_created_plots = []
     
     for dataset_name in datasets:

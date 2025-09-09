@@ -7,17 +7,28 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import argparse
 
 # Set up plotting style with consistent font
 plt.style.use('default')
-plt.rcParams['font.family'] = 'Times New Roman'
-plt.rcParams['font.size'] = 12
-plt.rcParams['axes.titlesize'] = 14
-plt.rcParams['axes.labelsize'] = 12
-plt.rcParams['legend.fontsize'] = 11
-plt.rcParams['xtick.labelsize'] = 11
-plt.rcParams['ytick.labelsize'] = 11
-plt.rcParams['figure.figsize'] = (10, 6)
+import matplotlib as mpl
+import matplotlib.font_manager as fm
+
+# Try different Palatino font names that might be available on Windows
+palatino_options = [
+    'Palatino',
+    'Palatino Linotype', 
+    'Book Antiqua',  # Similar serif font often available on Windows
+    'Times New Roman',
+    'serif'
+]
+
+mpl.rcParams.update({
+    "text.usetex": False,
+    "font.family": "serif",
+    "font.serif": palatino_options,
+    "font.size": 14,
+})
 
 from baseline_data_reader import ExperimentDataReader
 
@@ -108,7 +119,7 @@ def create_validity_line_plot(model_data, model_params, cf_method, plot_type, da
     os.makedirs(save_dir, exist_ok=True)
     
     # Set up the plot
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(8, 4))
     
     # Color palette for different model types
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
@@ -197,9 +208,9 @@ def create_validity_line_plot(model_data, model_params, cf_method, plot_type, da
     
     # Customize the plot
     plt.title(f"{cf_method} - Validity vs {x_label}\n{title_suffix}", 
-             fontweight='bold', pad=20)
-    plt.xlabel(x_label, fontweight='bold')
-    plt.ylabel('Validity (%)', fontweight='bold')
+             fontweight='bold', pad=20, fontfamily='serif', fontsize=16)
+    plt.xlabel(x_label, fontweight='bold', fontfamily='serif', fontsize=14)
+    plt.ylabel('Validity (%)', fontweight='bold', fontfamily='serif', fontsize=14)
     
     # Set axis limits and clean integer ticks for x-axis
     plt.ylim(0, 105)
@@ -223,8 +234,7 @@ def create_validity_line_plot(model_data, model_params, cf_method, plot_type, da
     
     plt.grid(True, alpha=0.3, linestyle='--')
     
-    # Place legend at top right corner
-    plt.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
+    # Remove legend - will be created separately
     
     # Improve layout
     plt.tight_layout()
@@ -238,14 +248,172 @@ def create_validity_line_plot(model_data, model_params, cf_method, plot_type, da
     plt.close()
     return plot_path
 
+def create_model_perturbation_grid_plots(datasets, save_dir="visualizations"):
+    """Create 3 separate 2x4 grid plots for model perturbations"""
+    
+    cf_methods = ['DICE', 'NICE', 'CEML', 'FEATURE TWEAK']
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    
+    # Create 3 separate grid plots for the first 3 datasets
+    # Now create for all 4 datasets
+    
+    for dataset_idx, dataset_name in enumerate(datasets):
+        print(f"Creating model perturbation grid for {dataset_name}...")
+        
+        # Load data for this dataset
+        reader = load_model_data(dataset_name)
+        if reader is None:
+            print(f"ERROR: Failed to load data for {dataset_name}")
+            continue
+            
+        # Extract configurations
+        configs = []
+        if reader.model_data:
+            sample_method = list(reader.model_data.keys())[0]
+            configs = list(reader.model_data[sample_method].keys())
+        
+        if not configs:
+            print(f"ERROR: No configurations found for {dataset_name}")
+            continue
+            
+        # Parse configurations
+        model_params = parse_model_configurations(configs)
+        if not model_params:
+            print(f"ERROR: No valid model configurations for {dataset_name}")
+            continue
+        
+        # Create 2x4 grid (2 types x 4 methods)
+        fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+        
+        for method_idx, method in enumerate(cf_methods):
+            if method not in reader.model_data:
+                continue
+                
+            for plot_type_idx, plot_type in enumerate(['1', '2']):
+                ax = axes[plot_type_idx, method_idx]
+                
+                # Determine fixed and varying parameters
+                if plot_type == '1':
+                    fixed_param, fixed_value = 'max_depth', 3
+                    varying_param = 'n_estimators'
+                else:
+                    fixed_param, fixed_value = 'n_estimators', 100
+                    varying_param = 'max_depth'
+                
+                # Plot each model type
+                for i, (model_type, data) in enumerate(sorted(model_params.items())):
+                    # Filter configurations
+                    if plot_type == '1':
+                        filtered_configs = [c for c in data['configs'] if c['max_depth'] == fixed_value]
+                        x_values = []
+                        y_values = []
+                        y_errors = []
+                        
+                        for config_data in sorted(filtered_configs, key=lambda x: x['n_estimators']):
+                            config_name = config_data['config']
+                            n_est = config_data['n_estimators']
+                            
+                            if config_name in reader.model_data[method]:
+                                entry = reader.model_data[method][config_name]
+                                mean_val = entry['mean_validity']
+                                std_val = entry['std_validity']
+                                
+                                if pd.notna(mean_val):
+                                    x_values.append(n_est)
+                                    y_values.append(mean_val * 100)
+                                    y_errors.append(std_val * 100 if pd.notna(std_val) else 0)
+                    else:
+                        filtered_configs = [c for c in data['configs'] if c['n_estimators'] == fixed_value]
+                        x_values = []
+                        y_values = []
+                        y_errors = []
+                        
+                        for config_data in sorted(filtered_configs, key=lambda x: x['max_depth']):
+                            config_name = config_data['config']
+                            max_d = config_data['max_depth']
+                            
+                            if config_name in reader.model_data[method]:
+                                entry = reader.model_data[method][config_name]
+                                mean_val = entry['mean_validity']
+                                std_val = entry['std_validity']
+                                
+                                if pd.notna(mean_val):
+                                    x_values.append(max_d)
+                                    y_values.append(mean_val * 100)
+                                    y_errors.append(std_val * 100 if pd.notna(std_val) else 0)
+                    
+                    # Plot the line
+                    if x_values:
+                        ax.errorbar(x_values, y_values, yerr=y_errors,
+                                   marker='o', linewidth=2, markersize=6,
+                                   color=colors[i % len(colors)],
+                                   capsize=3, capthick=1.5, elinewidth=1)
+                
+                # Customize subplot
+                ax.set_ylim(0, 105)
+                ax.grid(True, alpha=0.3, linestyle='--')
+                
+                # Set x-axis based on available data
+                if x_values:
+                    if plot_type == '1':
+                        all_x_values = []
+                        for model_type, data in sorted(model_params.items()):
+                            filtered_configs = [c for c in data['configs'] if c['max_depth'] == fixed_value]
+                            x_vals = [c['n_estimators'] for c in filtered_configs]
+                            all_x_values.extend(x_vals)
+                        if all_x_values:
+                            unique_x = sorted(set(all_x_values))
+                            ax.set_xticks(unique_x)
+                            ax.set_xlim(min(unique_x) - 0.5, max(unique_x) + 0.5)
+                    else:
+                        all_x_values = []
+                        for model_type, data in sorted(model_params.items()):
+                            filtered_configs = [c for c in data['configs'] if c['n_estimators'] == fixed_value]
+                            x_vals = [c['max_depth'] for c in filtered_configs]
+                            all_x_values.extend(x_vals)
+                        if all_x_values:
+                            unique_x = sorted(set(all_x_values))
+                            ax.set_xticks(unique_x)
+                            ax.set_xlim(min(unique_x) - 0.5, max(unique_x) + 0.5)
+        
+        # Remove individual subplot labels and titles for clean grid
+        for ax in axes.flat:
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+            ax.set_title('')
+        
+        plt.tight_layout()
+        
+        # Save the grid plot
+        os.makedirs(save_dir, exist_ok=True)
+        grid_path = os.path.join(save_dir, f'model_perturbation_grid_{dataset_name}.png')
+        plt.savefig(grid_path, dpi=300, bbox_inches='tight')
+        print(f"Created model perturbation grid for {dataset_name}: {grid_path}")
+        plt.close()
+    
+    return f"Created 4 model perturbation grid plots"
+
 def main():
     """Main function to create all model perturbation plots for all datasets"""
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Generate model perturbation visualizations')
+    parser.add_argument('--gridplot', action='store_true', help='Generate 3 separate 2x4 grid plots instead of individual plots')
+    args = parser.parse_args()
     
     print("="*70)
     print("COUNTERFACTUAL ROBUSTNESS MODEL PERTURBATIONS LINE PLOTS")
     print("="*70)
     
     datasets = ['german_credit', 'spambase', 'heloc', 'compas']
+    
+    if args.gridplot:
+        print("Creating grid plots...")
+        result = create_model_perturbation_grid_plots(datasets)
+        print(result)
+        return
+    
+    # Regular individual plots
     all_created_plots = []
     
     for dataset_name in datasets:
@@ -346,7 +514,7 @@ def create_method_summary_plot(method_data, method_name, dataset_name, save_dir=
         return None
     
     # Create the plot
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(8, 4))
     
     # Create bar plot
     x_pos = range(len(configs))
