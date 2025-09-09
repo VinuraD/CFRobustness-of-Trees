@@ -364,7 +364,8 @@ def create_model_perturbation_grid_plots(datasets, save_dir="visualizations"):
                         if all_x_values:
                             unique_x = sorted(set(all_x_values))
                             ax.set_xticks(unique_x)
-                            ax.set_xlim(min(unique_x) - 0.5, max(unique_x) + 0.5)
+                            # Add more padding for n_estimators plots (values like 50, 100, 200)
+                            ax.set_xlim(min(unique_x) - 10, max(unique_x) + 10)
                     else:
                         all_x_values = []
                         for model_type, data in sorted(model_params.items()):
@@ -386,29 +387,32 @@ def create_model_perturbation_grid_plots(datasets, save_dir="visualizations"):
         for row in range(2):
             for col in range(4):
                 ax = axes[row, col]
-                ax.set_ylabel('validity', fontsize=10)
+                ax.set_ylabel('Validity', fontsize=12)
         
         # Add x-axis labels based on row
         for row in range(2):
             for col in range(4):
                 ax = axes[row, col]
                 if row == 0:  # First row - n_estimators
-                    ax.set_xlabel('n-est', fontsize=10)
+                    ax.set_xlabel('n estimators', fontsize=12)
                 else:  # Second row - max_depth
-                    ax.set_xlabel('max-dep.', fontsize=10)
+                    ax.set_xlabel('max depth', fontsize=12)
         
         # Add some space to the left and between rows, adjust layout
         plt.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.2, hspace=0.4, wspace=0.3)
         
         # Add master roman numerals at the bottom for each column
         roman_numerals = ['(i)', '(ii)', '(iii)', '(iv)']
+        # Position roman numerals below the x-axis labels of the bottom row (row 1)
         for col in range(4):
-            # Position at bottom of entire figure for each column
-            fig.text(0.2 + col * 0.18, 0.05, roman_numerals[col], fontsize=14, weight='bold', 
-                    ha='center', va='center')
+            # Get the bottom row subplot for this column
+            bottom_ax = axes[1, col]  # Bottom row (index 1)
+            # Position roman numeral centered below this subplot's x-axis label with more space
+            bottom_ax.text(0.5, -0.35, roman_numerals[col], transform=bottom_ax.transAxes,
+                          ha='center', va='top', fontsize=14, weight='bold')
         
         # Add row labels to the left of the y-axis labels using the added space
-        row_labels = ['A', 'B']
+        row_labels = ['(a)', '(b)']
         for row in range(2):
             fig.text(0.05, 0.8 - row * 0.4, row_labels[row], fontsize=16, weight='bold', 
                     ha='center', va='center')

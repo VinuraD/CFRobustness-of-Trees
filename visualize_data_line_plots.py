@@ -257,26 +257,29 @@ def create_data_perturbation_grid_plot(datasets, save_dir="visualizations"):
     for row in range(3):
         for col in range(4):
             ax = axes[row, col]
-            ax.set_ylabel('validity', fontsize=10)
+            ax.set_ylabel('Validity', fontsize=12)
     
     # Add x-axis labels to all subplots
     for row in range(3):
         for col in range(4):
             ax = axes[row, col]
-            ax.set_xlabel('Pct%', fontsize=10)
+            ax.set_xlabel('Perturbed data%', fontsize=12)
     
     # Add some space to the left and between rows, adjust layout
     plt.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.15, hspace=0.4, wspace=0.3)
     
     # Add master roman numerals at the bottom for each column
     roman_numerals = ['(i)', '(ii)', '(iii)', '(iv)']
+    # Position roman numerals below the x-axis labels of the bottom row (row 2)
     for col in range(4):
-        # Position at bottom of entire figure for each column - closer to x-axis labels
-        fig.text(0.2 + col * 0.18, 0.08, roman_numerals[col], fontsize=14, weight='bold', 
-                ha='center', va='center')
+        # Get the bottom row subplot for this column
+        bottom_ax = axes[2, col]  # Bottom row (index 2)
+        # Position roman numeral centered below this subplot's x-axis label with more space
+        bottom_ax.text(0.5, -0.35, roman_numerals[col], transform=bottom_ax.transAxes,
+                      ha='center', va='top', fontsize=14, weight='bold')
     
     # Add row labels to the left of the y-axis labels using the added space
-    row_labels = ['A', 'B', 'C']
+    row_labels = ['(a)', '(b)', '(c)']
     for row in range(3):
         fig.text(0.05, 0.85 - row * 0.27, row_labels[row], fontsize=16, weight='bold', 
                 ha='center', va='center')
@@ -297,7 +300,7 @@ def create_heloc_perturbation_grid_plot(save_dir="visualizations"):
     dataset_name = 'heloc'
     
     # Create figure with 1x4 subplots
-    fig, axes = plt.subplots(1, 4, figsize=(16, 2))  # Reduced height from 2.5 to 2
+    fig, axes = plt.subplots(1, 4, figsize=(16, 5))  # Increased height by 3 points for better spacing
     
     # Colors for methods
     colors = {
@@ -357,22 +360,25 @@ def create_heloc_perturbation_grid_plot(save_dir="visualizations"):
     # Add y-axis labels to all subplots
     for col in range(4):
         ax = axes[col]
-        ax.set_ylabel('validity', fontsize=10)
+        ax.set_ylabel('Validity', fontsize=12)
     
     # Add x-axis labels to all subplots
     for col in range(4):
         ax = axes[col]
-        ax.set_xlabel('Pct%', fontsize=10)
+        ax.set_xlabel('Perturbed data%', fontsize=12)
     
-    # Add some space to the left and adjust layout
-    plt.subplots_adjust(left=0.1, right=0.95, top=0.85, bottom=0.3, wspace=0.3)
+    # Add some space to the left and adjust layout with adequate bottom margin
+    plt.subplots_adjust(left=0.1, right=0.95, top=0.85, bottom=0.35, wspace=0.3)
     
     # Add master roman numerals at the bottom for each column
     roman_numerals = ['(i)', '(ii)', '(iii)', '(iv)']
+    # Position roman numerals below the x-axis labels of each subplot with proper spacing
     for col in range(4):
-        # Position at bottom of entire figure for each column
-        fig.text(0.2 + col * 0.18, 0.1, roman_numerals[col], fontsize=14, weight='bold', 
-                ha='center', va='center')
+        # Get the subplot for this column
+        ax = axes[col]
+        # Position roman numeral well below the x-axis label to ensure proper hierarchy
+        ax.text(0.5, -0.25, roman_numerals[col], transform=ax.transAxes,
+               ha='center', va='top', fontsize=14, weight='bold')
     
     # Save the grid plot
     os.makedirs(save_dir, exist_ok=True)
