@@ -432,6 +432,7 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Generate model perturbation visualizations')
     parser.add_argument('--gridplot', action='store_true', help='Generate 3 separate 2x4 grid plots instead of individual plots')
+    parser.add_argument('--accuracy-grid', action='store_true', help='Generate accuracy grid plots (2x3 for first 3 datasets + 2x1 for HELOC)')
     args = parser.parse_args()
     
     print("="*70)
@@ -441,9 +442,27 @@ def main():
     datasets = ['german_credit', 'spambase', 'heloc', 'compas']
     
     if args.gridplot:
-        print("Creating grid plots...")
+        print("Creating validity grid plots...")
         result = create_model_perturbation_grid_plots(datasets)
         print(result)
+        return
+    
+    if args.accuracy_grid:
+        print("Creating accuracy grid plots...")
+        # Create 2x3 grid for first 3 datasets (COMPAS, German Credit, Spambase)
+        datasets_3 = ['compas', 'german_credit', 'spambase']
+        result_3 = create_model_perturbation_accuracy_grid_plots(datasets_3)
+        print(f"Created 2x3 accuracy grid: {result_3}")
+        
+        # Create 2x1 grid for HELOC
+        result_heloc = create_heloc_accuracy_grid_plot()
+        if result_heloc:
+            print(f"Created 2x1 HELOC accuracy grid: {result_heloc}")
+        
+        # Create legend
+        legend_result = create_model_accuracy_legend()
+        print(f"Created accuracy legend: {legend_result}")
+        
         return
     
     # Regular individual plots
@@ -583,6 +602,392 @@ def create_method_summary_plot(method_data, method_name, dataset_name, save_dir=
     plt.close()
     
     return plot_path
+
+def create_model_perturbation_accuracy_grid_plots(datasets_3, save_dir="visualizations"):
+    """Create 2x3 grid plot for model perturbation accuracy values (COMPAS, German Credit, Spambase)"""
+    
+    cf_methods = ['DICE', 'NICE', 'CEML', 'FEATURE TWEAK']
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    
+    # Create 2x3 grid (2 parameter types x 3 datasets)
+    fig, axes = plt.subplots(2, 3, figsize=(14, 6))  # Increased width by 2 units
+    
+    dataset_names_display = ['COMPAS', 'German Credit', 'Spambase']
+    
+    for dataset_idx, dataset_name in enumerate(datasets_3):
+        print(f"Processing {dataset_name} for accuracy grid...")
+        
+        # Load data for this dataset
+        reader = load_model_data(dataset_name)
+        if reader is None:
+            print(f"ERROR: Failed to load data for {dataset_name}")
+            continue
+            
+        # Extract configurations
+        configs = []
+        if reader.model_data:
+            sample_method = list(reader.model_data.keys())[0]
+            configs = list(reader.model_data[sample_method].keys())
+        
+        if not configs:
+            print(f"ERROR: No configurations found for {dataset_name}")
+            continue
+            
+        # Parse configurations
+        model_params = parse_model_configurations(configs)
+        if not model_params:
+            print(f"ERROR: No valid model configurations for {dataset_name}")
+            continue
+        
+        # Plot for each row (parameter type)
+        for plot_type_idx, plot_type in enumerate(['1', '2']):
+            ax = axes[plot_type_idx, dataset_idx]
+            
+            # Determine fixed and varying parameters
+            if plot_type == '1':
+                fixed_param, fixed_value = 'max_depth', 3
+                varying_param = 'n_estimators'
+            else:
+                fixed_param, fixed_value = 'n_estimators', 100
+                varying_param = 'max_depth'
+            
+            # Plot each model type across all methods (combined data)
+            for i, (model_type, data) in enumerate(sorted(model_params.items())):
+                # Aggregate accuracy across all methods for this model type
+                x_values = []
+                y_values = []
+                y_errors = []
+                
+                if plot_type == '1':
+                    filtered_configs = [c for c in data['configs'] if c['max_depth'] == fixed_value]
+                    
+                    for config_data in sorted(filtered_configs, key=lambda x: x['n_estimators']):
+                        config_name = config_data['config']
+                        n_est = config_data['n_estimators']
+                        
+                        # Collect accuracy values across all methods
+                        method_accuracies = []
+                        for method in cf_methods:
+                            if method in reader.model_data and config_name in reader.model_data[method]:
+                                entry = reader.model_data[method][config_name]
+                                mean_acc = entry.get('mean_accuracy', None)
+                                if pd.notna(mean_acc):
+                                    method_accuracies.append(mean_acc)
+                        
+                        if method_accuracies:
+                            x_values.append(n_est)
+                            y_values.append(np.mean(method_accuracies))
+                            y_errors.append(np.std(method_accuracies) if len(method_accuracies) > 1 else 0)
+                            
+                else:
+                    filtered_configs = [c for c in data['configs'] if c['n_estimators'] == fixed_value]
+                    
+                    for config_data in sorted(filtered_configs, key=lambda x: x['max_depth']):
+                        config_name = config_data['config']
+                        max_d = config_data['max_depth']
+                        
+                        # Collect accuracy values across all methods
+                        method_accuracies = []
+                        for method in cf_methods:
+                            if method in reader.model_data and config_name in reader.model_data[method]:
+                                entry = reader.model_data[method][config_name]
+                                mean_acc = entry.get('mean_accuracy', None)
+                                if pd.notna(mean_acc):
+                                    method_accuracies.append(mean_acc)
+                        
+                        if method_accuracies:
+                            x_values.append(max_d)
+                            y_values.append(np.mean(method_accuracies))
+                            y_errors.append(np.std(method_accuracies) if len(method_accuracies) > 1 else 0)
+                
+                # Plot the line
+                if x_values:
+                    ax.errorbar(x_values, y_values, yerr=y_errors,
+                               marker='o', linewidth=2, markersize=6,
+                               color=colors[i % len(colors)],
+                               capsize=3, capthick=1.5, elinewidth=1,
+                               label=model_type)
+            
+            # Customize subplot
+            ax.set_ylim(0, 1.05)
+            ax.grid(True, alpha=0.3, linestyle='--')
+            
+            # Set x-axis based on available data
+            if plot_type == '1':
+                all_x_values = []
+                for model_type, data in sorted(model_params.items()):
+                    filtered_configs = [c for c in data['configs'] if c['max_depth'] == fixed_value]
+                    x_vals = [c['n_estimators'] for c in filtered_configs]
+                    all_x_values.extend(x_vals)
+                if all_x_values:
+                    unique_x = sorted(set(all_x_values))
+                    ax.set_xticks(unique_x)
+                    ax.set_xlim(min(unique_x) - 10, max(unique_x) + 10)
+            else:
+                all_x_values = []
+                for model_type, data in sorted(model_params.items()):
+                    filtered_configs = [c for c in data['configs'] if c['n_estimators'] == fixed_value]
+                    x_vals = [c['max_depth'] for c in filtered_configs]
+                    all_x_values.extend(x_vals)
+                if all_x_values:
+                    unique_x = sorted(set(all_x_values))
+                    ax.set_xticks(unique_x)
+                    ax.set_xlim(min(unique_x) - 0.5, max(unique_x) + 0.5)
+    
+    # Remove individual subplot labels and titles for clean grid
+    for ax in axes.flat:
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_title('')
+    
+    # Add y-axis labels to all subplots
+    for row in range(2):
+        for col in range(3):
+            ax = axes[row, col]
+            ax.set_ylabel('Accuracy', fontsize=12)
+    
+    # Add x-axis labels based on row
+    for row in range(2):
+        for col in range(3):
+            ax = axes[row, col]
+            if row == 0:  # First row - n_estimators
+                ax.set_xlabel('n estimators', fontsize=12)
+            else:  # Second row - max_depth
+                ax.set_xlabel('max depth', fontsize=12)
+    
+    # Add some space to the left and between rows, adjust layout
+    plt.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.2, hspace=0.4, wspace=0.3)
+    
+    # Add master roman numerals at the bottom for each column
+    roman_numerals = ['(i)', '(ii)', '(iii)']
+    for col in range(3):
+        bottom_ax = axes[1, col]  # Bottom row
+        bottom_ax.text(0.5, -0.35, roman_numerals[col], transform=bottom_ax.transAxes,
+                      ha='center', va='top', fontsize=14, weight='bold')
+    
+    # Add row labels to the left of the y-axis labels
+    row_labels = ['(a)', '(b)']
+    for row in range(2):
+        fig.text(0.05, 0.8 - row * 0.4, row_labels[row], fontsize=16, weight='bold', 
+                ha='center', va='center')
+    
+    # Save the grid plot
+    os.makedirs(save_dir, exist_ok=True)
+    grid_path = os.path.join(save_dir, 'model_perturbation_accuracy_grid_3datasets.png')
+    plt.savefig(grid_path, dpi=300, bbox_inches='tight')
+    print(f"Created accuracy grid for 3 datasets: {grid_path}")
+    plt.close()
+    
+    return grid_path
+
+def create_heloc_accuracy_grid_plot(save_dir="visualizations"):
+    """Create 2x1 grid plot for HELOC accuracy values"""
+    
+    cf_methods = ['DICE', 'NICE', 'CEML', 'FEATURE TWEAK']
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    
+    dataset_name = 'heloc'
+    
+    # Create 2x1 grid (2 parameter types x 1 dataset)
+    fig, axes = plt.subplots(2, 1, figsize=(8, 6))  # Increased width by 2 units
+    
+    print(f"Processing {dataset_name} for accuracy grid...")
+    
+    # Load data for HELOC
+    reader = load_model_data(dataset_name)
+    if reader is None:
+        print(f"ERROR: Failed to load data for {dataset_name}")
+        return None
+        
+    # Extract configurations
+    configs = []
+    if reader.model_data:
+        sample_method = list(reader.model_data.keys())[0]
+        configs = list(reader.model_data[sample_method].keys())
+    
+    if not configs:
+        print(f"ERROR: No configurations found for {dataset_name}")
+        return None
+        
+    # Parse configurations
+    model_params = parse_model_configurations(configs)
+    if not model_params:
+        print(f"ERROR: No valid model configurations for {dataset_name}")
+        return None
+    
+    # Plot for each row (parameter type)
+    for plot_type_idx, plot_type in enumerate(['1', '2']):
+        ax = axes[plot_type_idx]
+        
+        # Determine fixed and varying parameters
+        if plot_type == '1':
+            fixed_param, fixed_value = 'max_depth', 3
+            varying_param = 'n_estimators'
+        else:
+            fixed_param, fixed_value = 'n_estimators', 100
+            varying_param = 'max_depth'
+        
+        # Plot each model type across all methods (combined data)
+        for i, (model_type, data) in enumerate(sorted(model_params.items())):
+            # Aggregate accuracy across all methods for this model type
+            x_values = []
+            y_values = []
+            y_errors = []
+            
+            if plot_type == '1':
+                filtered_configs = [c for c in data['configs'] if c['max_depth'] == fixed_value]
+                
+                for config_data in sorted(filtered_configs, key=lambda x: x['n_estimators']):
+                    config_name = config_data['config']
+                    n_est = config_data['n_estimators']
+                    
+                    # Collect accuracy values across all methods
+                    method_accuracies = []
+                    for method in cf_methods:
+                        if method in reader.model_data and config_name in reader.model_data[method]:
+                            entry = reader.model_data[method][config_name]
+                            mean_acc = entry.get('mean_accuracy', None)
+                            if pd.notna(mean_acc):
+                                method_accuracies.append(mean_acc)
+                    
+                    if method_accuracies:
+                        x_values.append(n_est)
+                        y_values.append(np.mean(method_accuracies))
+                        y_errors.append(np.std(method_accuracies) if len(method_accuracies) > 1 else 0)
+                        
+            else:
+                filtered_configs = [c for c in data['configs'] if c['n_estimators'] == fixed_value]
+                
+                for config_data in sorted(filtered_configs, key=lambda x: x['max_depth']):
+                    config_name = config_data['config']
+                    max_d = config_data['max_depth']
+                    
+                    # Collect accuracy values across all methods
+                    method_accuracies = []
+                    for method in cf_methods:
+                        if method in reader.model_data and config_name in reader.model_data[method]:
+                            entry = reader.model_data[method][config_name]
+                            mean_acc = entry.get('mean_accuracy', None)
+                            if pd.notna(mean_acc):
+                                method_accuracies.append(mean_acc)
+                    
+                    if method_accuracies:
+                        x_values.append(max_d)
+                        y_values.append(np.mean(method_accuracies))
+                        y_errors.append(np.std(method_accuracies) if len(method_accuracies) > 1 else 0)
+            
+            # Plot the line
+            if x_values:
+                ax.errorbar(x_values, y_values, yerr=y_errors,
+                           marker='o', linewidth=2, markersize=6,
+                           color=colors[i % len(colors)],
+                           capsize=3, capthick=1.5, elinewidth=1,
+                           label=model_type)
+        
+        # Customize subplot
+        ax.set_ylim(0, 1.05)
+        ax.grid(True, alpha=0.3, linestyle='--')
+        
+        # Set x-axis based on available data
+        if plot_type == '1':
+            all_x_values = []
+            for model_type, data in sorted(model_params.items()):
+                filtered_configs = [c for c in data['configs'] if c['max_depth'] == fixed_value]
+                x_vals = [c['n_estimators'] for c in filtered_configs]
+                all_x_values.extend(x_vals)
+            if all_x_values:
+                unique_x = sorted(set(all_x_values))
+                ax.set_xticks(unique_x)
+                ax.set_xlim(min(unique_x) - 10, max(unique_x) + 10)
+        else:
+            all_x_values = []
+            for model_type, data in sorted(model_params.items()):
+                filtered_configs = [c for c in data['configs'] if c['n_estimators'] == fixed_value]
+                x_vals = [c['max_depth'] for c in filtered_configs]
+                all_x_values.extend(x_vals)
+            if all_x_values:
+                unique_x = sorted(set(all_x_values))
+                ax.set_xticks(unique_x)
+                ax.set_xlim(min(unique_x) - 0.5, max(unique_x) + 0.5)
+    
+    # Remove individual subplot labels and titles for clean grid
+    for ax in axes.flat:
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_title('')
+    
+    # Add y-axis labels to all subplots
+    for row in range(2):
+        ax = axes[row]
+        ax.set_ylabel('Accuracy', fontsize=12)
+    
+    # Add x-axis labels based on row
+    for row in range(2):
+        ax = axes[row]
+        if row == 0:  # First row - n_estimators
+            ax.set_xlabel('n estimators', fontsize=12)
+        else:  # Second row - max_depth
+            ax.set_xlabel('max depth', fontsize=12)
+    
+    # Add some space to the left and between rows, adjust layout
+    plt.subplots_adjust(left=0.15, right=0.95, top=0.95, bottom=0.2, hspace=0.4)
+    
+    # Add master roman numeral at the bottom (single column)
+    roman_numeral = '(i)'
+    bottom_ax = axes[1]  # Bottom row
+    bottom_ax.text(0.5, -0.35, roman_numeral, transform=bottom_ax.transAxes,
+                  ha='center', va='top', fontsize=14, weight='bold')
+    
+    # Add row labels to the left of the y-axis labels
+    row_labels = ['(a)', '(b)']
+    for row in range(2):
+        fig.text(0.08, 0.8 - row * 0.4, row_labels[row], fontsize=16, weight='bold', 
+                ha='center', va='center')
+    
+    # Save the grid plot
+    os.makedirs(save_dir, exist_ok=True)
+    grid_path = os.path.join(save_dir, 'model_perturbation_accuracy_grid_heloc.png')
+    plt.savefig(grid_path, dpi=300, bbox_inches='tight')
+    print(f"Created accuracy grid for HELOC: {grid_path}")
+    plt.close()
+    
+    return grid_path
+
+def create_model_accuracy_legend(save_dir="visualizations"):
+    """Create a separate legend for model accuracy plots"""
+    
+    # Model types and colors (same as used in the plots)
+    model_types = ['AdaBoost', 'LightGBM', 'Random Forest', 'XGBoost']
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+    
+    # Create a simple figure for the legend
+    fig, ax = plt.subplots(figsize=(8, 2))
+    
+    # Create legend entries
+    for i, (model_type, color) in enumerate(zip(model_types, colors)):
+        ax.plot([], [], marker='o', linewidth=2, markersize=6, 
+                color=color, label=model_type)
+    
+    # Remove the actual plot area
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+    
+    # Create the legend
+    legend = ax.legend(loc='center', ncol=4, frameon=True, 
+                      fontsize=14, bbox_to_anchor=(0.5, 0.5))
+    legend.get_frame().set_facecolor('white')
+    legend.get_frame().set_edgecolor('black')
+    legend.get_frame().set_linewidth(1)
+    
+    # Save the legend
+    os.makedirs(save_dir, exist_ok=True)
+    legend_path = os.path.join(save_dir, 'model_perturbation_accuracy_legend.png')
+    plt.savefig(legend_path, dpi=300, bbox_inches='tight')
+    print(f"Created accuracy legend: {legend_path}")
+    plt.close()
+    
+    return legend_path
 
 if __name__ == "__main__":
     main()
