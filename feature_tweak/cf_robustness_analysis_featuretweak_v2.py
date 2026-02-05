@@ -189,92 +189,136 @@ def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
         'lof_score': avg_lof_score
     }
 
-def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx):
+def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, baseline_cf_list, baseline_metrics, test_accuracy, fold_idx):
     """
     Run data perturbation experiments using EXISTING counterfactuals
     Tests how well the baseline counterfactuals perform on models trained with perturbed data
+
+    Deletion: CFs generated with 100% data, test on models with progressively less data
+    Addition: CFs generated with 50% data, test on models with progressively more data
     """
-    
+
     log_print(f"\nTesting data perturbations for fold {fold_idx}...")
-    
-    # Define perturbation types and ranges matching the DICE version
-    data_perturbations = [
-        ('minor_deletion', [0, 5, 10, 15, 20]),  # Bin 0 = baseline (0% removed)
-        ('major_deletion', [0, 1]),              # Bin 0 = baseline (0% removed)
-        ('minor_addition', [0, 5, 10, 15, 20]),  # Bin 0 ≠ baseline (uses 80% of data)
-        ('major_addition', [0, 1])               # Bin 0 ≠ baseline (uses 50% of data)
-    ]
-    
+
+    label_col = perturbation.get_metadata()['label_column']
+    bins = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+
     results = {}
-    
-    for pert_type, bins in data_perturbations:
-        log_print(f"  {pert_type}:")
-        pert_results = []
-        
-        for bin_val in bins:
-            try:
-                # Get the raw training data for this fold
-                train_raw, _ = perturbation.get_data(fold=fold_idx, raw_data=True)
-                
-                # Apply perturbation using the perturb_data method
-                perturbed_train_data = perturbation.perturb_data(train_raw, pert_type, bin_val)
-                
-                # Apply the same preprocessing as baseline model (critical!)
-                perturbed_processed = perturbation.data_module._preprocess_data(perturbed_train_data)
-                
-                # Extract features and labels
-                label_col = perturbation.get_metadata()['label_column']
-                X_pert = perturbed_processed.drop(columns=[label_col])
-                y_pert = perturbed_processed[label_col]
-                
-                # Handle categorical labels if needed
-                if y_pert.dtype == 'object':
-                    le = LabelEncoder()
-                    y_pert = le.fit_transform(y_pert)
-                
-                log_print(f"    Bin {bin_val} - Train: {len(X_pert)} samples, Test: {len(X_test)} samples")
-                
-                # Train model on perturbed data
-                model = RandomForestClassifier(max_depth=5, n_estimators=100, random_state=42)
-                model.fit(X_pert, y_pert)
-                
-                # Test EXISTING baseline counterfactuals on this perturbed model
-                metrics = calculate_comprehensive_metrics(model, baseline_cf_list, X_test, X_pert)
-                
-                # Calculate model accuracy
-                accuracy = accuracy_score(y_test, model.predict(X_test))
-                
-                pert_results.append({
-                    'bin': bin_val,
-                    'accuracy': accuracy,
-                    'model_accuracy': accuracy,
-                    **metrics
+
+    # DELETION PERTURBATIONS: CFs from 100% data, test on less
+    log_print("  minor_deletion:")
+    deletion_results = []
+
+    for bin_num in bins:
+        try:
+            if bin_num == 0:
+                # Bin 0 is the baseline (no data removed)
+                deletion_results.append({
+                    'bin': bin_num,
+                    'accuracy': test_accuracy,
+                    'model_accuracy': test_accuracy,
+                    **baseline_metrics
                 })
-                
-                if pert_type in ['minor_deletion', 'major_deletion']:
-                    remove_pct = bin_val if pert_type == 'minor_deletion' else (0 if bin_val == 0 else 50)
-                    log_print(f"    Bin {bin_val}: Remove {remove_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
-                else:
-                    use_pct = 80 + bin_val if pert_type == 'minor_addition' else (50 if bin_val == 0 else 100)
-                    log_print(f"    Bin {bin_val}: Use {use_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
-                
-            except Exception as e:
-                log_print(f"      Error in {pert_type} bin {bin_val}: {e}")
-                # Add default entry for failed perturbation
-                pert_results.append({
-                    'bin': bin_val,
-                    'accuracy': 0.0,
-                    'model_accuracy': 0.0,
-                    'validity': 0.0,
-                    'flipped': 0,
-                    'total': 0,
-                    'l2_distance': 0.0,
-                    'l0_distance': 0.0,
-                    'lof_score': 0.0
-                })
-        
-        results[pert_type] = pert_results
-    
+                log_print(f"    Bin 0: Remove 0% -> validity: {baseline_metrics['validity']:.4f}, accuracy: {test_accuracy:.4f}, L2: {baseline_metrics['l2_distance']:.4f}, L0: {baseline_metrics['l0_distance']:.2f}, LOF: {baseline_metrics['lof_score']:.4f}")
+                continue
+
+            # Get raw training data and apply deletion perturbation
+            train_raw_for_pert, _ = perturbation.get_data(fold=fold_idx, raw_data=True)
+            perturbed_train_raw = perturbation.perturb_data(train_raw_for_pert, 'minor_deletion', bin_num)
+
+            # Apply same preprocessing as baseline
+            perturbed_processed = perturbation.data_module._preprocess_data(perturbed_train_raw)
+
+            X_pert = perturbed_processed.drop(columns=[label_col])
+            y_pert = perturbed_processed[label_col]
+
+            if y_pert.dtype == 'object':
+                le = LabelEncoder()
+                y_pert = le.fit_transform(y_pert)
+
+            # Train model on perturbed data
+            model = RandomForestClassifier(max_depth=5, n_estimators=100, random_state=42)
+            model.fit(X_pert, y_pert)
+
+            accuracy = accuracy_score(y_test, model.predict(X_test))
+            metrics = calculate_comprehensive_metrics(model, baseline_cf_list, X_test, X_pert)
+
+            deletion_results.append({
+                'bin': bin_num,
+                'accuracy': accuracy,
+                'model_accuracy': accuracy,
+                **metrics
+            })
+
+            log_print(f"    Bin {bin_num}: Remove {bin_num}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
+
+        except Exception as e:
+            log_print(f"      Error in minor_deletion bin {bin_num}: {e}")
+
+    results['minor_deletion'] = deletion_results
+
+    # ADDITION PERTURBATIONS: CFs from 50% data, test on more
+    log_print("  minor_addition:")
+    addition_results = []
+
+    # First, generate CFs with 50% data
+    train_raw_50pct, _ = perturbation.get_data(fold=fold_idx, raw_data=True)
+    train_raw_50pct = perturbation.perturb_data(train_raw_50pct, 'minor_addition', 0)  # 50% data
+    train_processed_50pct = perturbation.data_module._preprocess_data(train_raw_50pct)
+
+    X_train_50pct = train_processed_50pct.drop(columns=[label_col])
+    y_train_50pct = train_processed_50pct[label_col]
+
+    if y_train_50pct.dtype == 'object':
+        le_50pct = LabelEncoder()
+        y_train_50pct = le_50pct.fit_transform(y_train_50pct)
+
+    # Train model with 50% data
+    model_50pct = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+    model_50pct.fit(X_train_50pct, y_train_50pct)
+
+    # Generate CFs with 50% data using FeatureTweak
+    addition_cf_list, addition_success_rate = generate_counterfactuals_featuretweak(
+        X_test, y_test, model_50pct, eps=0.1
+    )
+
+    for bin_num in bins:
+        try:
+            # Get raw training data and apply addition perturbation
+            train_raw_for_add, _ = perturbation.get_data(fold=fold_idx, raw_data=True)
+            perturbed_train_raw = perturbation.perturb_data(train_raw_for_add, 'minor_addition', bin_num)
+
+            perturbed_processed = perturbation.data_module._preprocess_data(perturbed_train_raw)
+
+            X_pert = perturbed_processed.drop(columns=[label_col])
+            y_pert = perturbed_processed[label_col]
+
+            if y_pert.dtype == 'object':
+                le = LabelEncoder()
+                y_pert = le.fit_transform(y_pert)
+
+            # Train model on perturbed data
+            model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+            model.fit(X_pert, y_pert)
+
+            accuracy = accuracy_score(y_test, model.predict(X_test))
+            metrics = calculate_comprehensive_metrics(model, addition_cf_list, X_test, X_pert)
+
+            addition_results.append({
+                'bin': bin_num,
+                'accuracy': accuracy,
+                'model_accuracy': accuracy,
+                **metrics
+            })
+
+            use_pct = 50 + bin_num
+            log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
+
+        except Exception as e:
+            log_print(f"      Error in minor_addition bin {bin_num}: {e}")
+
+    results['minor_addition'] = addition_results
+
     return results
 
 def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx):
@@ -285,21 +329,26 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
     
     log_print(f"\nTesting model perturbations for fold {fold_idx}...")
     
-    # Define model configurations to test (FeatureTweak works with tree-based models)
+    # Define model configurations to test - STANDARDIZED APPROACH
     model_configs = []
-    
-    # RandomForest variations
-    # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
+    # Max depth study: Fix n_estimators=100, vary max_depth
     for max_depth in [3, 4, 5, 6]:
-        model_configs.append(('random_forest', {'max_depth': max_depth, 'n_estimators': 100, 'random_state': 42}))
-    
-    # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
+        model_configs.extend([
+            ('random_forest', {'max_depth': max_depth, 'n_estimators': 100, 'random_state': 42}),
+            ('xgboost', {'max_depth': max_depth, 'n_estimators': 100, 'random_state': 42}),
+            ('lightgbm', {'max_depth': max_depth, 'n_estimators': 100, 'random_state': 42, 'verbose': -1}),
+            ('adaboost', {'max_depth': max_depth, 'n_estimators': 100, 'random_state': 42}),
+            ('catboost', {'depth': max_depth, 'iterations': 100, 'random_seed': 42, 'verbose': 0}),
+        ])
+    # N_estimators study: Fix max_depth=3, vary n_estimators
     for n_estimators in [50, 100, 150, 200]:
-        model_configs.append(('random_forest', {'max_depth': 5, 'n_estimators': n_estimators, 'random_state': 42}))
-    
-    # DecisionTree variations
-    for max_depth in [3, 4, 5, 6]:
-        model_configs.append(('decision_tree', {'max_depth': max_depth, 'random_state': 42}))
+        model_configs.extend([
+            ('random_forest', {'max_depth': 3, 'n_estimators': n_estimators, 'random_state': 42}),
+            ('xgboost', {'max_depth': 3, 'n_estimators': n_estimators, 'random_state': 42}),
+            ('lightgbm', {'max_depth': 3, 'n_estimators': n_estimators, 'random_state': 42, 'verbose': -1}),
+            ('adaboost', {'max_depth': 3, 'n_estimators': n_estimators, 'random_state': 42}),
+            ('catboost', {'depth': 3, 'iterations': n_estimators, 'random_seed': 42, 'verbose': 0}),
+        ])
     
     results = []
     
@@ -310,8 +359,19 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
             # Train perturbed model
             if model_type == 'random_forest':
                 model = RandomForestClassifier(**params)
-            elif model_type == 'decision_tree':
-                model = DecisionTreeClassifier(**params)
+            elif model_type == 'xgboost':
+                import xgboost as xgb
+                model = xgb.XGBClassifier(**params)
+            elif model_type == 'lightgbm':
+                import lightgbm
+                model = lightgbm.LGBMClassifier(**params)
+            elif model_type == 'adaboost':
+                from sklearn.ensemble import AdaBoostClassifier
+                base_tree = DecisionTreeClassifier(max_depth=params.get('max_depth', 3), random_state=42)
+                model = AdaBoostClassifier(estimator=base_tree, n_estimators=params['n_estimators'], random_state=42)
+            elif model_type == 'catboost':
+                from catboost import CatBoostClassifier
+                model = CatBoostClassifier(**params)
             else:
                 continue
                 
@@ -362,13 +422,13 @@ def create_comprehensive_visualizations(all_results, output_dir="featuretweak_pl
     sns.set_palette("husl")
     
     # 1. Data Robustness Visualization
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
     fig.suptitle('FeatureTweak Counterfactual Data Robustness Analysis - Spambase Dataset', fontsize=16, fontweight='bold')
-    
-    perturbation_types = ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
-    
+
+    perturbation_types = ['minor_deletion', 'minor_addition']
+
     for idx, pert_type in enumerate(perturbation_types):
-        ax = axes[idx // 2, idx % 2]
+        ax = axes[idx]
         
         # Aggregate results across folds
         fold_data = []
@@ -438,7 +498,7 @@ def print_statistical_summary(all_results):
     
     # Data perturbation summary
     log_print(f"\n[INSIGHTS] DATA PERTURBATION ROBUSTNESS:")
-    perturbation_types = ['minor_deletion', 'major_deletion', 'minor_addition', 'major_addition']
+    perturbation_types = ['minor_deletion', 'minor_addition']
     
     for pert_type in perturbation_types:
         log_print(f"  {pert_type.replace('_', ' ').title()}:")
@@ -616,7 +676,7 @@ def main():
             
             # Test the SAME counterfactuals on perturbed models
             data_pert_results = run_data_perturbations(
-                perturbation, X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx
+                perturbation, X_train, y_train, X_test, y_test, baseline_cf_list, baseline_metrics, test_accuracy, fold_idx
             )
             
             model_pert_results = run_model_perturbations(
