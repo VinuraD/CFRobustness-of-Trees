@@ -44,13 +44,13 @@ CF_METHODS = {
         'name': 'DiCE',
         'supports_categorical': True,
         'supports_continuous': True,
-        'model_types': ['rf', 'xgb', 'lgb', 'mlp', 'ada']
+        'model_types': ['rf', 'xgb', 'lgb', 'mlp', 'ada', 'cat']
     },
     'ceml': {
         'name': 'CEML',
         'supports_categorical': True,
         'supports_continuous': True,
-        'model_types': ['rf']  # CEML primarily works with RF
+        'model_types': ['rf', 'xgb', 'lgb', 'ada', 'cat']
     },
     'cfxplorer': {
         'name': 'CFXplorer',
@@ -62,19 +62,19 @@ CF_METHODS = {
         'name': 'NICE',
         'supports_categorical': True,
         'supports_continuous': True,
-        'model_types': ['rf', 'xgb', 'lgb']
+        'model_types': ['rf', 'xgb', 'lgb', 'ada', 'cat']
     },
     'feature_tweak': {
         'name': 'FeatureTweak',
         'supports_categorical': True,
         'supports_continuous': True,
-        'model_types': ['rf']  # FeatureTweak works with tree-based models
+        'model_types': ['rf', 'xgb', 'lgb', 'ada', 'cat']
     },
     'armor': {
         'name': 'ARMOR',
         'supports_categorical': True,
         'supports_continuous': True,
-        'model_types': ['rf', 'xgb', 'lgb', 'ada']  # ARMOR uses MCTS on tree-based models
+        'model_types': ['rf', 'xgb', 'lgb', 'ada', 'cat']
     }
 }
 
@@ -118,6 +118,14 @@ MODEL_CONFIGS = {
         'perturbations': {
             'n_estimators': [50, 150],
             'learning_rate': [0.5, 1.5]
+        }
+    },
+    'cat': {
+        'name': 'CatBoost',
+        'base_params': {'iterations': 100, 'random_seed': 42, 'verbose': 0},
+        'perturbations': {
+            'iterations': [50, 100, 150, 200],
+            'depth': [3, 4, 5, 6]
         }
     }
 }

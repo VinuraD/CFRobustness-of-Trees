@@ -229,9 +229,17 @@ class Perturbation:
                         n_estimators=n_estimators,
                         random_state=42
                     )
+            elif model_type == 'catboost':
+                from catboost import CatBoostClassifier
+                return CatBoostClassifier(
+                    iterations=n_estimators,
+                    depth=max_depth,
+                    random_seed=42,
+                    verbose=0
+                )
             else:
                 raise ValueError(f"Unsupported model type: {model_type}. "
-                               f"Supported types: 'random_forest', 'xgboost', 'lightgbm', 'adaboost'")
+                               f"Supported types: 'random_forest', 'xgboost', 'lightgbm', 'adaboost', 'catboost'")
         
         except ImportError as e:
             raise ImportError(f"Model {model_type} requires additional packages: {e}")
