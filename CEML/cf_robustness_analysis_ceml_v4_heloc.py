@@ -399,10 +399,8 @@ def main():
     # NOTE: Only deletion Bin 0 should match baseline (no data removed)
     # Addition Bin 0 uses less data: minor_addition=80%, major_addition=50%
     data_perturbations = [
-        ('minor_deletion', [0, 5, 10, 15, 20]),  # Bin 0 = baseline (0% removed)
-        ('major_deletion', [0, 1]),              # Bin 0 = baseline (0% removed)
-        ('minor_addition', [0, 5, 10, 15, 20]),  # Bin 0 ≠ baseline (uses 80% of data)
-        ('major_addition', [0, 1])               # Bin 0 ≠ baseline (uses 50% of data)
+        ('minor_deletion', [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]),
+        ('minor_addition', [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50])
     ]
     log_print(f"  Data perturbation types: {[p[0] for p in data_perturbations]}")
     
@@ -411,28 +409,27 @@ def main():
     # Test n_estimators variations (keep max_depth fixed at baseline=5)
     model_perturbations = []
     
+    # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
+    for max_depth in [3, 4, 5, 6]:
+        model_perturbations.extend([
+            ('random_forest', max_depth, 100),
+            ('xgboost', max_depth, 100),
+            ('lightgbm', max_depth, 100),
+        ])
+    
+    # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
+    for n_estimators in [50, 100, 150, 200]:
+        model_perturbations.extend([
+            ('random_forest', 5, n_estimators),
+            ('xgboost', 5, n_estimators),
+            ('lightgbm', 5, n_estimators),
+        ])
 
-    # # Add AdaBoost with n_estimators variations (fix max_depth=3 for base estimator)
-    # for n_estimators in [50, 100, 150, 200]:
-    #     model_perturbations.extend([
-    #         ('adaboost', 3, n_estimators),
-    #     ])
-    # log_print(f"  Model perturbations: {len(model_perturbations)} configurations")
-    # for model_type, max_depth, n_estimators in model_perturbations:
-    #     log_print(f"    - {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")
-    from itertools import product
- 
-    n_estimators_values = [50, 100, 150, 200]
-    max_depth_values = [3, 4, 5, 6]
-    model_types = ['random_forest', 'xgboost', 'lightgbm', 'adaboost']  # include AdaBoost in the grid
-    
-    # 16 combinations per model type (4 n_estimators × 4 max_depth) → 64 total across 4 models
-    model_perturbations = [
-        (model_type, max_depth, n_estimators)
-        for model_type, max_depth, n_estimators
-        in product(model_types, max_depth_values, n_estimators_values)
-    ]
-    
+    # Add AdaBoost with n_estimators variations (fix max_depth=3 for base estimator)
+    for n_estimators in [50, 100, 150, 200]:
+        model_perturbations.extend([
+            ('adaboost', 3, n_estimators),
+        ])
     log_print(f"  Model perturbations: {len(model_perturbations)} configurations")
     for model_type, max_depth, n_estimators in model_perturbations:
         log_print(f"    - {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")

@@ -350,10 +350,8 @@ def main():
     # NOTE: Only deletion Bin 0 should match baseline (no data removed)
     # Addition Bin 0 uses less data: minor_addition=80%, major_addition=50%
     data_perturbations = [
-        ('minor_deletion', [0, 5, 10, 15, 20]),  # Bin 0 = baseline (0% removed)
-        ('major_deletion', [0, 1]),              # Bin 0 = baseline (0% removed)
-        ('minor_addition', [0, 5, 10, 15, 20]),  # Bin 0 ≠ baseline (uses 80% of data)
-        ('major_addition', [0, 1])               # Bin 0 ≠ baseline (uses 50% of data)
+        ('minor_deletion', [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]),
+        ('minor_addition', [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50])
     ]
     log_print(f"  Data perturbation types: {[p[0] for p in data_perturbations]}")
     
@@ -363,48 +361,30 @@ def main():
     model_perturbations = []
     
     # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
-    # for max_depth in [3, 4, 5, 6]:
-    #     model_perturbations.extend([
-    #         ('random_forest', max_depth, 100),
-    #         ('xgboost', max_depth, 100),
-    #         ('lightgbm', max_depth, 100),
-    #     ])
+    for max_depth in [3, 4, 5, 6]:
+        model_perturbations.extend([
+            ('random_forest', max_depth, 100),
+            ('xgboost', max_depth, 100),
+            ('lightgbm', max_depth, 100),
+        ])
     
-    # # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
-    # for n_estimators in [50, 100, 150, 200]:
-    #     model_perturbations.extend([
-    #         ('random_forest', 5, n_estimators),
-    #         ('xgboost', 5, n_estimators),
-    #         ('lightgbm', 5, n_estimators),
-    #     ])
+    # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
+    for n_estimators in [50, 100, 150, 200]:
+        model_perturbations.extend([
+            ('random_forest', 5, n_estimators),
+            ('xgboost', 5, n_estimators),
+            ('lightgbm', 5, n_estimators),
+        ])
 
     # Add AdaBoost with n_estimators variations (fix max_depth=3 for base estimator)
-    # for n_estimators in [50, 100, 150, 200]:
-    #     model_perturbations.extend([
-    #         ('adaboost', 3, n_estimators),
-    #     ])
-    # log_print(f"  Model perturbations: {len(model_perturbations)} configurations")
-    # for model_type, max_depth, n_estimators in model_perturbations:
-    #     log_print(f"    - {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")
-    
-    from itertools import product
- 
-    n_estimators_values = [50, 100, 150, 200]
-    max_depth_values = [3, 4, 5, 6]
-    model_types = ['random_forest', 'xgboost', 'lightgbm', 'adaboost']  # include AdaBoost in the grid
-    
-    # 16 combinations per model type (4 n_estimators × 4 max_depth) → 64 total across 4 models
-    model_perturbations = [
-        (model_type, max_depth, n_estimators)
-        for model_type, max_depth, n_estimators
-        in product(model_types, max_depth_values, n_estimators_values)
-    ]
-    
+    for n_estimators in [50, 100, 150, 200]:
+        model_perturbations.extend([
+            ('adaboost', 3, n_estimators),
+        ])
     log_print(f"  Model perturbations: {len(model_perturbations)} configurations")
     for model_type, max_depth, n_estimators in model_perturbations:
         log_print(f"    - {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")
-
-
+    
     # Dictionary to store results across all folds
     all_fold_results = {
         'baseline_validity': [],
@@ -513,65 +493,148 @@ def main():
             # Log baseline metrics in standardized format for visualization parsing
             log_print(f"    Bin 0: Remove 0% -> validity: {baseline_metrics['validity']:.4f}, accuracy: {test_acc:.4f}, L2: {baseline_metrics['l2_distance']:.4f}, L0: {baseline_metrics['l0_distance']:.2f}, LOF: {baseline_metrics['lof_score']:.4f}")
             
-            # Test counterfactuals on data perturbed models
+            # -----------------------------
+            # Data perturbations
+            # -----------------------------
             log_print(f"\nTesting data perturbations for fold {fold}...")
             
-            for perturb_type, bins in data_perturbations:
-                log_print(f"  {perturb_type}:")
-                
-                for bin_num in bins:
-                    try:
-                        # Get the raw unperturbed training data
-                        train_raw_for_pert, _ = perturbation.get_data(fold=fold, raw_data=True)
-                        
-                        # Apply perturbation to the raw training data
-                        perturbed_train_raw = perturbation.perturb_data(train_raw_for_pert, perturb_type, bin_num)
-                        
-                        # Apply the same preprocessing as baseline model
-                        perturbed_train_processed = perturbation.data_module._preprocess_data(perturbed_train_raw)
-                        
-                        # Prepare features and target from PROCESSED data
-                        perturbed_X_train = perturbed_train_processed.drop(columns=[label_col])
-                        perturbed_y_train = perturbed_train_processed[label_col]
-                        
-                        # Handle categorical labels if needed
-                        if perturbed_y_train.dtype == 'object':
-                            le_pert = LabelEncoder()
-                            perturbed_y_train = le_pert.fit_transform(perturbed_y_train)
-                        
-                        # Train model on perturbed PROCESSED data (same format as baseline)
-                        perturbed_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
-                        perturbed_model.fit(perturbed_X_train, perturbed_y_train)
-                        
-                        # Evaluate perturbed model on test set (using processed test data)
-                        perturbed_test_acc = accuracy_score(y_test[:test_subset_size], perturbed_model.predict(X_test_subset))
-                        
-                        # Calculate comprehensive metrics for perturbed model
-                        cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test_subset, perturbed_X_train)
-                        
-                        # Store results
-                        all_fold_results['data_perturbations'][perturb_type][bin_num].append({
-                            'validity': cf_metrics['validity'],
-                            'model_accuracy': perturbed_test_acc,
-                            'l2_distance': cf_metrics['l2_distance'],
-                            'l0_distance': cf_metrics['l0_distance'],
-                            'lof_score': cf_metrics['lof_score'],
+            # DELETION PERTURBATIONS: Generate CFs with 100% data, test on models with progressively less data
+            log_print("  minor_deletion:")
+            deletion_cf_list = cf_list  # Use CFs generated with 100% data
+            
+            for bin_num in [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]:
+                try:
+                    if bin_num == 0:
+                        # Bin 0 is the baseline (already computed above)
+                        all_fold_results['data_perturbations']['minor_deletion'][bin_num].append({
+                            'validity': baseline_metrics['validity'],
+                            'model_accuracy': test_acc,
+                            'l2_distance': baseline_metrics['l2_distance'],
+                            'l0_distance': baseline_metrics['l0_distance'],
+                            'lof_score': baseline_metrics['lof_score'],
                             'fold': fold
                         })
-                        
-                        if perturb_type in ['minor_deletion', 'major_deletion']:
-                            remove_pct = bin_num if perturb_type == 'minor_deletion' else (0 if bin_num == 0 else 50)
-                            log_print(f"    Bin {bin_num}: Remove {remove_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
-                        else:
-                            use_pct = 80 + bin_num if perturb_type == 'minor_addition' else (50 if bin_num == 0 else 100)
-                            log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
-                        
-                    except Exception as e:
-                        log_print(f"    Error in {perturb_type} bin {bin_num}: {e}")
+                        continue
+                    
+                    # Get raw training data and apply deletion perturbation
+                    train_raw_for_pert, _ = perturbation.get_data(fold=fold, raw_data=True)
+                    perturbed_train_raw = perturbation.perturb_data(train_raw_for_pert, 'minor_deletion', bin_num)
+                    
+                    # Apply same preprocessing as baseline
+                    perturbed_train_processed = perturbation.data_module._preprocess_data(perturbed_train_raw)
+                    
+                    # Prepare features and target
+                    perturbed_X_train = perturbed_train_processed.drop(columns=[label_col])
+                    perturbed_y_train = perturbed_train_processed[label_col]
+                    
+                    # Handle categorical labels if needed
+                    if perturbed_y_train.dtype == 'object':
+                        le_pert = LabelEncoder()
+                        perturbed_y_train = le_pert.fit_transform(perturbed_y_train)
+                    
+                    # Train model on perturbed data
+                    perturbed_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+                    perturbed_model.fit(perturbed_X_train, perturbed_y_train)
+                    
+                    # Evaluate on test set
+                    perturbed_test_acc = accuracy_score(y_test[:test_subset_size], perturbed_model.predict(X_test_subset))
+                    
+                    # Test original CFs on this perturbed model
+                    cf_metrics = calculate_comprehensive_metrics(perturbed_model, deletion_cf_list, X_test_subset, perturbed_X_train)
+                    
+                    # Store results
+                    all_fold_results['data_perturbations']['minor_deletion'][bin_num].append({
+                        'validity': cf_metrics['validity'],
+                        'model_accuracy': perturbed_test_acc,
+                        'l2_distance': cf_metrics['l2_distance'],
+                        'l0_distance': cf_metrics['l0_distance'],
+                        'lof_score': cf_metrics['lof_score'],
+                        'fold': fold
+                    })
+                    
+                    log_print(f"    Bin {bin_num}: Remove {bin_num}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
+                    
+                except Exception as e:
+                    log_print(f"    Error in minor_deletion bin {bin_num}: {e}")
             
-            # Test counterfactuals on model perturbations
-            log_print(f"\nTesting model perturbations for fold {fold}...")
+            # ADDITION PERTURBATIONS: Generate CFs with 50% data, test on models with progressively more data
+            log_print("  minor_addition:")
             
+            # First, generate CFs with 50% data
+            train_raw_50pct, _ = perturbation.get_data(fold=fold, raw_data=True)
+            train_raw_50pct = perturbation.perturb_data(train_raw_50pct, 'minor_addition', 0)  # 50% data
+            train_processed_50pct = perturbation.data_module._preprocess_data(train_raw_50pct)
+            
+            X_train_50pct = train_processed_50pct.drop(columns=[label_col])
+            y_train_50pct = train_processed_50pct[label_col]
+            
+            if y_train_50pct.dtype == 'object':
+                le_50pct = LabelEncoder()
+                y_train_50pct = le_50pct.fit_transform(y_train_50pct)
+            
+            # Train model with 50% data
+            model_50pct = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+            model_50pct.fit(X_train_50pct, y_train_50pct)
+            
+            # Generate CFs with 50% data using CEML
+            addition_cf_list, addition_success_rate = generate_counterfactuals_ceml(
+                X_test_subset,
+                model_50pct,
+                X_train_50pct,
+                y_train_50pct
+            )
+            
+            for bin_num in [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]:
+                try:
+                    # Get raw training data and apply addition perturbation
+                    train_raw_for_add, _ = perturbation.get_data(fold=fold, raw_data=True)
+                    perturbed_train_raw = perturbation.perturb_data(train_raw_for_add, 'minor_addition', bin_num)
+                    
+                    # Apply preprocessing
+                    perturbed_train_processed = perturbation.data_module._preprocess_data(perturbed_train_raw)
+                    
+                    # Prepare features and target
+                    perturbed_X_train = perturbed_train_processed.drop(columns=[label_col])
+                    perturbed_y_train = perturbed_train_processed[label_col]
+                    
+                    if perturbed_y_train.dtype == 'object':
+                        le_pert = LabelEncoder()
+                        perturbed_y_train = le_pert.fit_transform(perturbed_y_train)
+                    
+                    # Train model on perturbed data
+                    perturbed_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+                    perturbed_model.fit(perturbed_X_train, perturbed_y_train)
+                    
+                    # Evaluate on test set
+                    perturbed_test_acc = accuracy_score(y_test[:test_subset_size], perturbed_model.predict(X_test_subset))
+                    
+                    # Test CFs generated with 50% data on this model
+                    cf_metrics = calculate_comprehensive_metrics(perturbed_model, addition_cf_list, X_test_subset, perturbed_X_train)
+                    
+                    # Store results
+                    all_fold_results['data_perturbations']['minor_addition'][bin_num].append({
+                        'validity': cf_metrics['validity'],
+                        'model_accuracy': perturbed_test_acc,
+                        'l2_distance': cf_metrics['l2_distance'],
+                        'l0_distance': cf_metrics['l0_distance'],
+                        'lof_score': cf_metrics['lof_score'],
+                        'fold': fold
+                    })
+                    
+                    use_pct = 50 + bin_num
+                    log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
+                    
+                except Exception as e:
+                    log_print(f"    Error in minor_addition bin {bin_num}: {e}")
+            
+            # COMMENTED OUT: Original data perturbation analysis
+            # for perturb_type, bins in data_perturbations:
+            
+            # COMMENTED OUT: Model perturbations
+            # log_print(f"\nTesting model perturbations for fold {fold}...")
+            
+            # COMMENTED OUT: Model perturbation section
+            """
             for model_type, max_depth, n_estimators in model_perturbations:
                 try:
                     # Use processed data for model perturbations too (same format as baseline)
@@ -655,6 +718,7 @@ def main():
                     
                 except Exception as e:
                     log_print(f"  Error with {model_type} ({max_depth}, {n_estimators}): {e}")
+            """
         
         except Exception as e:
             log_print(f"Error in fold {fold}: {e}")
@@ -726,14 +790,14 @@ def main():
                         'validity_delta': validity_delta,
                         'validities': validities
                     }
-                    
-                    if perturb_type in ['minor_deletion', 'major_deletion']:
-                        remove_pct = bin_num if perturb_type == 'minor_deletion' else (0 if bin_num == 0 else 50)
+
+                    if perturb_type == 'minor_deletion':
+                        remove_pct = bin_num
                         data_description = f"Remove {remove_pct}%"
-                    else:
-                        use_pct = 80 + bin_num if perturb_type == 'minor_addition' else (50 if bin_num == 0 else 100)
+                    else:  # minor_addition
+                        use_pct = 50 + bin_num
                         data_description = f"Use {use_pct}%"
-                    
+
                     per_fold_str = [f'{v:.3f}' for v in validities]
                     log_print(f"{perturb_type:<15} {bin_num:<5} {data_description:<12} {mean_validity:<13.4f} {std_validity:<12.4f} {mean_accuracy:<13.4f} {std_accuracy:<12.4f} {mean_l2:<10.4f} {mean_l0:<10.2f} {validity_delta:<+11.4f} {per_fold_str}")
         
