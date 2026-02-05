@@ -10,6 +10,11 @@ from dataclasses import dataclass, field
 from typing import Dict, Tuple, Set, List, Optional, Any
 from collections import defaultdict
 
+try:
+    from .tree_utils import extract_trees
+except ImportError:
+    from tree_utils import extract_trees
+
 
 @dataclass
 class MCTSState:
@@ -487,8 +492,8 @@ class ForestMCTS:
 
         Parameters
         ----------
-        model : sklearn RandomForestClassifier
-            The random forest model
+        model : tree-based ensemble (RF, XGBoost, LightGBM, AdaBoost)
+            The ensemble model
         target_class : int
             Target class for counterfactual
         x_original : np.ndarray
@@ -532,7 +537,8 @@ class ForestMCTS:
         """
         all_candidates = []
 
-        for i, tree in enumerate(self.model.estimators_):
+        trees = extract_trees(self.model)
+        for i, tree in enumerate(trees):
             tree_mcts = TreeMCTS(
                 tree=tree,
                 target_class=self.target_class,

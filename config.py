@@ -74,7 +74,7 @@ CF_METHODS = {
         'name': 'ARMOR',
         'supports_categorical': True,
         'supports_continuous': True,
-        'model_types': ['rf']  # ARMOR uses MCTS on RandomForest trees
+        'model_types': ['rf', 'xgb', 'lgb', 'ada']  # ARMOR uses MCTS on tree-based models
     }
 }
 

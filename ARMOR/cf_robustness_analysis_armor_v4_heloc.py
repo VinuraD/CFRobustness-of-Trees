@@ -23,6 +23,7 @@ Note: HELOC has continuous features only.
 import sys
 import os
 import logging
+import argparse
 from datetime import datetime
 import contextlib
 import io
@@ -30,7 +31,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'modules'))
 
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
@@ -38,12 +39,64 @@ from sklearn.neighbors import LocalOutlierFactor
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+try:
+    import xgboost
+except ImportError:
+    xgboost = None
+try:
+    import lightgbm
+except ImportError:
+    lightgbm = None
+
 # ARMOR imports
 from armor import ARMOR
 from constraints import get_feature_types_list, get_immutable_features
 
 from data_module import DataModule
 from perturb import Perturbation
+
+# Build supported types tuple for type guard
+SUPPORTED_TYPES = [RandomForestClassifier, AdaBoostClassifier]
+if xgboost is not None:
+    SUPPORTED_TYPES.append(xgboost.XGBClassifier)
+if lightgbm is not None:
+    SUPPORTED_TYPES.append(lightgbm.LGBMClassifier)
+SUPPORTED_TYPES = tuple(SUPPORTED_TYPES)
+
+
+def create_baseline_model(model_type, max_depth=5, n_estimators=100, random_state=42):
+    """Factory function to create a baseline model of the given type."""
+    if model_type == 'xgboost':
+        if xgboost is None:
+            raise ImportError("xgboost is not installed")
+        return xgboost.XGBClassifier(
+            max_depth=max_depth, n_estimators=n_estimators,
+            random_state=random_state, use_label_encoder=False,
+            eval_metric='logloss', verbosity=0,
+        )
+    elif model_type == 'lightgbm':
+        if lightgbm is None:
+            raise ImportError("lightgbm is not installed")
+        return lightgbm.LGBMClassifier(
+            max_depth=max_depth, n_estimators=n_estimators,
+            random_state=random_state, verbose=-1,
+        )
+    elif model_type == 'adaboost':
+        try:
+            return AdaBoostClassifier(
+                estimator=DecisionTreeClassifier(max_depth=max_depth),
+                n_estimators=n_estimators, random_state=random_state,
+            )
+        except TypeError:
+            return AdaBoostClassifier(
+                base_estimator=DecisionTreeClassifier(max_depth=max_depth),
+                n_estimators=n_estimators, random_state=random_state,
+            )
+    else:
+        return RandomForestClassifier(
+            max_depth=max_depth, n_estimators=n_estimators,
+            random_state=random_state,
+        )
 
 
 def setup_logging():
@@ -92,8 +145,8 @@ def generate_counterfactuals_armor(x_test, y_test, model, X_train, y_train,
     log_print(f"Test set size: {len(x_test)} samples")
     log_print(f"Parameters: tau={tau}, n_ensemble={n_ensemble}, mcts_budget={mcts_budget}")
 
-    if not isinstance(model, RandomForestClassifier):
-        log_print(f"Warning: ARMOR requires RandomForest. Got {type(model)}")
+    if not isinstance(model, SUPPORTED_TYPES):
+        log_print(f"Warning: ARMOR requires a supported tree ensemble. Got {type(model)}")
         cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
         for i in range(len(x_test)):
             cf_row = list(x_test.iloc[i].values) + [y_test.iloc[i], False]
@@ -434,8 +487,17 @@ def print_statistical_summary(all_results):
     log_print(f"  - Perturbation ensemble validates robustness to model changes")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='ARMOR CF Robustness Analysis - HELOC')
+    parser.add_argument('--model-type', default='random_forest',
+                        choices=['random_forest', 'xgboost', 'lightgbm', 'adaboost'],
+                        help='Type of tree-based model to use (default: random_forest)')
+    return parser.parse_args()
+
+
 def main():
     """Main execution function"""
+    args = parse_args()
     logger, log_filename = setup_logging()
 
     log_print("="*80)
@@ -510,8 +572,8 @@ def main():
             log_print(f"  Class distribution - Train: {np.bincount(y_train.astype(int))}")
             log_print(f"  Class distribution - Test: {np.bincount(y_test.astype(int))}")
 
-            log_print(f"\nTraining baseline model for fold {fold_idx}...")
-            baseline_model = RandomForestClassifier(max_depth=5, n_estimators=100, random_state=42)
+            log_print(f"\nTraining baseline model ({args.model_type}) for fold {fold_idx}...")
+            baseline_model = create_baseline_model(args.model_type, max_depth=5, n_estimators=100)
             baseline_model.fit(X_train, y_train)
 
             train_accuracy = accuracy_score(y_train, baseline_model.predict(X_train))

@@ -9,7 +9,22 @@ import numpy as np
 import pandas as pd
 import random
 from typing import List, Dict, Tuple, Optional, Any
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+try:
+    import xgboost
+except ImportError:
+    xgboost = None
+try:
+    import lightgbm
+except ImportError:
+    lightgbm = None
+
+try:
+    from .tree_utils import extract_trees, get_model_type, get_n_estimators
+except ImportError:
+    from tree_utils import extract_trees, get_model_type, get_n_estimators
 
 try:
     from .mcts import TreeMCTS, ForestMCTS
@@ -286,15 +301,56 @@ class ARMOR:
             n_est = max(10, base_n_estimators + random.randint(-30, 30))
             max_d = max(2, min(10, base_max_depth + random.randint(-1, 2)))
 
-            m_k = RandomForestClassifier(
-                n_estimators=n_est,
-                max_depth=max_d,
-                random_state=self.random_state + k if self.random_state else None
-            )
+            rs = self.random_state + k if self.random_state else None
+            m_k = self._create_model_like_base(n_est, max_d, rs)
             m_k.fit(X_pert, y_pert)
             models.append(m_k)
 
         return models
+
+    def _create_model_like_base(self, n_estimators, max_depth, random_state):
+        """Create a model of the same type as the base model with given hyperparameters."""
+        try:
+            model_type = get_model_type(self.base_model)
+        except ValueError:
+            model_type = 'random_forest'
+
+        if model_type == 'xgboost' and xgboost is not None:
+            return xgboost.XGBClassifier(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                random_state=random_state,
+                use_label_encoder=False,
+                eval_metric='logloss',
+                verbosity=0,
+            )
+        elif model_type == 'lightgbm' and lightgbm is not None:
+            return lightgbm.LGBMClassifier(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                random_state=random_state,
+                verbose=-1,
+            )
+        elif model_type == 'adaboost':
+            try:
+                return AdaBoostClassifier(
+                    estimator=DecisionTreeClassifier(max_depth=max_depth),
+                    n_estimators=n_estimators,
+                    random_state=random_state,
+                )
+            except TypeError:
+                # Older sklearn uses base_estimator instead of estimator
+                return AdaBoostClassifier(
+                    base_estimator=DecisionTreeClassifier(max_depth=max_depth),
+                    n_estimators=n_estimators,
+                    random_state=random_state,
+                )
+        else:
+            return RandomForestClassifier(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                random_state=random_state,
+            )
 
     def _compute_consensus(
         self,
@@ -347,6 +403,12 @@ class ARMOR:
         float
             Margin score
         """
+        try:
+            mt = get_model_type(self.base_model)
+        except ValueError:
+            mt = 'random_forest'
+        if mt in ('xgboost', 'lightgbm'):
+            return margin_boost(self.base_model, x_cf, target_class)
         return margin_rf(self.base_model, x_cf, target_class)
 
     def _compute_proximity(
@@ -468,7 +530,7 @@ class ARMOR:
             Best counterfactual candidate, or None if none found
         """
         # Calculate MCTS budget per tree
-        n_trees = len(self.base_model.estimators_)
+        n_trees = get_n_estimators(self.base_model)
         budget_per_tree = max(10, self.mcts_budget // n_trees)
 
         # Run MCTS on the forest
