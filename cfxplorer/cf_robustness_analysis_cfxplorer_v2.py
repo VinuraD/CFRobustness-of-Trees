@@ -421,10 +421,8 @@ def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, basel
     
     # Define perturbation types and ranges matching the DICE version
     data_perturbations = [
-        ('minor_deletion', [0, 5, 10, 15, 20]),  # Bin 0 = baseline (0% removed)
-        ('major_deletion', [0, 1]),              # Bin 0 = baseline (0% removed)
-        ('minor_addition', [0, 5, 10, 15, 20]),  # Bin 0 ≠ baseline (uses 80% of data)
-        ('major_addition', [0, 1])               # Bin 0 ≠ baseline (uses 50% of data)
+        ('minor_deletion', [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]),
+        ('minor_addition', [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50])
     ]
     
     results = {}
@@ -477,7 +475,7 @@ def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, basel
                     remove_pct = bin_val if pert_type == 'minor_deletion' else (0 if bin_val == 0 else 50)
                     log_print(f"    Bin {bin_val}: Remove {remove_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
                 else:
-                    use_pct = 80 + bin_val if pert_type == 'minor_addition' else (50 if bin_val == 0 else 100)
+                    use_pct = 50 + bin_val if pert_type == 'minor_addition' else (50 if bin_val == 0 else 100)
                     log_print(f"    Bin {bin_val}: Use {use_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
                 
             except Exception as e:
@@ -507,17 +505,33 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
     
     log_print(f"\nTesting model perturbations for fold {fold_idx}...")
     
-    # Define RandomForest hyperparameters to test (CFXplorer only works with RF)
-    # Matching the DICE version structure
-    model_configs = []
+    # # Define RandomForest hyperparameters to test (CFXplorer only works with RF)
+    # # Matching the DICE version structure
+    # model_configs = []
     
-    # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
-    for max_depth in [3, 4, 5, 6]:
-        model_configs.append(('random_forest', max_depth, 100))
+    # # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
+    # for max_depth in [3, 4, 5, 6]:
+    #     model_configs.append(('random_forest', max_depth, 100))
     
-    # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
-    for n_estimators in [50, 100, 150, 200]:
-        model_configs.append(('random_forest', 5, n_estimators))
+    # # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
+    # for n_estimators in [50, 100, 150, 200]:
+    #     model_configs.append(('random_forest', 5, n_estimators))
+
+        # FULL GRID for RandomForest: 4 max_depth × 4 n_estimators = 16 combos
+    from itertools import product
+
+    max_depth_values = [3, 4, 5, 6]
+    n_estimators_values = [50, 100, 150, 200]
+
+    model_configs = [
+        ('random_forest', md, ne)
+        for md, ne in product(max_depth_values, n_estimators_values)
+    ]
+
+    log_print(f"    RF grid size: {len(model_configs)} configurations")
+    for _, md, ne in model_configs:
+        log_print(f"      - random_forest (max_depth={md}, n_estimators={ne})")
+
     
     results = []
     

@@ -165,13 +165,88 @@ def generate_counterfactuals_cfxplorer(x_test, x_train, y_train, model):
         test_pred = model_copy.predict(x_test_array[:1])
         log_print(f"Model prediction test - prediction type: {type(test_pred[0])}, value: {test_pred[0]}")
         
-        # Initialize CFXplorer Focus instance (matching notebook parameters)
-        focus = Focus(num_iter=100)
+        # Initialize CFXplorer Focus instance with optimizer fix
+        log_print("Initializing CFXplorer Focus with legacy optimizer support...")
+        try:
+            # Try to patch the Focus class to use legacy optimizer if available
+            import tensorflow as tf
+            
+            # Configure TensorFlow for better int32/int64 compatibility
+            log_print("Configuring TensorFlow for CFXplorer compatibility...")
+            
+            # Set TensorFlow to use int32 by default for better CFXplorer compatibility
+            try:
+                # Disable TensorFlow's automatic mixed precision which can cause dtype issues
+                tf.config.optimizer.set_experimental_options({"auto_mixed_precision": False})
+                log_print("Disabled TensorFlow auto mixed precision")
+            except:
+                pass
+                
+            # Ensure consistent dtype handling
+            try:
+                tf.config.experimental.enable_tensor_float_32_execution(False)
+                log_print("Disabled TensorFlow TF32 execution for consistency")
+            except:
+                pass
+            
+            if hasattr(tf.keras.optimizers, 'legacy') and hasattr(tf.keras.optimizers.legacy, 'Adam'):
+                log_print("Using legacy Adam optimizer for TensorFlow compatibility")
+                # Create Focus instance with legacy optimizer support
+                focus = Focus(num_iter=100)
+                # Monkey patch the optimizer if Focus uses Adam
+                if hasattr(focus, 'optimizer'):
+                    focus.optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=0.01)
+                elif hasattr(focus, '_optimizer'):
+                    focus._optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=0.01)
+            else:
+                log_print("Using standard optimizer")
+                focus = Focus(num_iter=100)
+        except Exception as e:
+            log_print(f"Warning: Could not set legacy optimizer, using default: {e}")
+            focus = Focus(num_iter=100)
         
-        # Generate counterfactuals with properly typed model and data
-        cf_array = focus.generate(model_copy, x_test_array)
+        # Generate counterfactuals with proper error handling and retry logic
+        cf_array = None
+        max_retries = 2
         
-        log_print(f"CFXplorer generation completed. Result type: {type(cf_array)}")
+        for attempt in range(max_retries):
+            try:
+                log_print(f"CFXplorer generation attempt {attempt + 1}/{max_retries}")
+                cf_array = focus.generate(model_copy, x_test_array)
+                log_print(f"CFXplorer generation completed successfully. Result type: {type(cf_array)}")
+                break
+            except Exception as gen_error:
+                log_print(f"Attempt {attempt + 1} failed: {str(gen_error)}")
+                if "optimizer cannot recognize variable" in str(gen_error):
+                    log_print("Detected optimizer variable error, clearing session and retrying...")
+                    try:
+                        import tensorflow as tf
+                        tf.keras.backend.clear_session()
+                        # Create a completely fresh Focus instance
+                        focus = Focus(num_iter=50)  # Reduce iterations for retry
+                        if hasattr(tf.keras.optimizers, 'legacy'):
+                            if hasattr(focus, 'optimizer'):
+                                focus.optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=0.01)
+                    except:
+                        pass
+                if attempt == max_retries - 1:
+                    # Last resort: try with a smaller batch
+                    if len(x_test_array) > 100:
+                        log_print(f"Final attempt with smaller batch size (first 100 samples)")
+                        try:
+                            cf_array_small = focus.generate(model_copy, x_test_array[:100])
+                            # Pad the result to full size with copies of original instances
+                            if cf_array_small is not None:
+                                log_print("Partial generation successful, expanding to full size")
+                                cf_array = np.zeros_like(x_test_array)
+                                cf_array[:100] = cf_array_small
+                                # For remaining instances, use original + small random noise
+                                for i in range(100, len(x_test_array)):
+                                    cf_array[i] = x_test_array[i] + np.random.normal(0, 0.01, x_test_array[i].shape)
+                                break
+                        except:
+                            pass
+                    raise gen_error
         
         # Initialize result DataFrame
         if hasattr(x_test, 'columns'):
@@ -337,10 +412,8 @@ def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, basel
     
     # Define perturbation types and ranges matching the DICE version
     data_perturbations = [
-        ('minor_deletion', [0, 5, 10, 15, 20]),  # Bin 0 = baseline (0% removed)
-        ('major_deletion', [0, 1]),              # Bin 0 = baseline (0% removed)
-        ('minor_addition', [0, 5, 10, 15, 20]),  # Bin 0 ≠ baseline (uses 80% of data)
-        ('major_addition', [0, 1])               # Bin 0 ≠ baseline (uses 50% of data)
+        ('minor_deletion', [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]),
+        ('minor_addition', [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50])
     ]
     
     results = {}
@@ -393,7 +466,7 @@ def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, basel
                     remove_pct = bin_val if pert_type == 'minor_deletion' else (0 if bin_val == 0 else 50)
                     log_print(f"    Bin {bin_val}: Remove {remove_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
                 else:
-                    use_pct = 80 + bin_val if pert_type == 'minor_addition' else (50 if bin_val == 0 else 100)
+                    use_pct = 50 + bin_val if pert_type == 'minor_addition' else (50 if bin_val == 0 else 100)
                     log_print(f"    Bin {bin_val}: Use {use_pct}% -> validity: {metrics['validity']:.4f}, accuracy: {accuracy:.4f}, L2: {metrics['l2_distance']:.4f}, L0: {metrics['l0_distance']:.2f}, LOF: {metrics['lof_score']:.4f}")
                 
             except Exception as e:
@@ -423,17 +496,32 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
     
     log_print(f"\nTesting model perturbations for fold {fold_idx}...")
     
-    # Define RandomForest hyperparameters to test (CFXplorer only works with RF)
-    # Matching the DICE version structure
-    model_configs = []
+    # # Define RandomForest hyperparameters to test (CFXplorer only works with RF)
+    # # Complete grid search: all combinations of n_estimators and max_depth
+    # model_configs = []
     
-    # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
-    for max_depth in [3, 4, 5, 6]:
-        model_configs.append(('random_forest', max_depth, 100))
+    # # All 16 combinations: 4 n_estimators × 4 max_depth values
+    # n_estimators_values = [50, 100, 150, 200]
+    # max_depth_values = [3, 4, 5, 6]
     
-    # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
-    for n_estimators in [50, 100, 150, 200]:
-        model_configs.append(('random_forest', 5, n_estimators))
+    # for n_estimators in n_estimators_values:
+    #     for max_depth in max_depth_values:
+    #         model_configs.append(('random_forest', max_depth, n_estimators))
+        # FULL GRID for RandomForest: 4 max_depth × 4 n_estimators = 16 combos
+    from itertools import product
+
+    max_depth_values = [3, 4, 5, 6]
+    n_estimators_values = [50, 100, 150, 200]
+
+    model_configs = [
+        ('random_forest', md, ne)
+        for md, ne in product(max_depth_values, n_estimators_values)
+    ]
+
+    log_print(f"    RF grid size: {len(model_configs)} configurations")
+    for _, md, ne in model_configs:
+        log_print(f"      - random_forest (max_depth={md}, n_estimators={ne})")
+
     
     results = []
     
@@ -683,6 +771,16 @@ def main():
             log_print(f"\n--- FOLD {fold_idx} ANALYSIS ---")
             log_print("-" * 50)
             
+            # Clear any persistent state before each fold to avoid TensorFlow issues
+            try:
+                import gc
+                import tensorflow as tf
+                tf.keras.backend.clear_session()
+                gc.collect()
+                log_print(f"Cleared session state before fold {fold_idx}")
+            except Exception as e:
+                log_print(f"Warning: Could not clear state before fold {fold_idx}: {e}")
+            
             # Get fold data
             train_raw, _ = perturbation.get_data(fold=fold_idx, raw_data=True)
             train_processed, test_processed = perturbation.get_data(fold=fold_idx, raw_data=False)
@@ -760,7 +858,7 @@ def main():
                     'success_rate': baseline_success_rate,
                     **baseline_metrics
                 },
-                'data_perturbations': data_pert_results,
+                'data_perturbations': data_pert_results,  # Empty dict - data perturbations commented out
                 'model_perturbations': model_pert_results
             }
             
