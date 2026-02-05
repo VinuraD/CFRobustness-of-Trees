@@ -43,7 +43,7 @@ class ExperimentRunner:
         self.experiment_status = {}
         
         # Define all experiments
-        self.methods = ['DiCE', 'CEML', 'cfxplorer', 'NICE', 'feature_tweak']
+        self.methods = ['DiCE', 'CEML', 'cfxplorer', 'NICE', 'feature_tweak', 'ARMOR']
         self.datasets = [
             ('v2', 'Spambase'),
             ('v3', 'German-Credit'), 

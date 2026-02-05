@@ -1,0 +1,8 @@
+*.csv
+*.log
+*.err
+*.json
+*.out
+*.png
+*.pyc
+__pycache__/

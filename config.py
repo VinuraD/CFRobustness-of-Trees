@@ -69,6 +69,12 @@ CF_METHODS = {
         'supports_categorical': True,
         'supports_continuous': True,
         'model_types': ['rf']  # FeatureTweak works with tree-based models
+    },
+    'armor': {
+        'name': 'ARMOR',
+        'supports_categorical': True,
+        'supports_continuous': True,
+        'model_types': ['rf']  # ARMOR uses MCTS on RandomForest trees
     }
 }
 
