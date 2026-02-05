@@ -374,19 +374,29 @@ def main():
     # for model_type, max_depth, n_estimators in model_perturbations:
     #     log_print(f"    - {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")
 
-    # Define model perturbations to test — FULL GRID for every model type
-    from itertools import product
+    # Define model perturbations to test - STANDARDIZED APPROACH
+    # Two separate studies: max_depth study and n_estimators study
+    model_perturbations = []
 
-    n_estimators_values = [50, 100, 150, 200]
-    max_depth_values = [3, 4, 5, 6]
-    model_types = ['random_forest', 'xgboost', 'lightgbm', 'adaboost']  # include AdaBoost in the grid
+    # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
+    for max_depth in [3, 4, 5, 6]:
+        model_perturbations.extend([
+            ('random_forest', max_depth, 100),
+            ('xgboost', max_depth, 100),
+            ('lightgbm', max_depth, 100),
+            ('adaboost', max_depth, 100),
+            ('catboost', max_depth, 100),
+        ])
 
-    # 16 combinations per model type (4 n_estimators × 4 max_depth) → 64 total across 4 models
-    model_perturbations = [
-        (model_type, max_depth, n_estimators)
-        for model_type, max_depth, n_estimators
-        in product(model_types, max_depth_values, n_estimators_values)
-    ]
+    # N_estimators study: Fix max_depth=3, vary n_estimators=[50,100,150,200]
+    for n_estimators in [50, 100, 150, 200]:
+        model_perturbations.extend([
+            ('random_forest', 3, n_estimators),
+            ('xgboost', 3, n_estimators),
+            ('lightgbm', 3, n_estimators),
+            ('adaboost', 3, n_estimators),
+            ('catboost', 3, n_estimators),
+        ])
 
     log_print(f"  Model perturbations: {len(model_perturbations)} configurations")
     for model_type, max_depth, n_estimators in model_perturbations:
@@ -707,92 +717,88 @@ def main():
             #             log_print(f"    Error in {perturb_type} bin {bin_num}: {e}")
             
             # Test counterfactuals on model perturbations
-            # COMMENTED OUT: Model perturbation analysis (as requested)
-            # log_print(f"\nTesting model perturbations for fold {fold}...")
-            # 
-            # for model_type, max_depth, n_estimators in model_perturbations:
-            #     try:
-            #         # FIX: Use processed data for model perturbations too (same format as baseline)
-            #         train_processed_for_model, _ = perturbation.get_data(fold=fold, raw_data=False)
-            #         
-            #         # Extract features and target from processed data
-            #         model_X_train = train_processed_for_model.drop(columns=[label_col])
-            #         model_y_train = train_processed_for_model[label_col]
-            #         
-            #         # Handle categorical labels if needed
-            #         if model_y_train.dtype == 'object':
-            #             le_model = LabelEncoder()
-            #             model_y_train = le_model.fit_transform(model_y_train)
-            #         
-            #         # Create and train the model with different hyperparameters
-            #         if model_type == 'random_forest':
-            #             perturbed_model = RandomForestClassifier(
-            #                 n_estimators=n_estimators,
-            #                 max_depth=max_depth,
-            #                 random_state=42
-            #             )
-            #         elif model_type == 'xgboost':
-            #             import xgboost as xgb
-            #             perturbed_model = xgb.XGBClassifier(
-            #                 n_estimators=n_estimators,
-            #                 max_depth=max_depth,
-            #                 random_state=42
-            #             )
-            #         elif model_type == 'lightgbm':
-            #             import lightgbm
-            #             perturbed_model = lightgbm.LGBMClassifier(
-            #                 n_estimators=n_estimators,
-            #                 max_depth=max_depth,
-            #                 random_state=42,
-            #                 verbose=-1
-            #             )
-            #         elif model_type == 'adaboost':
-            #             from sklearn.ensemble import AdaBoostClassifier
-            #             from sklearn.tree import DecisionTreeClassifier
-            #             # Fix: Use 'estimator' instead of deprecated 'base_estimator'
-            #             try:
-            #                 # Try new API first (scikit-learn >= 1.2)
-            #                 base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
-            #                 perturbed_model = AdaBoostClassifier(
-            #                     estimator=base_tree,
-            #                     n_estimators=n_estimators,
-            #                     random_state=42
-            #                 )
-            #             except TypeError:
-            #                 # Fallback to old API (scikit-learn < 1.2)
-            #                 base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
-            #                 perturbed_model = AdaBoostClassifier(
-            #                     base_estimator=base_tree,
-            #                     n_estimators=n_estimators,
-            #                     random_state=42
-            #                 )
-            #         else:
-            #             continue  # Skip unknown model types
-            #         
-            #         # Train on processed data (same format as baseline)
-            #         perturbed_model.fit(model_X_train, model_y_train)
-            #         
-            #         # Evaluate model on test set
-            #         model_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
-            #         
-            #         # Calculate comprehensive metrics for this model
-            #         cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test, model_X_train)
-            #         
-            #         # Store results
-            #         model_key = f"{model_type}_{max_depth}_{n_estimators}"
-            #         all_fold_results['model_perturbations'][model_key].append({
-            #             'validity': cf_metrics['validity'],
-            #             'model_accuracy': model_test_acc,
-            #             'l2_distance': cf_metrics['l2_distance'],
-            #             'l0_distance': cf_metrics['l0_distance'],
-            #             'lof_score': cf_metrics['lof_score'],
-            #             'fold': fold
-            #         })
-            #         
-            #         log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {cf_metrics['validity']:.4f}, accuracy: {model_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
-            #         
-            #     except Exception as e:
-            #         log_print(f"  Error with {model_type} ({max_depth}, {n_estimators}): {e}")
+            log_print(f"\nTesting model perturbations for fold {fold}...")
+
+            for model_type, max_depth, n_estimators in model_perturbations:
+                try:
+                    # Use processed data for model perturbations too (same format as baseline)
+                    train_processed_for_model, _ = perturbation.get_data(fold=fold, raw_data=False)
+
+                    # Extract features and target from processed data
+                    model_X_train = train_processed_for_model.drop(columns=[label_col])
+                    model_y_train = train_processed_for_model[label_col]
+
+                    # Handle categorical labels if needed
+                    if model_y_train.dtype == 'object':
+                        le_model = LabelEncoder()
+                        model_y_train = le_model.fit_transform(model_y_train)
+
+                    # Create and train the model with different hyperparameters
+                    if model_type == 'random_forest':
+                        perturbed_model = RandomForestClassifier(
+                            n_estimators=n_estimators,
+                            max_depth=max_depth,
+                            random_state=42
+                        )
+                    elif model_type == 'xgboost':
+                        import xgboost as xgb
+                        perturbed_model = xgb.XGBClassifier(
+                            n_estimators=n_estimators,
+                            max_depth=max_depth,
+                            random_state=42
+                        )
+                    elif model_type == 'lightgbm':
+                        import lightgbm
+                        perturbed_model = lightgbm.LGBMClassifier(
+                            n_estimators=n_estimators,
+                            max_depth=max_depth,
+                            random_state=42,
+                            verbose=-1
+                        )
+                    elif model_type == 'adaboost':
+                        from sklearn.ensemble import AdaBoostClassifier
+                        from sklearn.tree import DecisionTreeClassifier
+                        base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
+                        perturbed_model = AdaBoostClassifier(
+                            estimator=base_tree,
+                            n_estimators=n_estimators,
+                            random_state=42
+                        )
+                    elif model_type == 'catboost':
+                        from catboost import CatBoostClassifier
+                        perturbed_model = CatBoostClassifier(
+                            depth=max_depth,
+                            iterations=n_estimators,
+                            random_seed=42,
+                            verbose=0
+                        )
+                    else:
+                        continue  # Skip unknown model types
+
+                    # Train on processed data (same format as baseline)
+                    perturbed_model.fit(model_X_train, model_y_train)
+
+                    # Evaluate model on test set
+                    model_test_acc = accuracy_score(y_test, perturbed_model.predict(X_test))
+
+                    # Calculate comprehensive metrics for this model
+                    cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test, model_X_train)
+
+                    # Store results
+                    model_key = f"{model_type}_{max_depth}_{n_estimators}"
+                    all_fold_results['model_perturbations'][model_key].append({
+                        'validity': cf_metrics['validity'],
+                        'model_accuracy': model_test_acc,
+                        'l2_distance': cf_metrics['l2_distance'],
+                        'l0_distance': cf_metrics['l0_distance'],
+                        'lof_score': cf_metrics['lof_score'],
+                        'fold': fold
+                    })
+
+                    log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {cf_metrics['validity']:.4f}, accuracy: {model_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
+
+                except Exception as e:
+                    log_print(f"  Error with {model_type} ({max_depth}, {n_estimators}): {e}")
         
         except Exception as e:
             log_print(f"Error in fold {fold}: {e}")
