@@ -66,7 +66,7 @@ class Perturbation:
             Number of available bins
         """
         if perturb_type in ['minor_deletion', 'minor_addition']:
-            return 21  # Bins 0-20
+            return 11  # Bins for 0%, 5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 45%, 50%
         elif perturb_type in ['major_deletion', 'major_addition']:
             return 2   # Bins 0-1
         else:
@@ -107,23 +107,31 @@ class Perturbation:
     
     def _minor_deletion(self, train_data: pd.DataFrame, bin_number: int):
         """
-        Minor deletion: Remove bin_number/100 of data (0% to 20%).
-        Bin 0: Remove 0%, Bin 1: Remove 1%, ..., Bin 20: Remove 20%
+        Minor deletion: Remove bin_number% of data from the END (use last 50% for perturbations).
+        Bin 0: Remove 0%, Bin 5: Remove 5%, ..., Bin 50: Remove 50%
+        For perturbations, remove from the last 50% of data.
         """
-        if not 0 <= bin_number <= 20:
-            raise ValueError(f"Minor deletion bin must be between 0 and 20, got {bin_number}")
-        
         if bin_number == 0:
             return train_data.copy()
-        
-        # Remove bin_number% from the beginning (maintain order)
+
+        # Use the last 50% of data for perturbations
+        total_size = len(train_data)
+        last_50_percent_start = total_size // 2
+        last_50_percent = train_data.iloc[last_50_percent_start:]
+
+        # Remove bin_number% from the last 50%
         remove_fraction = bin_number / 100.0
-        remove_count = int(len(train_data) * remove_fraction)
-        
-        if remove_count >= len(train_data):
-            raise ValueError(f"Cannot remove {remove_count} rows from {len(train_data)} rows")
-        
-        return train_data.iloc[remove_count:].reset_index(drop=True)
+        remove_count = int(len(last_50_percent) * remove_fraction)
+
+        if remove_count >= len(last_50_percent):
+            remove_count = len(last_50_percent) - 1  # Keep at least 1 sample
+
+        # Keep first 50% + remaining from last 50%
+        first_50_percent = train_data.iloc[:last_50_percent_start]
+        remaining_last_50 = last_50_percent.iloc[:-remove_count] if remove_count > 0 else last_50_percent
+
+        result = pd.concat([first_50_percent, remaining_last_50], ignore_index=True)
+        return result
     
     def _major_deletion(self, train_data: pd.DataFrame, bin_number: int):
         """
@@ -141,21 +149,26 @@ class Perturbation:
     
     def _minor_addition(self, train_data: pd.DataFrame, bin_number: int):
         """
-        Minor addition: Use increasing percentages of data.
-        Bin 0: Use 80% (remove 20%), Bin 1: Use 81% (remove 19%), ..., Bin 20: Use 100% (remove 0%)
+        Minor addition: Start with 50% data, progressively add from the last 50%.
+        Bin 0: Use 50%, Bin 5: Use 55%, ..., Bin 50: Use 100%
+        Additions come from the last 50% of data.
         """
-        if not 0 <= bin_number <= 20:
-            raise ValueError(f"Minor addition bin must be between 0 and 20, got {bin_number}")
-        
-        # Calculate how much to keep: 80% + bin_number%
-        keep_percentage = 80 + bin_number
-        keep_fraction = keep_percentage / 100.0
-        keep_count = int(len(train_data) * keep_fraction)
-        
-        # Ensure we don't exceed the original data size
-        keep_count = min(keep_count, len(train_data))
-        
-        return train_data.iloc[:keep_count].reset_index(drop=True)
+        total_size = len(train_data)
+        first_50_percent = train_data.iloc[:total_size // 2]
+        last_50_percent = train_data.iloc[total_size // 2:]
+
+        if bin_number == 0:
+            # Use only first 50%
+            return first_50_percent.reset_index(drop=True)
+
+        # Add bin_number% from the last 50%
+        add_fraction = bin_number / 100.0
+        add_count = int(len(last_50_percent) * add_fraction)
+        add_count = min(add_count, len(last_50_percent))  # Don't exceed available data
+
+        additional_data = last_50_percent.iloc[:add_count]
+        result = pd.concat([first_50_percent, additional_data], ignore_index=True)
+        return result
     
     def _major_addition(self, train_data: pd.DataFrame, bin_number: int):
         """
