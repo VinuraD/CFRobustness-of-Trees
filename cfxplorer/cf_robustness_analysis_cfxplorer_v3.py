@@ -496,27 +496,14 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
     
     log_print(f"\nTesting model perturbations for fold {fold_idx}...")
     
-    # # Define RandomForest hyperparameters to test (CFXplorer only works with RF)
-    # # Complete grid search: all combinations of n_estimators and max_depth
-    # model_configs = []
-    
-    # # All 16 combinations: 4 n_estimators × 4 max_depth values
-    # n_estimators_values = [50, 100, 150, 200]
-    # max_depth_values = [3, 4, 5, 6]
-    
-    # for n_estimators in n_estimators_values:
-    #     for max_depth in max_depth_values:
-    #         model_configs.append(('random_forest', max_depth, n_estimators))
-        # FULL GRID for RandomForest: 4 max_depth × 4 n_estimators = 16 combos
-    from itertools import product
-
-    max_depth_values = [3, 4, 5, 6]
-    n_estimators_values = [50, 100, 150, 200]
-
-    model_configs = [
-        ('random_forest', md, ne)
-        for md, ne in product(max_depth_values, n_estimators_values)
-    ]
+    # Define RandomForest hyperparameters to test (CFXplorer only works with RF)
+    model_configs = []
+    # Max depth study: Fix n_estimators=100, vary max_depth
+    for max_depth in [3, 4, 5, 6]:
+        model_configs.append(('random_forest', max_depth, 100))
+    # N_estimators study: Fix max_depth=3, vary n_estimators
+    for n_estimators in [50, 100, 150, 200]:
+        model_configs.append(('random_forest', 3, n_estimators))
 
     log_print(f"    RF grid size: {len(model_configs)} configurations")
     for _, md, ne in model_configs:
