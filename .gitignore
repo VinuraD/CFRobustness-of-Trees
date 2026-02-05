@@ -6,3 +6,7 @@
 *.png
 *.pyc
 __pycache__/
+*.tex
+*.pdf
+*.aux
+*.toc
