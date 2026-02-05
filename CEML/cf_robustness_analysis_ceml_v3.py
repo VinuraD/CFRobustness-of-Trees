@@ -355,31 +355,28 @@ def main():
     ]
     log_print(f"  Data perturbation types: {[p[0] for p in data_perturbations]}")
     
-    # Define model perturbations to test - NEW SYSTEMATIC APPROACH
-    # Test max_depth variations (keep n_estimators fixed at baseline=100)
-    # Test n_estimators variations (keep max_depth fixed at baseline=5)
+    # Define model perturbations to test - STANDARDIZED APPROACH
+    # Two separate studies: max_depth study and n_estimators study
     model_perturbations = []
-    
+
     # Max depth study: Fix n_estimators=100, vary max_depth=[3,4,5,6]
     for max_depth in [3, 4, 5, 6]:
         model_perturbations.extend([
             ('random_forest', max_depth, 100),
             ('xgboost', max_depth, 100),
             ('lightgbm', max_depth, 100),
-        ])
-    
-    # N_estimators study: Fix max_depth=5, vary n_estimators=[50,100,150,200]
-    for n_estimators in [50, 100, 150, 200]:
-        model_perturbations.extend([
-            ('random_forest', 5, n_estimators),
-            ('xgboost', 5, n_estimators),
-            ('lightgbm', 5, n_estimators),
+            ('adaboost', max_depth, 100),
+            ('catboost', max_depth, 100),
         ])
 
-    # Add AdaBoost with n_estimators variations (fix max_depth=3 for base estimator)
+    # N_estimators study: Fix max_depth=3, vary n_estimators=[50,100,150,200]
     for n_estimators in [50, 100, 150, 200]:
         model_perturbations.extend([
+            ('random_forest', 3, n_estimators),
+            ('xgboost', 3, n_estimators),
+            ('lightgbm', 3, n_estimators),
             ('adaboost', 3, n_estimators),
+            ('catboost', 3, n_estimators),
         ])
     log_print(f"  Model perturbations: {len(model_perturbations)} configurations")
     for model_type, max_depth, n_estimators in model_perturbations:
@@ -627,28 +624,23 @@ def main():
                 except Exception as e:
                     log_print(f"    Error in minor_addition bin {bin_num}: {e}")
             
-            # COMMENTED OUT: Original data perturbation analysis
-            # for perturb_type, bins in data_perturbations:
-            
-            # COMMENTED OUT: Model perturbations
-            # log_print(f"\nTesting model perturbations for fold {fold}...")
-            
-            # COMMENTED OUT: Model perturbation section
-            """
+            # Test counterfactuals on model perturbations
+            log_print(f"\nTesting model perturbations for fold {fold}...")
+
             for model_type, max_depth, n_estimators in model_perturbations:
                 try:
                     # Use processed data for model perturbations too (same format as baseline)
                     train_processed_for_model, _ = perturbation.get_data(fold=fold, raw_data=False)
-                    
+
                     # Extract features and target from processed data
                     model_X_train = train_processed_for_model.drop(columns=[label_col])
                     model_y_train = train_processed_for_model[label_col]
-                    
+
                     # Handle categorical labels if needed
                     if model_y_train.dtype == 'object':
                         le_model = LabelEncoder()
                         model_y_train = le_model.fit_transform(model_y_train)
-                    
+
                     # Create and train the model with different hyperparameters
                     if model_type == 'random_forest':
                         perturbed_model = RandomForestClassifier(
@@ -674,35 +666,32 @@ def main():
                     elif model_type == 'adaboost':
                         from sklearn.ensemble import AdaBoostClassifier
                         from sklearn.tree import DecisionTreeClassifier
-                        # Use 'estimator' instead of deprecated 'base_estimator'
-                        try:
-                            # Try new API first (scikit-learn >= 1.2)
-                            base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
-                            perturbed_model = AdaBoostClassifier(
-                                estimator=base_tree,
-                                n_estimators=n_estimators,
-                                random_state=42
-                            )
-                        except TypeError:
-                            # Fallback to old API (scikit-learn < 1.2)
-                            base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
-                            perturbed_model = AdaBoostClassifier(
-                                base_estimator=base_tree,
-                                n_estimators=n_estimators,
-                                random_state=42
-                            )
+                        base_tree = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
+                        perturbed_model = AdaBoostClassifier(
+                            estimator=base_tree,
+                            n_estimators=n_estimators,
+                            random_state=42
+                        )
+                    elif model_type == 'catboost':
+                        from catboost import CatBoostClassifier
+                        perturbed_model = CatBoostClassifier(
+                            depth=max_depth,
+                            iterations=n_estimators,
+                            random_seed=42,
+                            verbose=0
+                        )
                     else:
                         continue  # Skip unknown model types
-                    
+
                     # Train on processed data (same format as baseline)
                     perturbed_model.fit(model_X_train, model_y_train)
-                    
+
                     # Evaluate model on test set
                     model_test_acc = accuracy_score(y_test[:test_subset_size], perturbed_model.predict(X_test_subset))
-                    
+
                     # Calculate comprehensive metrics for this model
                     cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test_subset, model_X_train)
-                    
+
                     # Store results
                     model_key = f"{model_type}_{max_depth}_{n_estimators}"
                     all_fold_results['model_perturbations'][model_key].append({
@@ -713,12 +702,11 @@ def main():
                         'lof_score': cf_metrics['lof_score'],
                         'fold': fold
                     })
-                    
+
                     log_print(f"  {model_type} ({max_depth}, {n_estimators}): validity: {cf_metrics['validity']:.4f}, accuracy: {model_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
-                    
+
                 except Exception as e:
                     log_print(f"  Error with {model_type} ({max_depth}, {n_estimators}): {e}")
-            """
         
         except Exception as e:
             log_print(f"Error in fold {fold}: {e}")
