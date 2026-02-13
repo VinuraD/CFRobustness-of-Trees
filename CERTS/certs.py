@@ -172,6 +172,7 @@ class CERTS:
         self.immutable_features = None
         self.classes_ = None
         self.X_train = None
+        self.y_train = None
 
     def fit(
         self,
@@ -216,6 +217,8 @@ class CERTS:
 
         if isinstance(y_train, pd.Series):
             y_train = y_train.values
+
+        self.y_train = y_train
 
         # Store classes
         self.classes_ = np.unique(y_train)
@@ -280,8 +283,8 @@ class CERTS:
         else:
             base_max_depth = 5
 
-        # Perturbation bins (matching evaluation)
-        perturbation_bins = [5, 10, 15, 20, 25, 30]  # Minor deletion percentages
+        # Perturbation bins: minor deletion percentages
+        perturbation_bins = [5, 10, 15, 20, 25, 30]
 
         for k in range(self.n_ensemble):
             # Randomly pick a perturbation level
@@ -289,13 +292,17 @@ class CERTS:
             remove_fraction = bin_num / 100.0
             remove_count = int(len(X_train) * remove_fraction)
 
-            # Simple data perturbation: remove samples from beginning
             if remove_count > 0 and remove_count < len(X_train):
-                X_pert = X_train[remove_count:]
-                y_pert = y_train[remove_count:]
+                # Randomly select indices to keep (no knowledge of evaluation strategy)
+                indices = np.arange(len(X_train))
+                rng = np.random.RandomState(self.random_state + k if self.random_state else None)
+                keep_indices = rng.choice(indices, size=len(X_train) - remove_count, replace=False)
+                keep_indices.sort()  # Maintain order for consistency
+                X_pert = X_train[keep_indices]
+                y_pert = y_train[keep_indices]
             else:
-                X_pert = X_train
-                y_pert = y_train
+                X_pert = X_train.copy()
+                y_pert = y_train.copy()
 
             # Also vary hyperparameters slightly
             n_est = max(10, base_n_estimators + random.randint(-30, 30))
@@ -621,11 +628,9 @@ class CERTS:
         # Use provided model or base model
         if model is not None:
             self.base_model = model
-            # Rebuild ensemble for new model
-            if self.X_train is not None:
-                # Get y_train from stored data
-                y_train = self.base_model.predict(self.X_train)
-                self.ensemble = self._generate_ensemble(self.X_train, y_train)
+            # Rebuild ensemble for new model using stored true labels
+            if self.X_train is not None and self.y_train is not None:
+                self.ensemble = self._generate_ensemble(self.X_train, self.y_train)
 
         if isinstance(x_test, pd.DataFrame):
             x_test_array = x_test.values
