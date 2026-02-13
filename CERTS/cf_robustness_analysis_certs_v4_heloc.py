@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Counterfactual Robustness Analysis (ARMOR v2) - Spambase Dataset
+Counterfactual Robustness Analysis (CERTS v4) - HELOC Dataset
 
-This script evaluates the robustness of counterfactual explanations using the ARMOR algorithm
+This script evaluates the robustness of counterfactual explanations using the CERTS algorithm
 (Adversarially Robust Model-Optimized Recourse) across two separate experiments:
 1. Data perturbations - testing how changes in training data affect counterfactual validity
 2. Model perturbations - testing how different model types and hyperparameters affect counterfactual validity
 
 The workflow is:
-1. Generate counterfactual explanations using ARMOR on unperturbed data with a baseline model
+1. Generate counterfactual explanations using CERTS on unperturbed data with a baseline model
 2. Run DATA PERTURBATION tests:
    - Train models with the same architecture on different perturbed datasets
    - Evaluate how valid the original counterfactuals remain
@@ -16,8 +16,8 @@ The workflow is:
    - Train different model types on the full unperturbed dataset
    - Evaluate how valid the original counterfactuals remain
 
-This version uses the ARMOR algorithm for counterfactual generation and the Spambase dataset.
-Note: ARMOR is designed for tree-based models (RandomForest initially).
+This version uses the CERTS algorithm for counterfactual generation and the HELOC dataset.
+Note: HELOC has continuous features only.
 """
 
 import sys
@@ -52,9 +52,9 @@ try:
 except ImportError:
     catboost_module = None
 
-# ARMOR imports
-from armor import ARMOR
-from constraints import get_feature_types_list
+# CERTS imports
+from certs import CERTS
+from constraints import get_feature_types_list, get_immutable_features
 
 from data_module import DataModule
 from perturb import Perturbation
@@ -109,7 +109,7 @@ def create_baseline_model(model_type, max_depth=5, n_estimators=100, random_stat
 def setup_logging():
     """Setup comprehensive logging to both console and file"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"cf_robustness_analysis_armor_v2_{timestamp}.log"
+    log_filename = f"cf_robustness_analysis_certs_v4_heloc_{timestamp}.log"
 
     logger = logging.getLogger('CFRobustness')
     logger.setLevel(logging.INFO)
@@ -141,61 +141,47 @@ def log_print(*args, **kwargs):
     logger.info(message)
 
 
-def generate_counterfactuals_armor(x_test, y_test, model, X_train, y_train,
+def generate_counterfactuals_certs(x_test, y_test, model, X_train, y_train,
                                    feature_types=None, label_encoders=None,
+                                   immutable_features=None,
                                    tau=0.7, n_ensemble=10, mcts_budget=500):
     """
-    Generate counterfactuals for test set using ARMOR
-
-    Args:
-        x_test: Test data (without label)
-        y_test: Test labels
-        model: Trained model (must be tree-based)
-        X_train: Training features
-        y_train: Training labels
-        feature_types: List of feature types
-        label_encoders: Dict of label encoders
-        tau: Consensus threshold
-        n_ensemble: Number of ensemble models
-        mcts_budget: MCTS search budget
-
-    Returns:
-        cf_list: DataFrame with counterfactuals and success flag
-        success_rate: Proportion of successful generations
+    Generate counterfactuals for test set using CERTS
     """
-    log_print(f"Generating counterfactuals using ARMOR algorithm")
+    log_print(f"Generating counterfactuals using CERTS algorithm")
     log_print(f"Test set size: {len(x_test)} samples")
     log_print(f"Parameters: tau={tau}, n_ensemble={n_ensemble}, mcts_budget={mcts_budget}")
 
     if not isinstance(model, SUPPORTED_TYPES):
-        log_print(f"Warning: ARMOR requires a supported tree ensemble. Got {type(model)}")
+        log_print(f"Warning: CERTS requires a supported tree ensemble. Got {type(model)}")
         cf_list = pd.DataFrame(columns=list(x_test.columns) + ['cf_class', 'success'])
         for i in range(len(x_test)):
             cf_row = list(x_test.iloc[i].values) + [y_test.iloc[i], False]
             cf_list.loc[i] = cf_row
         return cf_list, 0.0
 
-    # Initialize ARMOR
-    armor = ARMOR(
+    # Initialize CERTS
+    certs = CERTS(
         tau=tau,
         n_ensemble=n_ensemble,
         mcts_budget=mcts_budget,
         random_state=42
     )
 
-    # Fit ARMOR with training data
-    armor.fit(
+    # Fit CERTS with training data
+    certs.fit(
         X_train=X_train.values if isinstance(X_train, pd.DataFrame) else X_train,
         y_train=y_train.values if isinstance(y_train, pd.Series) else y_train,
         base_model=model,
         feature_types=feature_types,
-        label_encoders=label_encoders
+        label_encoders=label_encoders,
+        immutable_features=immutable_features
     )
 
     # Generate counterfactuals
-    cf_list, success_rate = armor.generate_counterfactuals(x_test, model)
+    cf_list, success_rate = certs.generate_counterfactuals(x_test, model)
 
-    log_print(f"ARMOR counterfactual generation complete:")
+    log_print(f"CERTS counterfactual generation complete:")
     log_print(f"  Successful: {int(success_rate * len(x_test))}/{len(x_test)} ({success_rate:.2%})")
     log_print(f"  Failed: {len(x_test) - int(success_rate * len(x_test))}/{len(x_test)} ({(1-success_rate):.2%})")
 
@@ -231,7 +217,7 @@ def calculate_comprehensive_metrics(model, cf_list, x_test, x_train):
     avg_l2_distance = np.mean(l2_distances)
 
     # 3. L0 Distance
-    l0_distances = np.sum((cf_features.values != corresponding_originals.values), axis=1)
+    l0_distances = np.sum((np.abs(cf_features.values - corresponding_originals.values) > 1e-6), axis=1)
     avg_l0_distance = np.mean(l0_distances)
 
     # 4. LOF Score
@@ -323,9 +309,8 @@ def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, basel
     log_print("  minor_addition:")
     addition_results = []
 
-    # First, generate CFs with 50% data
     train_raw_50pct, _ = perturbation.get_data(fold=fold_idx, raw_data=True)
-    train_raw_50pct = perturbation.perturb_data(train_raw_50pct, 'minor_addition', 0)  # 50% data
+    train_raw_50pct = perturbation.perturb_data(train_raw_50pct, 'minor_addition', 0)
     train_processed_50pct = perturbation.data_module._preprocess_data(train_raw_50pct)
 
     X_train_50pct = train_processed_50pct.drop(columns=[label_col])
@@ -335,12 +320,10 @@ def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, basel
         le_50pct = LabelEncoder()
         y_train_50pct = le_50pct.fit_transform(y_train_50pct)
 
-    # Train model with 50% data
     model_50pct = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
     model_50pct.fit(X_train_50pct, y_train_50pct)
 
-    # Generate CFs with 50% data using ARMOR
-    addition_cf_list, addition_success_rate = generate_counterfactuals_armor(
+    addition_cf_list, addition_success_rate = generate_counterfactuals_certs(
         X_test, y_test, model_50pct, X_train_50pct, y_train_50pct,
         feature_types=feature_types, label_encoders=label_encoders,
         tau=0.7, n_ensemble=10, mcts_budget=500
@@ -468,7 +451,7 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
     return results
 
 
-def create_comprehensive_visualizations(all_results, output_dir="armor_plots"):
+def create_comprehensive_visualizations(all_results, output_dir="certs_plots"):
     """Create comprehensive visualizations for all results"""
     os.makedirs(output_dir, exist_ok=True)
 
@@ -476,7 +459,7 @@ def create_comprehensive_visualizations(all_results, output_dir="armor_plots"):
     sns.set_palette("husl")
 
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-    fig.suptitle('ARMOR Counterfactual Data Robustness Analysis - Spambase Dataset', fontsize=16, fontweight='bold')
+    fig.suptitle('CERTS Counterfactual Data Robustness Analysis - HELOC Dataset', fontsize=16, fontweight='bold')
 
     perturbation_types = ['minor_deletion', 'minor_addition']
 
@@ -522,7 +505,7 @@ def create_comprehensive_visualizations(all_results, output_dir="armor_plots"):
 
     plt.tight_layout()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plt.savefig(f'{output_dir}/cf_data_robustness_spambase_5fold_plot_{timestamp}.png',
+    plt.savefig(f'{output_dir}/cf_data_robustness_heloc_5fold_plot_{timestamp}.png',
                 dpi=300, bbox_inches='tight')
     plt.close()
 
@@ -574,14 +557,14 @@ def print_statistical_summary(all_results):
         log_print(f"    Min validity: {np.min(all_model_validities):.4f}")
         log_print(f"    Max validity: {np.max(all_model_validities):.4f}")
 
-    log_print(f"\n[KEY INSIGHTS] KEY INSIGHTS FOR SPAMBASE DATASET:")
-    log_print(f"  - ARMOR uses MCTS for robust counterfactual generation")
-    log_print(f"  - Perturbation ensemble provides empirical robustness validation")
-    log_print(f"  - Continuous features allow for precise constraint satisfaction")
+    log_print(f"\n[KEY INSIGHTS] KEY INSIGHTS FOR HELOC DATASET:")
+    log_print(f"  - HELOC contains continuous financial risk features")
+    log_print(f"  - CERTS leverages MCTS for efficient constraint-based search")
+    log_print(f"  - Perturbation ensemble validates robustness to model changes")
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='ARMOR CF Robustness Analysis - Spambase')
+    parser = argparse.ArgumentParser(description='CERTS CF Robustness Analysis - HELOC')
     parser.add_argument('--model-type', default='random_forest',
                         choices=['random_forest', 'xgboost', 'lightgbm', 'adaboost'],
                         help='Type of tree-based model to use (default: random_forest)')
@@ -594,7 +577,7 @@ def main():
     logger, log_filename = setup_logging()
 
     log_print("="*80)
-    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (ARMOR v2) - SPAMBASE DATASET")
+    log_print("COUNTERFACTUAL ROBUSTNESS ANALYSIS (CERTS v4) - HELOC DATASET")
     log_print("="*80)
     log_print(f"[LOG] Logging session to: {log_filename}")
     log_print(f"[TIME] Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -602,19 +585,23 @@ def main():
 
     try:
         log_print("\n1. Loading dataset...")
-        data_path = os.path.join(os.path.dirname(__file__), "..", "data", "Spambase.csv")
+        data_path = os.path.join(os.path.dirname(__file__), "..", "data", "HELOC.csv")
         dm = DataModule(data_path, n_splits=5, random_state=42)
         perturbation = Perturbation(dm)
 
         metadata = perturbation.get_metadata()
-        log_print(f"Dataset: Spambase")
+        log_print(f"Dataset: HELOC")
         log_print(f"Label column: {metadata['label_column']}")
         log_print(f"Features: {len(metadata['feature_types'])} features")
+
+        # Get immutable features
+        immutable_features = get_immutable_features(dm)
+        log_print(f"Immutable features: {immutable_features}")
 
         log_print("\n2. Analysis parameters:")
         n_folds = 5
         log_print(f"  Number of folds: {n_folds}")
-        log_print(f"  Counterfactual method: ARMOR")
+        log_print(f"  Counterfactual method: CERTS")
 
         f = io.StringIO()
         with contextlib.redirect_stdout(f):
@@ -658,8 +645,8 @@ def main():
             log_print(f"  Training samples: {len(X_train)}")
             log_print(f"  Test samples: {len(X_test)}")
             log_print(f"  Features: {len(X_train.columns)}")
-            log_print(f"  Class distribution - Train: {np.bincount(y_train)}")
-            log_print(f"  Class distribution - Test: {np.bincount(y_test)}")
+            log_print(f"  Class distribution - Train: {np.bincount(y_train.astype(int))}")
+            log_print(f"  Class distribution - Test: {np.bincount(y_test.astype(int))}")
 
             log_print(f"\nTraining baseline model ({args.model_type}) for fold {fold_idx}...")
             baseline_model = create_baseline_model(args.model_type, max_depth=5, n_estimators=100)
@@ -670,11 +657,12 @@ def main():
             log_print(f"  Train accuracy: {train_accuracy:.4f}")
             log_print(f"  Test accuracy: {test_accuracy:.4f}")
 
-            log_print(f"Generating counterfactuals using ARMOR for fold {fold_idx}...")
-            baseline_cf_list, baseline_success_rate = generate_counterfactuals_armor(
+            log_print(f"Generating counterfactuals using CERTS for fold {fold_idx}...")
+            baseline_cf_list, baseline_success_rate = generate_counterfactuals_certs(
                 X_test, y_test, baseline_model, X_train, y_train,
                 feature_types=feature_types,
                 label_encoders=dm.label_encoders,
+                immutable_features=immutable_features,
                 tau=0.7,
                 n_ensemble=10,
                 mcts_budget=500
@@ -718,7 +706,7 @@ def main():
 
         print_statistical_summary(all_results)
 
-        log_print(f"\n[SUCCESS] ARMOR robustness analysis completed successfully!")
+        log_print(f"\n[SUCCESS] CERTS robustness analysis completed successfully!")
         log_print(f"All results saved and logged to: {log_filename}")
 
     except Exception as e:

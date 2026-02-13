@@ -12,13 +12,13 @@ OUTPUT_TEX = os.path.join(SCRIPT_DIR, "german_credit_latex_tables.tex")
 # Row 0 (header): method names at cols 3,7,11,15,19,23,27
 # Row 1 (sub-header): Mean Validity, Std Validity, Mean Accuracy, Std Accuracy (repeated)
 # Cols 0-2: Perturbation, Bin, Data %
-DATA_METHODS = ["NICE", "DiCE", "cfxplorer", "CEML", "Feature Tweak", "OCEAN", "ARMOR"]
+DATA_METHODS = ["NICE", "DiCE", "cfxplorer", "CEML", "Feature Tweak", "OCEAN", "CERTS"]
 DATA_METHOD_START_COLS = [3, 7, 11, 15, 19, 23, 27]  # Mean Validity column for each method
 
 # --- Model perturbation CSV column layout ---
 # Col 0: Model Configuration
 # Methods start at cols 1,5,9,13,17
-MODEL_METHODS = ["NICE", "DiCE", "Feature Tweak", "CEML", "ARMOR"]
+MODEL_METHODS = ["NICE", "DiCE", "Feature Tweak", "CEML", "CERTS"]
 MODEL_METHOD_START_COLS = [1, 5, 9, 13, 17]  # Mean Validity column for each method
 
 MODEL_TYPE_LABELS = {

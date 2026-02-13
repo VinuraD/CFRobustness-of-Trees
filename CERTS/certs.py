@@ -1,5 +1,5 @@
 """
-ARMOR: Adversarially Robust Model-Optimized Recourse
+CERTS: Counterfactual Explanations via Robust Tree-Search
 
 Main class for generating robust counterfactual explanations using MCTS-based
 candidate generation and perturbation ensemble validation.
@@ -114,9 +114,9 @@ def margin_boost(model, x_cf, target_class):
     return -0.5
 
 
-class ARMOR:
+class CERTS:
     """
-    Adversarially Robust Model-Optimized Recourse
+    Counterfactual Explanations via Robust Tree-Search
 
     Generates counterfactual explanations that are robust to model and data
     perturbations using MCTS-based candidate generation and ensemble validation.
@@ -183,7 +183,7 @@ class ARMOR:
         immutable_features: List[int] = None
     ):
         """
-        Fit ARMOR by generating the perturbation ensemble.
+        Fit CERTS by generating the perturbation ensemble.
 
         Parameters
         ----------

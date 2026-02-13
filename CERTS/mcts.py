@@ -1,5 +1,5 @@
 """
-ARMOR MCTS Implementation
+CERTS MCTS Implementation
 
 Monte Carlo Tree Search for counterfactual candidate generation on decision trees.
 """

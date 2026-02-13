@@ -17,7 +17,7 @@ This framework evaluates **6 counterfactual methods** across **4 datasets** unde
 | **CFXplorer** | Counterfactual explorer for tree-based models using decision paths | RF |
 | **NICE** | Nearest Instance Counterfactual Explanations using nearest neighbour search | RF, XGB, LGB |
 | **FeatureTweak** | Generates counterfactuals by tweaking features along decision tree paths | RF |
-| **ARMOR** | Adversarially Robust Model-Optimized Recourse using MCTS and perturbation ensemble validation | RF |
+| **CERTS** | Counterfactual Explanations via Robust Tree-Search using MCTS and perturbation ensemble validation | RF |
 
 ## Datasets
 
@@ -45,12 +45,12 @@ CFRobustness-of-Trees/
 ├── feature_tweak/
 │   ├── ft_simple.py               # FeatureTweak algorithm implementation
 │   └── cf_robustness_analysis_featuretweak_v*.py
-├── ARMOR/
-│   ├── armor.py                   # Main ARMOR class (fit, generate_counterfactuals)
+├── CERTS/
+│   ├── certs.py                   # Main CERTS class (fit, generate_counterfactuals)
 │   ├── mcts.py                    # Monte Carlo Tree Search on decision trees
 │   ├── distance.py                # HEOM and other distance metrics
 │   ├── constraints.py             # Feature constraint handling and immutability
-│   └── cf_robustness_analysis_armor_v*.py
+│   └── cf_robustness_analysis_certs_v*.py
 ├── config.py                      # Central configuration (datasets, methods, models)
 ├── run_all_experiments.py          # Sequential experiment runner for all methods/datasets
 ├── counterfactuals/               # Saved counterfactual CSVs per method/dataset/fold
@@ -93,9 +93,9 @@ Each experiment script follows the same two-stage protocol:
 | **L0 Distance** | Average number of features changed |
 | **LOF Score** | Local Outlier Factor measuring whether counterfactuals lie within the data manifold |
 
-## ARMOR Method
+## CERTS Method
 
-**ARMOR** (Adversarially Robust Model-Optimized Recourse) is a novel counterfactual method that prioritises robustness. It differs from existing methods by:
+**CERTS** (Counterfactual Explanations via Robust Tree-Search) is a novel counterfactual method that prioritises robustness. It differs from existing methods by:
 
 1. **MCTS-based candidate generation**: Uses Monte Carlo Tree Search on each decision tree in the Random Forest to efficiently explore the constraint space, avoiding combinatorial path enumeration.
 
@@ -109,7 +109,7 @@ Each experiment script follows the same two-stage protocol:
 
 4. **Feature actionability**: Respects immutable features (e.g., race, sex) by constraining the MCTS to follow branches consistent with the original values.
 
-See `ARMOR/ARMOR_Methodology.tex` for the complete mathematical formulation.
+See `CERTS/CERTS_Methodology.tex` for the complete mathematical formulation.
 
 ## Usage
 
@@ -128,20 +128,20 @@ python run_all_experiments.py
 ### Run a Specific Method on a Specific Dataset
 
 ```bash
-# Method choices: DiCE, CEML, cfxplorer, NICE, feature_tweak, ARMOR
+# Method choices: DiCE, CEML, cfxplorer, NICE, feature_tweak, CERTS
 # Dataset choices: v2 (Spambase), v3 (German-Credit), v4_heloc (HELOC), v5_compas (COMPAS)
 
-python run_all_experiments.py --methods ARMOR --datasets v3
+python run_all_experiments.py --methods CERTS --datasets v3
 ```
 
 ### Run a Single Experiment Script Directly
 
 ```bash
-cd ARMOR
-python cf_robustness_analysis_armor_v2.py   # Spambase
-python cf_robustness_analysis_armor_v3.py   # German Credit
-python cf_robustness_analysis_armor_v4_heloc.py  # HELOC
-python cf_robustness_analysis_armor_v5_compas.py # COMPAS
+cd CERTS
+python cf_robustness_analysis_certs_v2.py   # Spambase
+python cf_robustness_analysis_certs_v3.py   # German Credit
+python cf_robustness_analysis_certs_v4_heloc.py  # HELOC
+python cf_robustness_analysis_certs_v5_compas.py # COMPAS
 ```
 
 ### List Available Experiments

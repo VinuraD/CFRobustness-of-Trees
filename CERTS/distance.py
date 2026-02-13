@@ -1,5 +1,5 @@
 """
-ARMOR Distance Metrics
+CERTS Distance Metrics
 
 Implements HEOM (Heterogeneous Euclidean-Overlap Metric) for mixed-type data.
 """

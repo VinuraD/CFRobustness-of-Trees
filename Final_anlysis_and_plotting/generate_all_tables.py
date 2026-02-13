@@ -3,8 +3,8 @@ Generate LaTeX comparison tables for Spambase, HELOC, and COMPAS datasets.
 
 Steps:
 1. Convert xlsx files to csv (preserving 2-row header structure)
-2. Parse ARMOR log files to extract data & model perturbation results
-3. Append ARMOR columns to the CSVs
+2. Parse CERTS log files to extract data & model perturbation results
+3. Append CERTS columns to the CSVs
 4. Generate LaTeX tables for each dataset
 5. Create standalone tex wrappers
 """
@@ -28,8 +28,8 @@ DATASETS = {
         "model_perturb_xlsx": os.path.join(SCRIPT_DIR, "Spambase_model_perturb.xlsx"),
         "data_perturb_csv": os.path.join(SCRIPT_DIR, "spambase_data_perturb.csv"),
         "model_perturb_csv": os.path.join(SCRIPT_DIR, "spambase_model_perturb.csv"),
-        "armor_log": os.path.join(
-            PROJECT_ROOT, "experiment_outputs", "ARMOR_v2", "ARMOR_v2.log"
+        "certs_log": os.path.join(
+            PROJECT_ROOT, "experiment_outputs", "CERTS_v2", "CERTS_v2.log"
         ),
         "latex_tables": os.path.join(SCRIPT_DIR, "spambase_latex_tables.tex"),
         "standalone_tex": os.path.join(SCRIPT_DIR, "spambase_tables_standalone.tex"),
@@ -40,11 +40,11 @@ DATASETS = {
         "model_perturb_xlsx": os.path.join(SCRIPT_DIR, "Heloc_model_perturb.xlsx"),
         "data_perturb_csv": os.path.join(SCRIPT_DIR, "heloc_data_perturb.csv"),
         "model_perturb_csv": os.path.join(SCRIPT_DIR, "heloc_model_perturb.csv"),
-        "armor_log": os.path.join(
+        "certs_log": os.path.join(
             PROJECT_ROOT,
             "experiment_outputs",
-            "ARMOR_v4_heloc",
-            "ARMOR_v4_heloc.log",
+            "CERTS_v4_heloc",
+            "CERTS_v4_heloc.log",
         ),
         "latex_tables": os.path.join(SCRIPT_DIR, "heloc_latex_tables.tex"),
         "standalone_tex": os.path.join(SCRIPT_DIR, "heloc_tables_standalone.tex"),
@@ -55,11 +55,11 @@ DATASETS = {
         "model_perturb_xlsx": os.path.join(SCRIPT_DIR, "Compas_model_perturb.xlsx"),
         "data_perturb_csv": os.path.join(SCRIPT_DIR, "compas_data_perturb.csv"),
         "model_perturb_csv": os.path.join(SCRIPT_DIR, "compas_model_perturb.csv"),
-        "armor_log": os.path.join(
+        "certs_log": os.path.join(
             PROJECT_ROOT,
             "experiment_outputs",
-            "ARMOR_v5_compas",
-            "ARMOR_v5_compas.log",
+            "CERTS_v5_compas",
+            "CERTS_v5_compas.log",
         ),
         "latex_tables": os.path.join(SCRIPT_DIR, "compas_latex_tables.tex"),
         "standalone_tex": os.path.join(SCRIPT_DIR, "compas_tables_standalone.tex"),
@@ -70,13 +70,13 @@ DATASETS = {
 # Row 0 (header): method names at cols 3,7,11,15,19,23,27
 # Row 1 (sub-header): Mean Validity, Std Validity, Mean Accuracy, Std Accuracy
 # Cols 0-2: Perturbation, Bin, Data %
-DATA_METHODS = ["NICE", "DiCE", "cfxplorer", "CEML", "Feature Tweak", "OCEAN", "ARMOR"]
+DATA_METHODS = ["NICE", "DiCE", "cfxplorer", "CEML", "Feature Tweak", "OCEAN", "CERTS"]
 DATA_METHOD_START_COLS = [3, 7, 11, 15, 19, 23, 27]
 
 # ─── Model perturbation CSV layout ───────────────────────────────────────────
 # Col 0: Model Configuration
 # Methods start at cols 1,5,9,13,17
-MODEL_METHODS = ["NICE", "DiCE", "Feature Tweak", "CEML", "ARMOR"]
+MODEL_METHODS = ["NICE", "DiCE", "Feature Tweak", "CEML", "CERTS"]
 MODEL_METHOD_START_COLS = [1, 5, 9, 13, 17]
 
 MODEL_TYPE_LABELS = {
@@ -113,12 +113,12 @@ def write_csv(rows, csv_path):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Step 2: Parse ARMOR logs
+# Step 2: Parse CERTS logs
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def parse_armor_log(log_path):
-    """Parse an ARMOR log file and return data and model perturbation results.
+def parse_certs_log(log_path):
+    """Parse an CERTS log file and return data and model perturbation results.
 
     Returns:
         data_perturb: dict[(perturbation_type, bin_num)] -> list of (validity, accuracy)
@@ -213,26 +213,26 @@ def compute_mean_std(values):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Step 3: Build CSVs with ARMOR columns appended
+# Step 3: Build CSVs with CERTS columns appended
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def build_data_perturb_csv(xlsx_rows, armor_data):
-    """Add ARMOR columns to data perturbation xlsx rows.
+def build_data_perturb_csv(xlsx_rows, certs_data):
+    """Add CERTS columns to data perturbation xlsx rows.
 
-    xlsx_rows: raw rows from xlsx (6 methods, no ARMOR)
-    armor_data: dict[(perturb_type, bin)] -> list of (validity, accuracy) across folds
+    xlsx_rows: raw rows from xlsx (6 methods, no CERTS)
+    certs_data: dict[(perturb_type, bin)] -> list of (validity, accuracy) across folds
 
-    Returns rows with ARMOR appended (4 extra columns).
+    Returns rows with CERTS appended (4 extra columns).
     """
     result = []
 
-    # Row 0: method header - add ARMOR
+    # Row 0: method header - add CERTS
     row0 = list(xlsx_rows[0])
-    # Extend to ensure we have enough columns, then add ARMOR header
+    # Extend to ensure we have enough columns, then add CERTS header
     while len(row0) < 27:
         row0.append(None)
-    row0.extend(["ARMOR", None, None, None])
+    row0.extend(["CERTS", None, None, None])
     result.append(row0)
 
     # Row 1: sub-header - add Mean Validity, Std Validity, Mean Accuracy, Std Accuracy
@@ -253,17 +253,17 @@ def build_data_perturb_csv(xlsx_rows, armor_data):
         bin_num = int(row[1]) if row[1] is not None else None
 
         if perturb_type and bin_num is not None:
-            # For minor_addition, invert ARMOR bin mapping:
-            # ARMOR log Bin 0 = baseline (50% data), Bin 50 = 100% data
+            # For minor_addition, invert CERTS bin mapping:
+            # CERTS log Bin 0 = baseline (50% data), Bin 50 = 100% data
             # CSV convention: Bin 50 = baseline (100% data), Bin 0 = 50% data
-            # So CSV Bin X should use ARMOR log Bin (50 - X)
+            # So CSV Bin X should use CERTS log Bin (50 - X)
             if perturb_type == "minor_addition":
-                armor_bin = 50 - bin_num
+                certs_bin = 50 - bin_num
             else:
-                armor_bin = bin_num
-            key = (perturb_type, armor_bin)
-            if key in armor_data:
-                vals = armor_data[key]
+                certs_bin = bin_num
+            key = (perturb_type, certs_bin)
+            if key in certs_data:
+                vals = certs_data[key]
                 validities = [v for v, a in vals]
                 accuracies = [a for v, a in vals]
                 mv, sv = compute_mean_std(validities)
@@ -279,13 +279,13 @@ def build_data_perturb_csv(xlsx_rows, armor_data):
     return result
 
 
-def build_model_perturb_csv(xlsx_rows, armor_model):
-    """Add ARMOR columns to model perturbation xlsx rows.
+def build_model_perturb_csv(xlsx_rows, certs_model):
+    """Add CERTS columns to model perturbation xlsx rows.
 
     xlsx_rows: raw rows from xlsx (4 methods: NICE, DiCE, Feature Tweak, CEML)
-    armor_model: dict[(model_type, depth, n_est)] -> list of (validity, accuracy)
+    certs_model: dict[(model_type, depth, n_est)] -> list of (validity, accuracy)
 
-    Returns rows with ARMOR appended (4 extra columns).
+    Returns rows with CERTS appended (4 extra columns).
     """
     result = []
 
@@ -293,7 +293,7 @@ def build_model_perturb_csv(xlsx_rows, armor_model):
     row0 = list(xlsx_rows[0])
     while len(row0) < 17:
         row0.append(None)
-    row0.extend(["ARMOR", None, None, None])
+    row0.extend(["CERTS", None, None, None])
     result.append(row0)
 
     # Row 1: sub-header
@@ -314,8 +314,8 @@ def build_model_perturb_csv(xlsx_rows, armor_model):
 
         if model_type is not None:
             key = (model_type, depth, n_est)
-            if key in armor_model:
-                vals = armor_model[key]
+            if key in certs_model:
+                vals = certs_model[key]
                 validities = [v for v, a in vals]
                 accuracies = [a for v, a in vals]
                 mv, sv = compute_mean_std(validities)
@@ -547,7 +547,7 @@ def format_csv_value(val):
 
 
 def process_dataset(name, cfg):
-    """Process a single dataset: xlsx->csv, parse log, add ARMOR, generate LaTeX."""
+    """Process a single dataset: xlsx->csv, parse log, add CERTS, generate LaTeX."""
     print(f"\n{'='*60}")
     print(f"Processing {cfg['label']} dataset")
     print(f"{'='*60}")
@@ -568,28 +568,28 @@ def process_dataset(name, cfg):
             break
     print(f"    {len(model_xlsx_rows_clean)} rows (including 2 header rows)")
 
-    # Step 2: Parse ARMOR log
-    print(f"  Parsing ARMOR log: {cfg['armor_log']}...")
-    armor_data, armor_model = parse_armor_log(cfg["armor_log"])
-    print(f"    Data perturbation: {len(armor_data)} (type, bin) combinations")
-    print(f"    Model perturbation: {len(armor_model)} (model, depth, n_est) combinations")
+    # Step 2: Parse CERTS log
+    print(f"  Parsing CERTS log: {cfg['certs_log']}...")
+    certs_data, certs_model = parse_certs_log(cfg["certs_log"])
+    print(f"    Data perturbation: {len(certs_data)} (type, bin) combinations")
+    print(f"    Model perturbation: {len(certs_model)} (model, depth, n_est) combinations")
 
     # Verify 5 folds
-    for key, vals in armor_data.items():
+    for key, vals in certs_data.items():
         if len(vals) != 5:
             print(f"    WARNING: {key} has {len(vals)} folds (expected 5)")
 
-    # Step 3: Build CSVs with ARMOR
-    print("  Building data perturbation CSV with ARMOR...")
-    data_csv_rows = build_data_perturb_csv(data_xlsx_rows, armor_data)
+    # Step 3: Build CSVs with CERTS
+    print("  Building data perturbation CSV with CERTS...")
+    data_csv_rows = build_data_perturb_csv(data_xlsx_rows, certs_data)
     write_csv(
         [[format_csv_value(v) for v in row] for row in data_csv_rows],
         cfg["data_perturb_csv"],
     )
     print(f"    Written to {cfg['data_perturb_csv']}")
 
-    print("  Building model perturbation CSV with ARMOR...")
-    model_csv_rows = build_model_perturb_csv(model_xlsx_rows_clean, armor_model)
+    print("  Building model perturbation CSV with CERTS...")
+    model_csv_rows = build_model_perturb_csv(model_xlsx_rows_clean, certs_model)
     write_csv(
         [[format_csv_value(v) for v in row] for row in model_csv_rows],
         cfg["model_perturb_csv"],
@@ -657,18 +657,18 @@ def process_dataset(name, cfg):
     generate_standalone_tex(latex_basename, cfg["standalone_tex"])
     print(f"    Standalone tex written to {cfg['standalone_tex']}")
 
-    # Print sample ARMOR values for verification
-    print("\n  Sample ARMOR values for verification:")
-    sample_keys = list(armor_data.keys())[:3]
+    # Print sample CERTS values for verification
+    print("\n  Sample CERTS values for verification:")
+    sample_keys = list(certs_data.keys())[:3]
     for key in sample_keys:
-        vals = armor_data[key]
+        vals = certs_data[key]
         validities = [v for v, a in vals]
         mv, sv = compute_mean_std(validities)
         print(f"    {key}: validity mean={mv:.4f}, std={sv:.4f} (from {len(vals)} folds)")
 
-    sample_model_keys = list(armor_model.keys())[:3]
+    sample_model_keys = list(certs_model.keys())[:3]
     for key in sample_model_keys:
-        vals = armor_model[key]
+        vals = certs_model[key]
         validities = [v for v, a in vals]
         mv, sv = compute_mean_std(validities)
         print(f"    {key}: validity mean={mv:.4f}, std={sv:.4f} (from {len(vals)} folds)")

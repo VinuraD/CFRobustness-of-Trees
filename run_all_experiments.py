@@ -43,7 +43,7 @@ class ExperimentRunner:
         self.experiment_status = {}
         
         # Define all experiments
-        self.methods = ['DiCE', 'CEML', 'cfxplorer', 'NICE', 'feature_tweak', 'ARMOR']
+        self.methods = ['DiCE', 'CEML', 'cfxplorer', 'NICE', 'feature_tweak', 'CERTS']
         self.datasets = [
             ('v2', 'Spambase'),
             ('v3', 'German-Credit'), 
@@ -430,7 +430,7 @@ class ExperimentRunner:
 def main():
     parser = argparse.ArgumentParser(description='Run counterfactual robustness experiments sequentially')
     parser.add_argument('--methods', nargs='+', 
-                       choices=['DiCE', 'CEML', 'cfxplorer', 'NICE', 'feature_tweak', 'ARMOR'],
+                       choices=['DiCE', 'CEML', 'cfxplorer', 'NICE', 'feature_tweak', 'CERTS'],
                        help='Specific methods to run (default: all)')
     parser.add_argument('--datasets', nargs='+',
                        choices=['v2', 'v3', 'v4_heloc', 'v5_compas'],

@@ -46,6 +46,46 @@ from ceml.sklearn.randomforest import randomforest_generate_counterfactual
 from data_module import DataModule
 from perturb import Perturbation
 
+
+import argparse
+try:
+    from catboost import CatBoostClassifier
+except ImportError:
+    CatBoostClassifier = None
+
+def create_baseline_model(model_type, max_depth=5, n_estimators=100, random_state=42):
+    """Factory function to create baseline model."""
+    if model_type == 'catboost':
+        if CatBoostClassifier is None:
+            raise ImportError("catboost is not installed")
+        return CatBoostClassifier(depth=max_depth, iterations=n_estimators,
+                                   random_seed=random_state, verbose=0,
+                                   task_type='GPU', devices='3')
+    elif model_type == 'xgboost':
+        import xgboost as xgb
+        return xgb.XGBClassifier(max_depth=max_depth, n_estimators=n_estimators,
+                                  random_state=random_state, use_label_encoder=False,
+                                  eval_metric='logloss', verbosity=0)
+    elif model_type == 'lightgbm':
+        import lightgbm
+        return lightgbm.LGBMClassifier(max_depth=max_depth, n_estimators=n_estimators,
+                                        random_state=random_state, verbose=-1)
+    elif model_type == 'adaboost':
+        from sklearn.tree import DecisionTreeClassifier
+        from sklearn.ensemble import AdaBoostClassifier
+        return AdaBoostClassifier(estimator=DecisionTreeClassifier(max_depth=max_depth),
+                                   n_estimators=n_estimators, random_state=random_state)
+    else:  # random_forest (default)
+        return RandomForestClassifier(max_depth=max_depth, n_estimators=n_estimators,
+                                       random_state=random_state)
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model-type', default='random_forest',
+                        choices=['random_forest', 'xgboost', 'lightgbm', 'adaboost', 'catboost'])
+    parser.add_argument('--skip-data-perturbation', action='store_true')
+    return parser.parse_args()
+
 # Set up logging
 def setup_logging():
     """Setup comprehensive logging to both console and file"""
@@ -309,6 +349,8 @@ def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx, cf_t
         print(f"    Error saving counterfactuals to CSV: {e}")
 
 def main():
+    args = parse_args()
+
     # Setup logging
     logger, log_filename = setup_logging()
     
@@ -392,6 +434,11 @@ def main():
             ('adaboost', 3, n_estimators),
             ('catboost', 3, n_estimators),
         ])
+    # Filter model perturbations to only the selected model type (if not RF)
+    if args.model_type != 'random_forest':
+        model_perturbations = [(mt, md, ne) for mt, md, ne in model_perturbations
+                               if mt == args.model_type]
+    
     log_print(f"  Model perturbations: {len(model_perturbations)} configurations")
     for model_type, max_depth, n_estimators in model_perturbations:
         log_print(f"    - {model_type} (max_depth={max_depth}, n_estimators={n_estimators})")
@@ -448,7 +495,7 @@ def main():
             
             # Train baseline model on unperturbed data
             log_print(f"\nTraining baseline model for fold {fold}...")
-            baseline_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+            baseline_model = RandomForestClassifier(max_depth=5, n_estimators=100, random_state=42)  # CEML requires RF baseline
             baseline_model.fit(X_train, y_train)
             
             train_acc = accuracy_score(y_train, baseline_model.predict(X_train))
@@ -505,60 +552,61 @@ def main():
             log_print(f"    Bin 0: Remove 0% -> validity: {baseline_metrics['validity']:.4f}, accuracy: {test_acc:.4f}, L2: {baseline_metrics['l2_distance']:.4f}, L0: {baseline_metrics['l0_distance']:.2f}, LOF: {baseline_metrics['lof_score']:.4f}")
             
             # Test counterfactuals on data perturbed models
-            log_print(f"\nTesting data perturbations for fold {fold}...")
+            if not args.skip_data_perturbation:
+                log_print(f"\nTesting data perturbations for fold {fold}...")
             
-            for perturb_type, bins in data_perturbations:
-                log_print(f"  {perturb_type}:")
+                for perturb_type, bins in data_perturbations:
+                    log_print(f"  {perturb_type}:")
                 
-                for bin_num in bins:
-                    try:
-                        # Get the raw unperturbed training data
-                        train_raw_for_pert, _ = perturbation.get_data(fold=fold, raw_data=True)
+                    for bin_num in bins:
+                        try:
+                            # Get the raw unperturbed training data
+                            train_raw_for_pert, _ = perturbation.get_data(fold=fold, raw_data=True)
                         
-                        # Apply perturbation to the raw training data
-                        perturbed_train_raw = perturbation.perturb_data(train_raw_for_pert, perturb_type, bin_num)
+                            # Apply perturbation to the raw training data
+                            perturbed_train_raw = perturbation.perturb_data(train_raw_for_pert, perturb_type, bin_num)
                         
-                        # Apply the same preprocessing as baseline model
-                        perturbed_train_processed = perturbation.data_module._preprocess_data(perturbed_train_raw)
+                            # Apply the same preprocessing as baseline model
+                            perturbed_train_processed = perturbation.data_module._preprocess_data(perturbed_train_raw)
                         
-                        # Prepare features and target from PROCESSED data
-                        perturbed_X_train = perturbed_train_processed.drop(columns=[label_col])
-                        perturbed_y_train = perturbed_train_processed[label_col]
+                            # Prepare features and target from PROCESSED data
+                            perturbed_X_train = perturbed_train_processed.drop(columns=[label_col])
+                            perturbed_y_train = perturbed_train_processed[label_col]
                         
-                        # Handle categorical labels if needed
-                        if perturbed_y_train.dtype == 'object':
-                            le_pert = LabelEncoder()
-                            perturbed_y_train = le_pert.fit_transform(perturbed_y_train)
+                            # Handle categorical labels if needed
+                            if perturbed_y_train.dtype == 'object':
+                                le_pert = LabelEncoder()
+                                perturbed_y_train = le_pert.fit_transform(perturbed_y_train)
                         
-                        # Train model on perturbed PROCESSED data (same format as baseline)
-                        perturbed_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
-                        perturbed_model.fit(perturbed_X_train, perturbed_y_train)
+                            # Train model on perturbed PROCESSED data (same format as baseline)
+                            perturbed_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+                            perturbed_model.fit(perturbed_X_train, perturbed_y_train)
                         
-                        # Evaluate perturbed model on test set (using processed test data)
-                        perturbed_test_acc = accuracy_score(y_test[:test_subset_size], perturbed_model.predict(X_test_subset))
+                            # Evaluate perturbed model on test set (using processed test data)
+                            perturbed_test_acc = accuracy_score(y_test[:test_subset_size], perturbed_model.predict(X_test_subset))
                         
-                        # Calculate comprehensive metrics for perturbed model
-                        cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test_subset, perturbed_X_train)
+                            # Calculate comprehensive metrics for perturbed model
+                            cf_metrics = calculate_comprehensive_metrics(perturbed_model, cf_list, X_test_subset, perturbed_X_train)
                         
-                        # Store results
-                        all_fold_results['data_perturbations'][perturb_type][bin_num].append({
-                            'validity': cf_metrics['validity'],
-                            'model_accuracy': perturbed_test_acc,
-                            'l2_distance': cf_metrics['l2_distance'],
-                            'l0_distance': cf_metrics['l0_distance'],
-                            'lof_score': cf_metrics['lof_score'],
-                            'fold': fold
-                        })
+                            # Store results
+                            all_fold_results['data_perturbations'][perturb_type][bin_num].append({
+                                'validity': cf_metrics['validity'],
+                                'model_accuracy': perturbed_test_acc,
+                                'l2_distance': cf_metrics['l2_distance'],
+                                'l0_distance': cf_metrics['l0_distance'],
+                                'lof_score': cf_metrics['lof_score'],
+                                'fold': fold
+                            })
                         
-                        if perturb_type in ['minor_deletion', 'major_deletion']:
-                            remove_pct = bin_num if perturb_type == 'minor_deletion' else (0 if bin_num == 0 else 50)
-                            log_print(f"    Bin {bin_num}: Remove {remove_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
-                        else:
-                            use_pct = 80 + bin_num if perturb_type == 'minor_addition' else (50 if bin_num == 0 else 100)
-                            log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
+                            if perturb_type in ['minor_deletion', 'major_deletion']:
+                                remove_pct = bin_num if perturb_type == 'minor_deletion' else (0 if bin_num == 0 else 50)
+                                log_print(f"    Bin {bin_num}: Remove {remove_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
+                            else:
+                                use_pct = 80 + bin_num if perturb_type == 'minor_addition' else (50 if bin_num == 0 else 100)
+                                log_print(f"    Bin {bin_num}: Use {use_pct}% -> validity: {cf_metrics['validity']:.4f}, accuracy: {perturbed_test_acc:.4f}, L2: {cf_metrics['l2_distance']:.4f}, L0: {cf_metrics['l0_distance']:.2f}, LOF: {cf_metrics['lof_score']:.4f}")
                         
-                    except Exception as e:
-                        log_print(f"    Error in {perturb_type} bin {bin_num}: {e}")
+                        except Exception as e:
+                            log_print(f"    Error in {perturb_type} bin {bin_num}: {e}")
             
             # Test counterfactuals on model perturbations
             log_print(f"\nTesting model perturbations for fold {fold}...")
@@ -614,7 +662,8 @@ def main():
                             depth=max_depth,
                             iterations=n_estimators,
                             random_seed=42,
-                            verbose=0
+                            verbose=0,
+                            task_type='GPU', devices='3'
                         )
                     else:
                         continue  # Skip unknown model types

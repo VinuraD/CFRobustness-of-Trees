@@ -1,5 +1,5 @@
 """
-Tree Adapter Layer for ARMOR
+Tree Adapter Layer for CERTS
 
 Normalizes tree formats from XGBoost, LightGBM, and AdaBoost into the
 flat-array representation that TreeMCTS already consumes (children_left,

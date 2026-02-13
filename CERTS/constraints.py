@@ -1,5 +1,5 @@
 """
-ARMOR Constraint Handling
+CERTS Constraint Handling
 
 Functions for managing feature constraints and immutable features.
 """

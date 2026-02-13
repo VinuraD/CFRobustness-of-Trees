@@ -70,8 +70,8 @@ CF_METHODS = {
         'supports_continuous': True,
         'model_types': ['rf', 'xgb', 'lgb', 'ada', 'cat']
     },
-    'armor': {
-        'name': 'ARMOR',
+    'certs': {
+        'name': 'CERTS',
         'supports_categorical': True,
         'supports_continuous': True,
         'model_types': ['rf', 'xgb', 'lgb', 'ada', 'cat']

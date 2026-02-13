@@ -46,6 +46,16 @@ from ft_simple import FeatureTweakSimple
 from data_module import DataModule
 from perturb import Perturbation
 
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--skip-data-perturbation', action='store_true')
+    parser.add_argument('--model-perturbation-filter', type=str, default=None,
+                        help='Only run this model type in perturbations (e.g., catboost)')
+    return parser.parse_args()
+
+
 # Set up logging
 def setup_logging():
     """Setup comprehensive logging to both console and file"""
@@ -321,7 +331,7 @@ def run_data_perturbations(perturbation, X_train, y_train, X_test, y_test, basel
 
     return results
 
-def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx):
+def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx, model_perturbation_filter=None):
     """
     Run model perturbation experiments using EXISTING counterfactuals
     Tests how well the baseline counterfactuals perform on different model configurations
@@ -338,7 +348,7 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
             ('xgboost', {'max_depth': max_depth, 'n_estimators': 100, 'random_state': 42}),
             ('lightgbm', {'max_depth': max_depth, 'n_estimators': 100, 'random_state': 42, 'verbose': -1}),
             ('adaboost', {'max_depth': max_depth, 'n_estimators': 100, 'random_state': 42}),
-            ('catboost', {'depth': max_depth, 'iterations': 100, 'random_seed': 42, 'verbose': 0}),
+            ('catboost', {'depth': max_depth, 'iterations': 100, 'random_seed': 42, 'verbose': 0, 'task_type': 'GPU', 'devices': '3'}),
         ])
     # N_estimators study: Fix max_depth=3, vary n_estimators
     for n_estimators in [50, 100, 150, 200]:
@@ -347,11 +357,17 @@ def run_model_perturbations(X_train, y_train, X_test, y_test, baseline_cf_list, 
             ('xgboost', {'max_depth': 3, 'n_estimators': n_estimators, 'random_state': 42}),
             ('lightgbm', {'max_depth': 3, 'n_estimators': n_estimators, 'random_state': 42, 'verbose': -1}),
             ('adaboost', {'max_depth': 3, 'n_estimators': n_estimators, 'random_state': 42}),
-            ('catboost', {'depth': 3, 'iterations': n_estimators, 'random_seed': 42, 'verbose': 0}),
+            ('catboost', {'depth': 3, 'iterations': n_estimators, 'random_seed': 42, 'verbose': 0, 'task_type': 'GPU', 'devices': '3'}),
         ])
     
     results = []
     
+
+    # Filter model configs if a filter is specified
+    if model_perturbation_filter:
+        model_configs = [(mt, p) for mt, p in model_configs
+                         if mt == model_perturbation_filter]
+
     for model_type, params in model_configs:
         try:
             log_print(f"    {model_type} {params} - Train: {len(X_train)} samples, Test: {len(X_test)} samples")
@@ -562,6 +578,8 @@ def save_counterfactuals_to_csv(cf_list, cf_method, dataset_name, fold_idx, cf_t
 
 def main():
     """Main execution function"""
+    args = parse_args()
+
     # Setup logging
     logger, log_filename = setup_logging()
     
@@ -675,13 +693,16 @@ def main():
             log_print(f"    Bin 0: Remove 0% -> validity: {baseline_metrics['validity']:.4f}, accuracy: {test_accuracy:.4f}, L2: {baseline_metrics['l2_distance']:.4f}, L0: {baseline_metrics['l0_distance']:.2f}, LOF: {baseline_metrics['lof_score']:.4f}")
             
             # Test the SAME counterfactuals on perturbed models
-            data_pert_results = run_data_perturbations(
-                perturbation, X_train, y_train, X_test, y_test, baseline_cf_list, baseline_metrics, test_accuracy, fold_idx
-            )
+            if not args.skip_data_perturbation:
+                data_pert_results = run_data_perturbations(
+                    perturbation, X_train, y_train, X_test, y_test, baseline_cf_list, baseline_metrics, test_accuracy, fold_idx
+                )
+            else:
+                data_pert_results = {}
             
             model_pert_results = run_model_perturbations(
-                X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx
-            )
+                X_train, y_train, X_test, y_test, baseline_cf_list, fold_idx,
+                model_perturbation_filter=args.model_perturbation_filter)
             
             # Store results for this fold
             fold_results = {

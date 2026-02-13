@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Parse ARMOR v3 log file, compute mean/std across 5 folds,
-create summary log, and update Excel files with ARMOR results.
+Parse CERTS v3 log file, compute mean/std across 5 folds,
+create summary log, and update Excel files with CERTS results.
 """
 
 import re
@@ -10,14 +10,14 @@ import pandas as pd
 from collections import defaultdict
 import os
 
-LOG_PATH = "/mnt/datassd3/rashinda/CF_Robustness/CFRobustness-of-Trees/experiment_outputs/ARMOR_v3/ARMOR_v3.log"
-SUMMARY_PATH = "/mnt/datassd3/rashinda/CF_Robustness/CFRobustness-of-Trees/experiment_outputs/ARMOR_v3/ARMOR_v3_summary.log"
+LOG_PATH = "/mnt/datassd3/rashinda/CF_Robustness/CFRobustness-of-Trees/experiment_outputs/CERTS_v3/CERTS_v3.log"
+SUMMARY_PATH = "/mnt/datassd3/rashinda/CF_Robustness/CFRobustness-of-Trees/experiment_outputs/CERTS_v3/CERTS_v3_summary.log"
 DATA_PERTURB_XLSX = "/mnt/datassd3/rashinda/CF_Robustness/CFRobustness-of-Trees/Final_anlysis_and_plotting/german_credit_data_perturb.xlsx"
 MODEL_PERTURB_XLSX = "/mnt/datassd3/rashinda/CF_Robustness/CFRobustness-of-Trees/Final_anlysis_and_plotting/German_Credit_model_perturb.xlsx"
 
 
 def parse_log():
-    """Parse all 5 folds from the ARMOR v3 log file."""
+    """Parse all 5 folds from the CERTS v3 log file."""
     with open(LOG_PATH, 'r') as f:
         lines = f.readlines()
 
@@ -155,7 +155,7 @@ def write_summary_log(data_stats, model_stats):
     """Write a summary log file with averaged results."""
     with open(SUMMARY_PATH, 'w') as f:
         f.write("=" * 80 + "\n")
-        f.write("ARMOR v3 - GERMAN CREDIT DATASET - SUMMARY (Mean +/- Std across 5 folds)\n")
+        f.write("CERTS v3 - GERMAN CREDIT DATASET - SUMMARY (Mean +/- Std across 5 folds)\n")
         f.write("=" * 80 + "\n\n")
 
         # Data perturbation summary
@@ -204,7 +204,7 @@ def write_summary_log(data_stats, model_stats):
 
 
 def update_data_perturb_excel(data_stats):
-    """Append ARMOR columns to the data perturbation Excel file."""
+    """Append CERTS columns to the data perturbation Excel file."""
     # Read raw Excel (no header processing)
     df = pd.read_excel(DATA_PERTURB_XLSX, header=None)
 
@@ -215,7 +215,7 @@ def update_data_perturb_excel(data_stats):
 
     n_cols = df.shape[1]
 
-    # Add 4 new columns for ARMOR
+    # Add 4 new columns for CERTS
     new_col_start = n_cols
     df[new_col_start] = None
     df[new_col_start + 1] = None
@@ -223,7 +223,7 @@ def update_data_perturb_excel(data_stats):
     df[new_col_start + 3] = None
 
     # Set header row 0: method name in first new column, NaN for the rest
-    df.iloc[0, new_col_start] = 'ARMOR'
+    df.iloc[0, new_col_start] = 'CERTS'
     df.iloc[0, new_col_start + 1] = None
     df.iloc[0, new_col_start + 2] = None
     df.iloc[0, new_col_start + 3] = None
@@ -251,17 +251,17 @@ def update_data_perturb_excel(data_stats):
             df.iloc[row_idx, new_col_start + 2] = round(s['mean_accuracy'], 4)
             df.iloc[row_idx, new_col_start + 3] = round(s['std_accuracy'], 4)
         else:
-            print(f"WARNING: No ARMOR data for data perturbation key {key}")
+            print(f"WARNING: No CERTS data for data perturbation key {key}")
 
     # Write back
     df.to_excel(DATA_PERTURB_XLSX, index=False, header=False)
     print(f"Updated data perturbation Excel: {DATA_PERTURB_XLSX}")
-    print(f"  Added ARMOR columns at positions {new_col_start}-{new_col_start+3}")
+    print(f"  Added CERTS columns at positions {new_col_start}-{new_col_start+3}")
     print(f"  Total columns now: {df.shape[1]}")
 
 
 def update_model_perturb_excel(model_stats):
-    """Append ARMOR columns to the model perturbation Excel file."""
+    """Append CERTS columns to the model perturbation Excel file."""
     # Read raw Excel (no header processing)
     df = pd.read_excel(MODEL_PERTURB_XLSX, header=None)
 
@@ -272,7 +272,7 @@ def update_model_perturb_excel(model_stats):
 
     n_cols = df.shape[1]
 
-    # Add 4 new columns for ARMOR
+    # Add 4 new columns for CERTS
     new_col_start = n_cols
     df[new_col_start] = None
     df[new_col_start + 1] = None
@@ -280,7 +280,7 @@ def update_model_perturb_excel(model_stats):
     df[new_col_start + 3] = None
 
     # Set header row 0
-    df.iloc[0, new_col_start] = 'ARMOR'
+    df.iloc[0, new_col_start] = 'CERTS'
     df.iloc[0, new_col_start + 1] = None
     df.iloc[0, new_col_start + 2] = None
     df.iloc[0, new_col_start + 3] = None
@@ -305,12 +305,12 @@ def update_model_perturb_excel(model_stats):
             df.iloc[row_idx, new_col_start + 3] = round(s['std_accuracy'], 4)
             matched += 1
         else:
-            # Config exists in Excel but not in ARMOR log - leave empty
+            # Config exists in Excel but not in CERTS log - leave empty
             unmatched += 1
 
     print(f"Updated model perturbation Excel: {MODEL_PERTURB_XLSX}")
-    print(f"  Added ARMOR columns at positions {new_col_start}-{new_col_start+3}")
-    print(f"  Matched: {matched} configs, Unmatched (no ARMOR data): {unmatched} configs")
+    print(f"  Added CERTS columns at positions {new_col_start}-{new_col_start+3}")
+    print(f"  Matched: {matched} configs, Unmatched (no CERTS data): {unmatched} configs")
     print(f"  Total columns now: {df.shape[1]}")
 
     # Write back
@@ -319,7 +319,7 @@ def update_model_perturb_excel(model_stats):
 
 def main():
     print("=" * 60)
-    print("ARMOR v3 Log Parser - German Credit Dataset")
+    print("CERTS v3 Log Parser - German Credit Dataset")
     print("=" * 60)
 
     # Step 1: Parse the log file
